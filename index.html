@@ -642,7 +642,14 @@
      同屬 #actCardsRowInner，所以花牌太多、整排觸發 fitActCardsRow() 的等比例縮小時，按鈕也會
      跟著卡片一起等比例縮小——這是刻意的：按鈕就是這排卡片的一部分，維持跟卡片一致的縮放比例，
      不會單獨突兀地維持原尺寸而跟縮小後的卡片對不齊。 */
-  body.battle-mode #actConfirmBtn{align-self:stretch;flex:0 0 auto;min-width:120px;margin:0 0 0 auto;padding:12px 20px;font-size:16px;}
+  /* 回合確認：圓形 OK 鈕的外環直接反映本回合的 30 秒真實倒數；--turn-progress 由 JS 即時更新。 */
+  body.battle-mode #actConfirmBtn{--turn-progress:1;align-self:center;flex:0 0 82px;width:82px;height:82px;min-width:82px;margin:0 0 0 auto;padding:5px;border:0;border-radius:50%;display:grid;grid-template-rows:1fr auto;place-items:center;position:relative;isolation:isolate;color:#fff;background:conic-gradient(var(--gold) calc(var(--turn-progress) * 1turn),rgba(95,105,130,.55) 0);box-shadow:0 0 0 1px rgba(255,255,255,.12),0 4px 13px rgba(0,0,0,.45);font-size:18px;line-height:1;transition:filter .18s ease,transform .18s ease,box-shadow .18s ease;}
+  body.battle-mode #actConfirmBtn::before{content:"";position:absolute;inset:5px;border-radius:50%;z-index:-1;background:linear-gradient(145deg,#3d73db,#273d79);box-shadow:inset 0 1px 1px rgba(255,255,255,.28),inset 0 -3px 8px rgba(0,0,0,.42);}
+  body.battle-mode #actConfirmBtn:hover:not(:disabled){transform:scale(1.04);box-shadow:0 0 0 1px rgba(255,255,255,.25),0 0 16px rgba(242,193,78,.35);}
+  body.battle-mode #actConfirmBtn .act-confirm-label{font-size:18px;font-weight:800;letter-spacing:.04em;align-self:end;}
+  body.battle-mode #actConfirmBtn .act-confirm-time{font-size:10px;font-weight:700;color:#dfe8ff;align-self:start;margin-top:2px;}
+  body.battle-mode #actConfirmBtn.timed-out{filter:grayscale(1) saturate(.15);transform:scale(.96);box-shadow:0 0 0 1px rgba(190,195,205,.3),inset 0 0 14px rgba(0,0,0,.6);pointer-events:none;}
+  body.battle-mode #actConfirmBtn.timed-out::before{background:linear-gradient(145deg,#727681,#3c4049);}
   .hidden{display:none !important;}
   .panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 16px;margin-bottom:14px;}
   /* 找到真正原因：戰鬥紀錄（#logPanelWrap）跟出手面板（#actPanel）都是 class="panel"，用的是
@@ -1645,7 +1652,7 @@
        「這張是彈窗目前顯示的那張」，卡片本身尺寸不變），完整描述只在 #actDetailPopup 裡的那份
        獨立 renderCardFace（非 mini）看得到，那份不受這條選擇器影響（它不在這個容器裡）。 */
     body.battle-mode #act-card-zone .cardface .cf-desc{display:none;}
-    body.battle-mode #actConfirmBtn{min-width:0;padding:8px 10px;font-size:13px;}
+    body.battle-mode #actConfirmBtn{width:70px;height:70px;min-width:70px;min-height:70px;flex-basis:70px;padding:5px;font-size:13px;}
     /* 共用浮動彈窗：現在是 #screen-battle 的直接子元素（不是 #actPanel 裡面），用 position:fixed
        相對整個視窗定位/置中，不會被 #actPanelOuter 的 overflow:hidden 裁切，也不受 #actPanel
        可能套用的 scale 縮放影響（fixed 元素若在有 transform 的祖先底下，行為會變成相對那個祖先
@@ -1746,7 +1753,7 @@
   body.battle-mode #actDetailPopup .cardface .cf-corner-br{font-size:15px;bottom:10px;right:12px;}
   @media (pointer:coarse){
     body.battle-mode .btn, body.battle-mode .btn.slotbtn, body.battle-mode .btn.movebtn{min-height:38px;}
-    body.battle-mode #actConfirmBtn{min-height:44px;}
+    body.battle-mode #actConfirmBtn{min-height:70px;}
     /* 使用者反應選角／組卡畫面手指觸控熱區太小（原本只有戰鬥畫面有調整）：這裡比照戰鬥畫面
        同一套 pointer:coarse 判斷，把這兩個畫面裡的按鈕（含「下一步」「開始遊戲」「隨機組成」
        「清空重選」等）最小高度拉到 40~44px，滑鼠裝置不受影響。雙人模式那個 checkbox 本身
@@ -2182,7 +2189,7 @@
                      顯示方式。改成兩者共用同一個 #act-card-zone 容器，見 renderBattle() 裡
                      這段的說明，花色卡也改成手上有幾張就顯示幾張獨立卡面。 -->
                 <div id="act-card-zone"></div>
-                <button class="btn primary" id="actConfirmBtn">出手 ▸</button>
+                <button class="btn primary" id="actConfirmBtn" title="確認本回合操作"><span class="act-confirm-label">OK</span><span class="act-confirm-time" id="actConfirmTime">30 秒</span></button>
               </div>
             </div>
           </div>
@@ -3398,7 +3405,7 @@ function newState(){
     clock:0, dealtRound:-1, round:0,
     handA:[], handB:[], handCustomA:[], handCustomB:[],
     lastDiscardedA:null, lastDiscardedB:null, // for 縫合-style "get back last discarded" passives
-    actingUnitId:null, actPending:null, actMovePicked:null, actMoveTarget:null,
+    actingUnitId:null, actPending:null, actMovePicked:null, actMoveTarget:null, turnDeadlineAt:0,
     log:[], winner:null, winnerReason:'',
     // autoBattleDelay 預設值改成讀「使用者上次存的速度設定」：AUTO_BATTLE_SPEEDS／autoBattleSpeedIdx
     // 宣告在檔案後面（下面的按鈕綁定那段），但 newState() 這個「函式本身」在這裡只是定義、還沒有
@@ -6047,6 +6054,7 @@ function runLoop(){
       state.actPending = null;
       state.actMovePicked = null;
       state.actMoveTarget = null;
+      state.turnDeadlineAt = 0;
       actInfoRequest = null;
       actDiscardPending = [];
       state.phase = 'act';
@@ -6061,6 +6069,8 @@ function runLoop(){
     state.actPending = null;
     state.actMovePicked = null;
     state.actMoveTarget = null; // 這回合「預計」移動到哪一格；出手前都可以隨意重選，見 moveActingUnitTo()
+    // 這是「真實時間」期限，不是遊戲內 speed/clock；同步到跨網房間後，兩端會顯示相同截止時刻。
+    state.turnDeadlineAt = Date.now() + ACTION_TIMEOUT_MS;
     actInfoRequest = null; // 新的一輪出手，上一位角色開著的招式/花牌詳情彈窗不該繼續顯示
     actDiscardPending = []; // 新的一輪出手，理論上 confirmAct() 已經清空過，這裡是保險
     state.phase = 'act';
@@ -6069,6 +6079,7 @@ function runLoop(){
     // mode (outside two-player mode White never reaches 'act' at all — see the branch above).
     const autoOnForSide = next.side==='A' ? state.autoBattle : state.autoBattleB;
     if(autoOnForSide){ scheduleAutoLoop(); }
+    else { scheduleActionDeadline(); }
     return;
   }
 }
@@ -6217,6 +6228,64 @@ function moveActingUnitTo(slot){
 // 純畫面用的暫時變數記錄「現在要看哪一個的詳情」，跟選取狀態完全脫鉤——可以看任何一個招式的
 // 詳情（不限已選取的那個），看完關掉也完全不影響選取結果，出手鈕永遠碰得到、選取永遠保留。
 let actInfoRequest = null; // null | {type:'move', key} | {type:'card', idx}
+
+// 每個角色的操作期限。期限存在 state 裡，因此跨網兩端會用同一個截止時間顯示外圈；但只有
+// 正在操作該方的瀏覽器會真的送出「逾時待機」，避免對手的頁面代替玩家操作。
+const ACTION_TIMEOUT_MS = 30000;
+let actionDeadlineTimer = null;
+let actionDeadlineRaf = null;
+let actionTimedOutForId = null;
+
+function isLocalActionController(unit){
+  if(!unit) return false;
+  return !window.__onlineLocalSide || unit.side===window.__onlineLocalSide;
+}
+function cancelActionDeadline(){
+  if(actionDeadlineTimer){ clearTimeout(actionDeadlineTimer); actionDeadlineTimer=null; }
+  if(actionDeadlineRaf){ cancelAnimationFrame(actionDeadlineRaf); actionDeadlineRaf=null; }
+}
+function syncActionDeadlineUi(){
+  if(actionDeadlineRaf){ cancelAnimationFrame(actionDeadlineRaf); actionDeadlineRaf=null; }
+  const btn = document.getElementById('actConfirmBtn');
+  const label = document.getElementById('actConfirmTime');
+  const unit = getActingUnit();
+  if(!btn || !label || !unit || state.phase!=='act' || !state.turnDeadlineAt){
+    if(btn){ btn.style.setProperty('--turn-progress','1'); btn.classList.remove('timed-out'); }
+    if(label) label.textContent = '';
+    return;
+  }
+  const paint = function(){
+    const remaining = Math.max(0, state.turnDeadlineAt-Date.now());
+    btn.style.setProperty('--turn-progress', String(remaining / ACTION_TIMEOUT_MS));
+    label.textContent = Math.ceil(remaining/1000)+' 秒';
+    btn.classList.toggle('timed-out', remaining<=0 || actionTimedOutForId===unit.id);
+    if(remaining>0 && state.phase==='act' && state.actingUnitId===unit.id){ actionDeadlineRaf=requestAnimationFrame(paint); }
+  };
+  paint();
+}
+function scheduleActionDeadline(){
+  cancelActionDeadline();
+  const unit = getActingUnit();
+  if(!unit || state.phase!=='act' || !state.turnDeadlineAt || !isLocalActionController(unit)){
+    syncActionDeadlineUi();
+    return;
+  }
+  const unitId = unit.id;
+  const delay = Math.max(0, state.turnDeadlineAt-Date.now());
+  actionDeadlineTimer = setTimeout(function(){
+    if(state.phase!=='act' || state.actingUnitId!==unitId || !isLocalActionController(getActingUnit())) return;
+    actionTimedOutForId = unitId;
+    // 逾時一律待機，不會把玩家先前點過但尚未確認的招式／花牌自動打出去。
+    state.actPending = null; state.actMovePicked = null; state.actMoveTarget = null; actDiscardPending = [];
+    addLog('info', sideTag(unit)+' '+unitName(unit)+' 操作逾時，待機。');
+    render();
+    setTimeout(function(){
+      if(state.phase==='act' && state.actingUnitId===unitId){ confirmAct(); }
+      actionTimedOutForId = null;
+    }, 420);
+  }, delay);
+  syncActionDeadlineUi();
+}
 // 使用者要求「增加棄牌功能」，後來又要求「改成卡片上設計一個棄牌按鈕，點了立刻丟棄」，接著
 // 再要求「自訂卡也可以棄」「自訂卡棄掉後就直接消失」「棄牌要可以反悔，點擊出手才會正式棄牌」：
 // 於是點🗑按鈕不再是「立刻丟」，改成「標記／取消標記要棄」——卡片這時候都還在手上（還算在
@@ -6298,6 +6367,9 @@ function confirmAct(){
   if(state.phase!=='act' || !state.actingUnitId) return;
   const unit = getActingUnit();
   if(!unit || !unit.alive){ state.actingUnitId=null; runLoop(); return; }
+  // 先關掉真實時間倒數，避免確認出手與倒數 callback 在同一瞬間重複結算。
+  cancelActionDeadline();
+  state.turnDeadlineAt = 0;
   if(unit._didNotMoveThisTurn===undefined) unit._didNotMoveThisTurn = true;
 
   // 使用者要求「棄牌的順序改到交換之後」：棄牌本身的結算（actDiscardPending，見那裡的說明）
@@ -6398,6 +6470,8 @@ function confirmAct(){
 }
 
 function finishByElimination(aWiped, bWiped){
+  cancelActionDeadline();
+  state.turnDeadlineAt=0;
   if(aWiped && bWiped){ state.winner='draw'; state.winnerReason='雙方同時全滅'; }
   else if(aWiped){ state.winner='B'; state.winnerReason='我方全滅'; }
   else { state.winner='A'; state.winnerReason='對方全滅'; }
@@ -6405,6 +6479,8 @@ function finishByElimination(aWiped, bWiped){
   render();
 }
 function finishByTimeCap(){
+  cancelActionDeadline();
+  state.turnDeadlineAt=0;
   const hpA = state.teamA.reduce((s,u)=>s+Math.max(0,u.hp),0);
   const hpB = state.teamB.reduce((s,u)=>s+Math.max(0,u.hp),0);
   state.phase='end';
@@ -6985,6 +7061,7 @@ function render(){
   if(state.phase==='select'){ renderSelect(); return; }
   if(state.phase==='deckbuild'){ renderDeckBuild(); return; }
   renderBattle();
+  syncActionDeadlineUi();
   playPendingEffects();
   updateBgmTensionFromHp();
 }
@@ -10218,6 +10295,8 @@ tutorialInjectDom();
             showTopScreen('screen-battle');
             document.body.classList.add('battle-mode');
             render();
+            // 加入方收到「輪到自己」的新 state 時，也要依同一個同步 deadline 建立本機逾時保護。
+            scheduleActionDeadline();
           };
           if(battleKey!==onlineBattleAssetKey || onlineAssetLoading){
             onlinePreloadBattleAssets(battleIds).then(revealBattle);
