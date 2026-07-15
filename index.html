@@ -54,7 +54,7 @@
      這裡只留「向上淡出」（立繪腳邊融進地板），不再疊自己的左右淡出，避免兩條漸層各管
      各的在容器邊界銜接處出現硬邊。 */
   #lobbyHeroArt::before{content:'';position:absolute;inset:0;background:
-    linear-gradient(to top, rgba(6,7,11,.9) 0%, transparent 20%);}
+    radial-gradient(ellipse 90% 48% at 25% 100%, rgba(6,7,11,.88) 0%, rgba(6,7,11,.52) 38%, transparent 76%);}
   @keyframes lobbyHeroFloat{0%,100%{transform:translateY(0);}50%{transform:translateY(-10px);}}
   /* 使用者要求「讓玩家決定大廳左邊的角色要是誰」，跟 #screen-login #lobbyAdminBtn 那顆
      後臺角鈕同一套「不搶視覺的小圓鈕」風格。掛在 #screen-lobby（position:relative）下面，
@@ -9261,7 +9261,16 @@ function tutorialFinish(){
   overlay.classList.remove('active');
   overlay.classList.remove('cutscene');
   overlay.classList.add('no-dim');
-  document.getElementById('tutorialSceneArtWrap').classList.remove('show');
+  // 完成後把所有教學圖層一起清空。除了移除 overlay 的 active 以外，
+  // 也避免瀏覽器在畫面切換時留下對話框／立繪的最後一幀。
+  const sceneWrap = document.getElementById('tutorialSceneArtWrap');
+  sceneWrap.classList.remove('show');
+  document.getElementById('tutorialSceneArt').removeAttribute('src');
+  document.getElementById('tutorialBox').classList.add('hidden');
+  document.getElementById('tutorialCenterCard').style.display = 'none';
+  document.getElementById('tutorialCrawlWrap').classList.add('hidden');
+  document.getElementById('tutorialCrawlHint').classList.add('hidden');
+  document.getElementById('tutorialDim').style.background = 'transparent';
   document.getElementById('tutorialSkipBtn').classList.add('hidden');
   const catcher = document.getElementById('tutorialClickCatcher');
   catcher.style.pointerEvents = 'none';
