@@ -9969,6 +9969,11 @@ tutorialInjectDom();
         showTopScreen('screen-online'); renderOnlineLobby();
       }).catch(function(e){ alert('送出隊伍失敗：'+e.message); });
     };
+    // The normal screen wiring runs before this multiplayer module replaces
+    // confirmTeamPick, so explicitly refresh the button handler here. Otherwise
+    // the button keeps the old single-player function reference and starts a
+    // local game instead of creating/joining the online room.
+    document.getElementById('teampickConfirmBtn').onclick=confirmTeamPick;
     function onlineHandleSetup(){
       if(!onlineInRoom || !onlineMeta) return;
       if(onlineMeta.status==='setup'){
