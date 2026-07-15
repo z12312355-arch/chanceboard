@@ -6796,6 +6796,9 @@ function updateTeamPickSelection(){
 }
 
 function confirmTeamPick(){
+  // Multiplayer may enter this screen before its module replaces the button handler.
+  // Let the online module claim the action even if an older onclick reference remains.
+  if(window.__onlinePreRoomConfirm && window.__onlinePreRoomConfirm()) return;
   const teamA = teams.find(t=>t.id===pendingTeamIdA);
   if(!teamA) return;
   const isTwo = pendingMode==='two' || pendingMode==='two1v1';
@@ -9952,6 +9955,15 @@ tutorialInjectDom();
       const note=document.getElementById('teampick-noteams-hint'); if(note) note.textContent='選好後送出；對手也會在自己的裝置選擇隊伍。';
     }
     const __onlinePreviousConfirmTeamPick=confirmTeamPick;
+    window.__onlinePreRoomConfirm=function(){
+      if(pendingMode!=='online-pre' || !onlinePendingRoomAction) return false;
+      const team=teams.find(function(t){ return t.id===pendingTeamIdA; });
+      if(!team) return true;
+      const action=onlinePendingRoomAction; onlinePendingRoomAction=null; pendingMode=null;
+      if(action.action==='create') createOnlineRoomAfterPick(team);
+      else joinOnlineRoomAfterPick(action.roomId, team);
+      return true;
+    };
     confirmTeamPick=function(){
       if(pendingMode==='online-pre' && onlinePendingRoomAction){
         const team=teams.find(function(t){ return t.id===pendingTeamIdA; });
