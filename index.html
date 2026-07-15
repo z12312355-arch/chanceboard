@@ -9813,8 +9813,10 @@ tutorialInjectDom();
       onlineMetaRef.on('value', function(snap){
         onlineMeta=snap.val();
         // 加入者在房主按「開始設定」後，不再把斷線狀態改回等待房。
-        if(onlineRole==='B' && onlineMeta && onlineMeta.status==='playing'){
-          onlineMetaRef.onDisconnect().cancel();
+        if(onlineMeta && onlineMeta.status==='playing'){
+          // An unfinished match must not remain as a live Firebase room after
+          // a refresh, tab close, or network disconnect.
+          onlineRootRef.onDisconnect().remove();
         }
         renderOnlineLobby();
         onlineHandleSetup();
@@ -9863,7 +9865,7 @@ tutorialInjectDom();
     function startOnlineMatch(){
       if(onlineRole!=='A' || !onlineMeta || onlineMeta.status!=='ready') return;
       onlineMetaRef.update({status:'setup',setupA:null,setupB:null,setupStartedAt:Date.now()});
-      try { onlineRootRef.onDisconnect().cancel(); } catch(e){}
+      try { onlineRootRef.onDisconnect().remove(); } catch(e){}
     }
     function onlineTeamPayload(team){
       return {id:String(team.id||''),name:String(team.name||''),characterIds:team.characterIds.slice(0,3),deck:JSON.parse(JSON.stringify(team.deck||{}))};
