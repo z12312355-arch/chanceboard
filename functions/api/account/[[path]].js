@@ -39,11 +39,11 @@ function profileFromRow(row) {
   };
 }
 async function ensureProfile(db, user) {
-  // New accounts receive three balanced starters. This avoids allowing the client
-  // to grant itself a starter character before a server-side tutorial exists.
+  // A new account begins with no inventory. Tutorial grants are handled below,
+  // one time only, rather than trusting the browser to add characters.
   await db.prepare(`INSERT OR IGNORE INTO players
     (uid,email,gold,diamond,owned_chars,char_stars,owned_cards,teams,tutorial_done,tutorial_faction,lobby_hero_id,settings,daily_bonus_date,created_at,updated_at)
-    VALUES (?1,?2,?3,?4,'["001","004","006"]','{}','{}','[]',1,'black',NULL,'{}','',unixepoch(),unixepoch())`)
+    VALUES (?1,?2,?3,?4,'[]','{}','{}','[]',0,'black',NULL,'{}','',unixepoch(),unixepoch())`)
     .bind(user.uid, user.email, GOLD_START, DIAMOND_START).run();
   return db.prepare('SELECT * FROM players WHERE uid=?1').bind(user.uid).first();
 }
@@ -74,7 +74,27 @@ export async function onRequest(context) {
     if (request.method !== 'POST') return json({ error: 'Unknown API endpoint.' }, 404);
     if (action === 'bootstrap') return json({ state: profileFromRow(row) });
 
-    if (action === 'teams') {
+    if (action === 'tutorial-starter') {
+      const id = String(body.id || '');
+      const owned = parseJson(row.owned_chars, []);
+      if (row.tutorial_done || owned.length !== 0 || !['001', '004', '006'].includes(id)) throw apiError('The starter selection is no longer available.');
+      owned.push(id);
+      await db.prepare('UPDATE players SET owned_chars=?2,updated_at=unixepoch() WHERE uid=?1').bind(user.uid, JSON.stringify(owned)).run();
+    } else if (action === 'tutorial-gacha') {
+      const currency = body.currency === 'diamond' ? 'diamond' : 'gold';
+      const owned = parseJson(row.owned_chars, []), stars = parseJson(row.char_stars, {});
+      if (row.tutorial_done || owned.length < 1 || owned.length >= 3) throw apiError('This tutorial reward is no longer available.');
+      const pool = (currency === 'diamond' ? ALL_CHARACTER_IDS : ALL_CHARACTER_IDS.filter(id => !DIAMOND_EXCLUSIVE_IDS.has(id))).filter(id => !owned.includes(id));
+      const id = randomPick(pool);
+      owned.push(id);
+      await db.prepare('UPDATE players SET owned_chars=?2,char_stars=?3,updated_at=unixepoch() WHERE uid=?1').bind(user.uid, JSON.stringify(owned), JSON.stringify(stars)).run();
+      row = await db.prepare('SELECT * FROM players WHERE uid=?1').bind(user.uid).first();
+      return json({ state: profileFromRow(row), results: [{ id, isNew: true, starLevel: 0 }] });
+    } else if (action === 'tutorial-complete') {
+      const owned = parseJson(row.owned_chars, []);
+      if (owned.length < 3) throw apiError('Finish the starter and two tutorial summons first.');
+      await db.prepare('UPDATE players SET tutorial_done=1,updated_at=unixepoch() WHERE uid=?1').bind(user.uid).run();
+    } else if (action === 'teams') {
       const teams = safeTeams(body.teams, parseJson(row.owned_chars, []));
       await db.prepare('UPDATE players SET teams=?2,updated_at=unixepoch() WHERE uid=?1').bind(user.uid, JSON.stringify(teams)).run();
     } else if (action === 'preferences') {

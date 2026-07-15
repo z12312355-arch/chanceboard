@@ -10002,6 +10002,47 @@ tutorialInjectDom();
     if(!accountReady) return guestDailyClaim();
     try{ const d=await accountApi('daily-claim',{}); applyAccountState(d.state); }catch(e){ console.warn('[Account] daily claim',e); }
   };
+  // The original tutorial grants characters directly in localStorage. In account
+  // mode, each of these one-time rewards is instead granted by the D1 API.
+  const guestTutorialPickStarter=tutorialPickStarter;
+  tutorialPickStarter=async function(id){
+    if(!accountReady) return guestTutorialPickStarter(id);
+    try{
+      const d=await accountApi('tutorial-starter',{id:id}); applyAccountState(d.state);
+      document.getElementById('tutorialCenterCard').style.display='none'; tutorialSayAfterPick();
+    }catch(e){ alert(e.message); }
+  };
+  async function accountTutorialSummon(currency){
+    const d=await accountApi('tutorial-gacha',{currency:currency}); applyAccountState(d.state);
+    gachaShowResult(d.results.map(function(r){ return {char:CHAR_BY_ID[r.id],isNew:r.isNew,starLevel:r.starLevel}; }));
+  }
+  const guestTutorialGoldStep=tutorialGoldGachaStep, guestTutorialDiamondStep=tutorialDiamondGachaStep;
+  tutorialGoldGachaStep=function(){
+    if(!accountReady) return guestTutorialGoldStep();
+    if(tutorialReplayMode) return tutorialSayAfterGold();
+    tutorialSay([TUTORIAL_LINES.goldIntro[tutorialFaction]],function(){ tutorialSay([TUTORIAL_LINES.goldOffer[tutorialFaction]],function(){
+      tutorialWaitForClick('lobbyGachaBtn',function(){ tutorialWaitForClick('gachaPull1Btn',async function(){
+        try{ await accountTutorialSummon('gold'); tutorialSayAfterGold(); }catch(e){ alert(e.message); }
+      },true); });
+    }); });
+  };
+  tutorialDiamondGachaStep=function(){
+    if(!accountReady) return guestTutorialDiamondStep();
+    if(tutorialReplayMode) return tutorialSayAfterDiamond();
+    tutorialSay([TUTORIAL_LINES.diamondIntro[tutorialFaction]],function(){ tutorialSay([TUTORIAL_LINES.diamondOffer[tutorialFaction]],function(){
+      tutorialWaitForClick('gachaTabDiamond',function(){ tutorialWaitForClick('gachaPull1Btn',async function(){
+        try{ await accountTutorialSummon('diamond'); tutorialSayAfterDiamond(); }catch(e){ alert(e.message); }
+      },true); });
+    }); });
+  };
+  const guestTutorialEnsure=tutorialEnsureAtLeast3Owned;
+  tutorialEnsureAtLeast3Owned=function(cb){ if(accountReady) return cb(); return guestTutorialEnsure(cb); };
+  const guestMarkTutorialDone=markTutorialDone;
+  markTutorialDone=function(){
+    if(!accountReady) return guestMarkTutorialDone();
+    try{ localStorage.setItem(TUTORIAL_DONE_KEY,'1'); }catch(e){}
+    accountApi('tutorial-complete',{}).then(function(d){ applyAccountState(d.state); }).catch(function(e){ console.warn('[Account] tutorial completion',e); });
+  };
   const guestSaveSettings=saveSettings, guestSaveLobbyHeroChoice=saveLobbyHeroChoice;
   function queuePreferences(){
     if(!accountReady) return;
