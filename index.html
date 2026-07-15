@@ -9726,7 +9726,10 @@ tutorialInjectDom();
     }
     function startListing(){
       if(onlineListRef || !onlineDb) return;
-      onlineListRef=onlineDb.ref('rooms').orderByChild('meta/status').equalTo('waiting');
+      // 直接訂閱 rooms 後在 roomCardsHtml() 篩選 waiting。這比巢狀
+      // orderByChild('meta/status') 查詢更能兼容目前開放式的 Spark 規則，
+      // 也不需要使用者另外為 meta/status 建索引。
+      onlineListRef=onlineDb.ref('rooms');
       onlineListRef.on('value', function(snap){ onlineRooms=snap.val()||{}; renderOnlineLobby(); });
     }
     function detachOnlineRoom(){
