@@ -10038,12 +10038,21 @@ tutorialInjectDom();
     if(typeof renderGachaCollectionGrid==='function' && document.getElementById('gachaCollectionGrid')) renderGachaCollectionGrid();
     if(typeof renderShopGrid==='function' && document.getElementById('shopCardGrid')) renderShopGrid();
   }
+  function updateAdminButtons(){
+    const visible=!!window.__isAdmin;
+    ['adminOpenBtn','lobbyAdminBtn'].forEach(function(id){ const el=document.getElementById(id); if(el) el.style.display=visible?'':'none'; });
+  }
+  async function checkAdmin(){
+    window.__isAdmin=false;
+    try{ const result=await accountApi('admin'); window.__isAdmin=!!result.admin; }catch(e){}
+    updateAdminButtons();
+  }
   async function loadAccount(){
     try{
       const data=await accountApi('bootstrap',{}); accountReady=true; window.__accountMode=true; applyAccountState(data.state);
-      const admin=document.getElementById('lobbyAdminBtn'); if(admin) admin.style.display='none';
+      await checkAdmin();
       updateAccountLogin();
-    }catch(e){ accountReady=false; window.__accountMode=false; setAccountMessage('帳號後端尚未完成：'+e.message); }
+    }catch(e){ accountReady=false; window.__accountMode=false; window.__isAdmin=false; updateAdminButtons(); setAccountMessage('帳號後端尚未完成：'+e.message); }
   }
   function setAccountMessage(msg){ const el=document.getElementById('accountLoginMessage'); if(el) el.textContent=msg||''; }
   function updateAccountLogin(){
@@ -10052,7 +10061,7 @@ tutorialInjectDom();
     enter.disabled=!!currentUser&&!accountReady;
     if(currentUser){
       box.innerHTML='<div class="account-email">已登入：'+escapeHtml(currentUser.email||'')+'</div><button type="button" class="account-action" id="accountLogoutBtn">登出帳號</button><div id="accountLoginMessage" class="account-message"></div>';
-      document.getElementById('accountLogoutBtn').onclick=async function(){ await auth.signOut(); accountReady=false; window.__accountMode=false; };
+      document.getElementById('accountLogoutBtn').onclick=async function(){ await auth.signOut(); accountReady=false; window.__accountMode=false; window.__isAdmin=false; updateAdminButtons(); };
     }else{
       box.innerHTML='<button type="button" class="account-action" id="accountOpenBtn">登入／註冊帳號</button><div class="account-note">使用帳號後，角色、卡牌、金幣與隊伍會在不同裝置同步。</div><div id="accountLoginMessage" class="account-message"></div>';
       document.getElementById('accountOpenBtn').onclick=openAccountDialog;
@@ -10084,6 +10093,16 @@ tutorialInjectDom();
     modal.innerHTML='<div class="account-auth-panel"><button type="button" id="accountAuthClose" style="float:right">×</button><h2>帳號登入</h2><input id="accountEmail" type="email" placeholder="Email"><input id="accountPassword" type="password" placeholder="密碼（至少 6 字元）"><div class="account-auth-actions"><button type="button" id="accountSignIn">登入</button><button type="button" id="accountRegister">註冊新帳號</button></div><div id="accountAuthMessage" class="account-message"></div><div class="account-auth-help">訪客資料與帳號資料分開保存；帳號資料可在不同裝置使用。</div></div>';
     document.body.appendChild(modal); updateAccountLogin(); getAuth().catch(function(){ setAccountMessage('無法載入登入服務，請檢查網路。'); });
   }
+  window.__isAdmin=false;
+  const guestOpenAdminPanel=openAdminPanel;
+  openAdminPanel=function(){
+    if(!window.__isAdmin){ alert('只有管理者可以操作後臺。'); return; }
+    return guestOpenAdminPanel();
+  };
+  const adminButton=document.getElementById('adminOpenBtn'); if(adminButton) adminButton.onclick=openAdminPanel;
+  const lobbyAdminButton=document.getElementById('lobbyAdminBtn'); if(lobbyAdminButton) lobbyAdminButton.onclick=openAdminPanel;
+  updateAdminButtons();
+
   // Account-only actions are sent to D1. Local guest behavior remains unchanged.
   const guestSaveTeams=saveTeams;
   saveTeams=function(){

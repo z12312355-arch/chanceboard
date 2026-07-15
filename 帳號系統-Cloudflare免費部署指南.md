@@ -34,3 +34,17 @@
 - 新帳號會從新手教學開始：選一位起始角色，再取得兩次由伺服器發放的免費召喚；初始資源為 500 金幣與 30 鑽石。
 - 帳號模式的抽卡、商店購卡與每日獎勵會由伺服器驗證並儲存。
 - 戰鬥結算的金幣獎勵暫不寫入帳號資料，因為目前戰鬥邏輯全在瀏覽器，不能安全驗證；訪客模式不受影響。
+## 後臺管理者權限
+
+後臺現在由 Cloudflare Pages Function 驗證 Firebase 登入身分，不是只靠前端隱藏按鈕。
+
+1. Firebase Console → Authentication → Users，複製管理者帳號的 **User UID**。
+2. Cloudflare → Workers & Pages → `chanceboard`（Pages 專案）→ Settings → Environment variables。
+3. 在 Production 新增變數：
+   - Name：`ADMIN_UIDS`
+   - Value：貼上管理者的 User UID（多位管理者可用逗號分隔）
+4. 儲存後重新部署一次，登出再登入管理者帳號。
+
+沒有列在 `ADMIN_UIDS` 的帳號，即使知道後臺按鈕或網址，也會被伺服器拒絕。
+
+注意：目前後臺的角色／招式編輯是寫回管理者瀏覽器連結的 `chanceboard_db.js` 檔案；若要讓所有玩家從伺服器取得全域平衡數值，還需要另外建立全域遊戲設定 API。

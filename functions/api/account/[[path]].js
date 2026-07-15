@@ -72,6 +72,14 @@ export async function onRequest(context) {
     const action = Array.isArray(params.path) ? params.path.join('/') : String(params.path || '');
     const body = request.method === 'POST' ? await request.json().catch(() => ({})) : {};
 
+    if (action === 'admin') {
+      const csv = value => String(env[value] || '').split(',').map(v => v.trim()).filter(Boolean);
+      const allowedUids = csv('ADMIN_UIDS');
+      const allowedEmails = csv('ADMIN_EMAILS').map(v => v.toLowerCase());
+      const isAdmin = allowedUids.includes(user.uid) || allowedEmails.includes(user.email.toLowerCase());
+      if (!isAdmin) return json({ admin: false }, 403);
+      return json({ admin: true });
+    }
     if (request.method === 'GET' && action === 'state') return json({ state: profileFromRow(row) });
     if (request.method !== 'POST') return json({ error: 'Unknown API endpoint.' }, 404);
     if (action === 'bootstrap') return json({ state: profileFromRow(row) });
