@@ -9768,6 +9768,7 @@ tutorialInjectDom();
       try {
         state=onlineNormalize(JSON.parse(val.blob));
         onlineLastBlob=val.blob;
+        if(state.selectedPiece) applyBattleBackground(state.selectedPiece);
         if(state.lastMoveEvent && state.lastMoveEvent.id && state.lastMoveEvent.id!==onlineLastFxId){
           pendingEffects.push(state.lastMoveEvent);
           onlineLastFxId=state.lastMoveEvent.id;
