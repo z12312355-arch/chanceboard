@@ -9888,6 +9888,11 @@ tutorialInjectDom();
       if(!teams.length){ alert('請先在大廳建立至少一支隊伍，才能進行跨網對戰。'); return; }
       onlinePendingRoomAction={action:action, roomId:roomId||null};
       pendingMode='online-pre'; pendingTeamIdA=null; pendingTeamIdB=null;
+      // Rebind dynamically here as a final guard: this screen is opened after the
+      // initial page wiring, and the handler must resolve the current multiplayer
+      // confirmTeamPick function instead of an earlier single-player reference.
+      const confirmBtn=document.getElementById('teampickConfirmBtn');
+      if(confirmBtn) confirmBtn.onclick=function(){ confirmTeamPick(); };
       showTopScreen('screen-teampick');
       document.getElementById('pieceChoice').value='random';
       renderTeamPick();
