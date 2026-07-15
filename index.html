@@ -3813,7 +3813,18 @@ function conditionForUnit(unit, move){
 /* ============================================================ */
 /* ============ LOG HELPERS ============ */
 /* ============================================================ */
-function addLog(type, html){ state.log.push({type, html}); }
+// 跨網房間的 state.log 會整份同步到 Firebase。不能把「我方／對方」這種操作者視角
+// 直接存進去，否則 A 寫下的「我方」被 B 收到後也仍會是「我方」。寫入前先把
+// sideTag() 產生的主觀標籤還原成實際 A/B 陣營，畫面 render 時再依各自玩家視角翻譯。
+function normalizeOnlineLogSides(html){
+  const localSide=window.__onlineLocalSide;
+  if(!localSide) return html;
+  const foe=localSide==='A' ? 'B' : 'A';
+  return String(html||'')
+    .replace(/<span class="aside">【我方】<\/span>/g, '<span class="online-side" data-side="'+localSide+'">【'+localSide+'方】</span>')
+    .replace(/<span class="bside">【對方】<\/span>/g, '<span class="online-side" data-side="'+foe+'">【'+foe+'方】</span>');
+}
+function addLog(type, html){ state.log.push({type, html:normalizeOnlineLogSides(html)}); }
 // 戰鬥紀錄的 HTML 產生邏輯只寫一次，兩個地方共用：戰鬥畫面左側常駐的 #log（見 renderBattle()
 // 結尾），跟結束畫面「查看戰鬥紀錄」彈窗的 #bl-body（見 openBattleLogModal()）——兩邊看到的
 // 內容必須完全一樣（同一份 state.log），不用各自維護一份重複的 map/join 邏輯。
@@ -3833,7 +3844,7 @@ function localizeOnlineLogHtml(html){
       .replace(/(<span class="aside">)【[^】]*】(<\/span>)/g, '$1【對方】$2')
       .replace(/(<span class="bside">)【[^】]*】(<\/span>)/g, '$1【我方】$2');
   }
-  return out.replace(/<span class="timeout-side" data-side="([AB])">【[AB]方】<\/span>/g, function(_, side){
+  return out.replace(/<span class="(?:online-side|timeout-side)" data-side="([AB])">【[AB]方】<\/span>/g, function(_, side){
     const mine=side===localSide;
     return '<span class="'+(mine?'aside':'bside')+'">【'+(mine?'我方':'對方')+'】</span>';
   });
