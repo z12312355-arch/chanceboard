@@ -2783,7 +2783,8 @@ function charFullThumbOnErrorAttr(id){
   // 不顯示小頭像（21位角色的縮圖檔案都已確認存在），只有在立繪真的讀取失敗（連_full.png
   // 備援都讀不到）時，才把小頭像秀出來當最終備援——這樣正常情況下畫面上只有立繪本身，
   // 不會再有「先小圖、後立繪」的swap閃爍。
-  return "if(!this.dataset.fallback){this.dataset.fallback='1';this.src='images/"+id+"_full.png';}else{this.style.display='none'; var av=this.parentElement&&this.parentElement.querySelector('.char-avatar.sm'); if(av) av.style.display='';}";
+  // 美術圖不存在時保持空白，不再退回到預設頭像或另一張小圖。
+  return "this.style.display='none';";
 }
 // 使用者反應「為什麼要點擊才會變清楚，不能原本就清楚」：縮圖第一次被插進畫面（不管是
 // 收藏、隊伍列表、雙人選隊伍…）時，瀏覽器才第一次去下載＋解碼那張 _full_thumb.png，
@@ -2821,23 +2822,16 @@ function preloadCharThumbs(){
 window.__imgExistCache = window.__imgExistCache || {};
 function imgLayerHtml(fallbackHtml, src, imgClass, extraOnloadJs){
   const known = window.__imgExistCache[src];
-  if(known===false) return fallbackHtml; // 已知讀不到，連 <img> 都不用放
-  const wrapStyle = known===true ? 'display:none' : 'display:contents';
-  const onload = "window.__imgExistCache['"+src+"']=true; this.previousElementSibling.style.display='none';" + (extraOnloadJs||'');
+  // 不再顯示程式產生的預設 SVG：圖片載入完成前保持隱藏，失敗時留白。
+  if(known===false) return '';
+  const onload = "window.__imgExistCache['"+src+"']=true; this.style.visibility='visible';" + (extraOnloadJs||'');
   const onerror = "window.__imgExistCache['"+src+"']=false; this.remove();";
-  return '<span style="'+wrapStyle+'">'+fallbackHtml+'</span>'
-    + '<img src="'+src+'" class="'+imgClass+'" alt="" onload="'+onload+'" onerror="'+onerror+'">';
+  return '<img src="'+src+'" class="'+imgClass+'" alt="" style="visibility:hidden" onload="'+onload+'" onerror="'+onerror+'">';
 }
-// 有真人美術圖的角色（目前只有 001）會疊一張 <img> 蓋在程式產生的 SVG 頭像上面；
-// 圖片路徑對不到檔案（還沒畫、或檔名不符）時 onerror 直接把自己移除，底下的 SVG 自動露出來，
-// 所以沒有圖的角色完全不受影響，也不用另外維護一份「誰有圖」的清單。
-// _full.png 也是去背透明的插畫（跟 _wide.png 一樣），圖片讀取成功時再額外把底下那層 SVG
-// （這裡一定是 <img> 的前一個 sibling，因為兩者是照順序拼在同一個容器裡）藏起來，
-// 避免角色去背後方露出的透明區域，被底下金框 SVG 的顏色「穿幫」出來。
+// 角色頭像只使用正式美術圖；沒有圖時保持留白，不顯示醜陋的預設圖。
 function charAvatarInnerHtml(baseId, domKey){
-  const svg = charAvatarHtml(baseId, domKey);
-  if(baseId==null) return svg;
-  return imgLayerHtml(svg, 'images/'+baseId+'_full.png', 'char-avatar-img', '');
+  if(baseId==null) return '';
+  return imgLayerHtml('', 'images/'+baseId+'_full.png', 'char-avatar-img', '');
 }
 
 // Elemental advantage triangle (attacker element -> element it counters): 劍剋槍／槍剋法／法剋劍。
@@ -10368,8 +10362,8 @@ tutorialInjectDom();
       const c=CHAR_BY_ID[charId];
       const safeId=String(charId||'');
       return '<div class="online-team-portrait" title="'+escHtml(c ? c.name : '未知角色')+'">'+
-        '<span class="online-team-avatar">'+charAvatarHtml(safeId,key)+'</span>'+
-        '<img src="images/'+safeId+'_wide.png" alt="" onload="this.previousElementSibling.style.display=\'none\'" onerror="this.remove()"></div>';
+        '<span class="online-team-avatar"></span>'+
+        '<img src="images/'+safeId+'_wide.png" alt="" style="visibility:hidden" onload="this.style.visibility=\'visible\'" onerror="this.remove()"></div>';
     }
     function onlineTeamSummaryHtml(team, extraClass){
       const ids=(team && team.characterIds ? team.characterIds : []).slice(0,3);
