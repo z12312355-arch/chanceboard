@@ -5354,6 +5354,16 @@ function playPendingEffects(){
     const ghost = el.cloneNode(true);
     ghost.removeAttribute('id');
     ghost.classList.add('move-ghost');
+    // A unit sharing a cell receives extra .occupantsRow descendant rules
+    // (padding / artwork inset). The detached ghost has no such parent, so copy
+    // the resolved destination geometry instead of letting it fall back to the
+    // single-unit layout and visibly miss the landing point.
+    const copyResolvedStyle = function(source, target, properties){
+      if(!source || !target) return;
+      const style=getComputedStyle(source);
+      properties.forEach(function(property){ target.style[property]=style[property]; });
+    };
+    copyResolvedStyle(el,ghost,['boxSizing','paddingTop','paddingRight','paddingBottom','paddingLeft','borderTopWidth','borderRightWidth','borderBottomWidth','borderLeftWidth','borderRadius']);
     // The clone is moved outside #board, so it no longer inherits the joining
     // player's mirrored-board context. Reapply the exact left/right artwork rule
     // here: the unit displayed on the right faces left on both players' screens.
@@ -5362,6 +5372,11 @@ function playPendingEffects(){
     const movingUnit = (state.teamA||[]).concat(state.teamB||[]).find(function(unit){ return unit.id===m.unitId; });
     const rightSide = perspectiveB ? 'A' : 'B';
     const sourceImages = el.querySelectorAll('.unit-art-img');
+    const sourceArts = el.querySelectorAll('.unit-art');
+    const ghostArts = ghost.querySelectorAll('.unit-art');
+    ghostArts.forEach(function(art,index){
+      copyResolvedStyle(sourceArts[index],art,['position','top','right','bottom','left','width','height','marginTop','marginRight','marginBottom','marginLeft','paddingTop','paddingRight','paddingBottom','paddingLeft','borderRadius','overflow','boxSizing']);
+    });
     ghost.querySelectorAll('.unit-art-img').forEach(function(img,index){
       const source = sourceImages[index];
       if(source){
@@ -5371,6 +5386,7 @@ function playPendingEffects(){
         img.style.width=sourceRect.width+'px';
         img.style.height=sourceRect.height+'px';
         img.style.maxWidth='none'; img.style.maxHeight='none';
+        copyResolvedStyle(source,img,['position','top','right','bottom','left','objectFit','objectPosition','marginTop','marginRight','marginBottom','marginLeft','boxSizing']);
       }
       img.style.transform=(movingUnit && movingUnit.side===rightSide)?'scaleX(-1)':'';
     });
