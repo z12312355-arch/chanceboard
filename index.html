@@ -621,7 +621,7 @@
      #actCardsRow 的 gap 多推出幾 px，導致「小卡欄→花牌欄」的間隔跟其他卡片間隔對不齊。 */
   /* 手牌剛好抽完時，仍保留一排手牌的空間；否則整個出手面板會忽然縮高，
      同一排的招式按鈕也跟著被 fitBattleLayout() 重算得比較小。 */
-  body.battle-mode #act-card-zone{margin:1px 0 0;padding:0;gap:10px;min-height:72px;}
+  body.battle-mode #act-card-zone{margin:1px 0 0;padding:0;gap:10px;min-height:88px;}
   /* 使用者反應「點擊花牌後，他會因為抬起來，所以被擋住」：.cardface.picked 原本的設計（見那條
      基準規則）選中時用 translateY(-11px) 整張卡「跳起來」當作選中提示，這個效果在有充裕留白的
      組卡畫面很好看，但這裡（戰鬥中的出手面板）上面 #act-movegrid 跟這排花牌之間只留了幾 px 的
@@ -1651,6 +1651,7 @@
       width:16px;height:16px;align-items:center;justify-content:center;font-size:9px;
       background:var(--panel);border:1px solid var(--line);border-radius:50%;color:var(--text);
       cursor:pointer;box-shadow:0 1px 3px rgba(0,0,0,.4);}
+    body.battle-mode #act-card-zone{min-height:72px;}
     body.battle-mode #act-card-zone .cardface{width:52px;height:72px;padding:4px 3px;}
     body.battle-mode #act-card-zone .cardface .cf-bigicon{font-size:15px;margin-top:2px;}
     body.battle-mode #act-card-zone .cardface .cf-bigicon-img{width:38px;height:38px;}
