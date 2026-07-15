@@ -990,13 +990,13 @@
      （不分遊戲進行中/結束都會顯示），避免這排內容剛好排到最右邊時跟齒輪鈕疊在一起。 */
   #statusRow{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:10px;padding-right:46px;}
   #orderBar{display:flex;align-items:center;gap:6px;overflow-x:auto;padding:6px 2px;flex:1 1 auto;min-width:0;}
-  .obchip{flex:0 0 auto;background:linear-gradient(180deg,#2a2e40,var(--panel2));border:2px solid var(--line);border-radius:8px;padding:4px 8px;text-align:center;min-width:52px;font-size:11px;box-shadow:0 1px 3px rgba(0,0,0,.3);}
+  .obchip{flex:0 0 auto;background:rgba(28,31,43,.94);border:2px solid var(--line);border-radius:8px;padding:4px 8px;text-align:center;min-width:52px;font-size:11px;box-shadow:0 2px 5px rgba(0,0,0,.35);text-shadow:0 1px 2px #000;}
   .obchip.now{border-color:var(--gold);background:linear-gradient(180deg,#4a4118,#3a340f);box-shadow:0 0 10px 1px rgba(242,193,78,.4);}
   .obchip.side-A{border-left:3px solid var(--a);}
   .obchip.side-B{border-left:3px solid var(--b);}
   .obchip .obname{font-weight:bold;}
   .obchip .obtime{color:var(--muted);font-size:10px;}
-  #orderBarLabel{font-size:12px;color:var(--muted);white-space:nowrap;flex:0 0 auto;cursor:help;}
+  #orderBarLabel{font-size:13px;color:#fff;font-weight:800;white-space:nowrap;flex:0 0 auto;cursor:help;background:rgba(8,10,18,.82);border:1px solid rgba(255,255,255,.24);border-radius:6px;padding:4px 7px;text-shadow:0 1px 3px #000;}
   /* 使用者反應「背景透出來之後，回合資訊／順序：這些純文字看不清楚」：#roundlabel／
      #orderBarLabel 從頭到尾都是「純文字、沒有任何底色」的元素（不像.obchip/.btn有半透明底
      可以調），插畫變透明可見之後直接沒有遮蔽物襯著，字跟插畫顏色一混就容易看不清楚。
@@ -6069,6 +6069,7 @@ function moveActingUnitTo(slot){
   const unit = getActingUnit();
   if(!unit || hasStatus(unit,'禁足')) return;
   if(slot!==unit.slot && !hasFreeMove(unit) && !isAdjacentSlot(unit.slot, slot)) return; // 一次只能移動一格，不能前後直接互跳（瞬步不受此限）
+  queueMoveAnimation(unit);
   state.actMoveTarget = slot;
   render();
 }
@@ -6179,6 +6180,7 @@ function confirmAct(){
   const moveTarget = (state.actMoveTarget!=null) ? state.actMoveTarget : unit.slot;
   if(unit.alive && moveTarget!==unit.slot && (hasFreeMove(unit) || isAdjacentSlot(unit.slot, moveTarget))){
     addLog('info', sideTag(unit)+unitName(unit)+' 移動到 '+slotDistLabel(unit.side,moveTarget));
+    if(window.__onlineLocalSide) state.lastMoveEvent={id:Date.now()+'-'+Math.random().toString(36).slice(2),moveOnly:true,casterId:unit.id,casterSide:unit.side};
     queueMoveAnimation(unit); // 一定要在 unit.slot 真的被改掉之前呼叫，才量得到舊格子的座標
     unit.slot = moveTarget;
     unit._didNotMoveThisTurn = false;
@@ -9746,8 +9748,8 @@ tutorialInjectDom();
         colorStyle=document.createElement('style'); colorStyle.id='online-perspective-colors'; document.head.appendChild(colorStyle);
       }
       colorStyle.textContent=(onlineInRoom && onlineRole==='B') ?
-        '#board.online-perspective-b .cell.side-A,.online-perspective-b .obchip.side-A,.online-perspective-b .hs-side.side-A{border-color:var(--b)!important;box-shadow:inset 0 3px 10px -6px var(--b)}'+
-        '#board.online-perspective-b .cell.side-B,.online-perspective-b .obchip.side-B,.online-perspective-b .hs-side.side-B{border-color:var(--a)!important;box-shadow:inset 0 3px 10px -6px var(--a)}'+
+        '#board.online-perspective-b .cell.side-A{border-top-color:var(--b)!important;box-shadow:inset 0 3px 10px -6px var(--b),inset 0 1px 0 rgba(255,255,255,.05),inset 0 0 24px rgba(0,0,0,.25)}.online-perspective-b .obchip.side-A,.online-perspective-b .hs-side.side-A{border-left-color:var(--b)!important}'+
+        '#board.online-perspective-b .cell.side-B{border-top-color:var(--a)!important;box-shadow:inset 0 3px 10px -6px var(--a),inset 0 1px 0 rgba(255,255,255,.05),inset 0 0 24px rgba(0,0,0,.25)}.online-perspective-b .obchip.side-B,.online-perspective-b .hs-side.side-B{border-left-color:var(--a)!important}'+
         '.online-perspective-b #log .aside{color:var(--b)!important}.online-perspective-b #log .bside{color:var(--a)!important}': '';
       if(onlineInRoom && onlineRole==='B'){
         const log=document.getElementById('log');
@@ -9760,7 +9762,10 @@ tutorialInjectDom();
       if(!onlineInRoom || !onlineGameRef){ onlinePrevController=onlineController(state); onlineUpdateLock(); return; }
       onlineNormalize(state);
       if(state.lastMoveEvent && state.lastMoveEvent.id) onlineLastFxId=state.lastMoveEvent.id;
-      const blob=JSON.stringify(state);
+      const syncState=JSON.parse(JSON.stringify(state));
+      // A slot choice is a local preview until the player confirms the move.
+      syncState.actMoveTarget=null;
+      const blob=JSON.stringify(syncState);
       if(!onlineApplying && blob!==onlineLastBlob){
         if(onlinePrevController===onlineRole){
           onlineGameRef.set({blob:blob, by:onlineRole, ts:Date.now()}).catch(function(e){ console.warn('[Online] push', e); });
@@ -9778,6 +9783,10 @@ tutorialInjectDom();
         onlineLastBlob=val.blob;
         if(state.selectedPiece) applyBattleBackground(state.selectedPiece);
         if(state.lastMoveEvent && state.lastMoveEvent.id && state.lastMoveEvent.id!==onlineLastFxId){
+          const movingUnit=(state.teamA||[]).concat(state.teamB||[]).find(function(u){ return u.id===state.lastMoveEvent.casterId; });
+          if(movingUnit) queueMoveAnimation(movingUnit);
+        }
+        if(state.lastMoveEvent && state.lastMoveEvent.id && !state.lastMoveEvent.moveOnly && state.lastMoveEvent.id!==onlineLastFxId){
           pendingEffects.push(state.lastMoveEvent);
           onlineLastFxId=state.lastMoveEvent.id;
         }
