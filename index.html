@@ -9977,6 +9977,57 @@ tutorialInjectDom();
     let onlineAutoBattleEnabled = false, onlineAutoBattleTimer = null, onlineAutoBattleExecuting = false;
     let onlineTeamPickerExpanded = false;
     let onlineOverlay = null, onlineOverlayText = null, onlineScreen = null;
+    // 跨網戰鬥的立繪必須在切入棋盤前準備完畢；避免首局在戰鬥中才一張張跳出來。
+    let onlineAssetLoading = false, onlineBattleAssetKey = '', onlineBattleAssetPromise = null;
+
+    function onlineSetAssetLoadingText(done,total){
+      if(!onlineOverlay || !onlineOverlayText) return;
+      onlineOverlay.style.display='flex';
+      onlineOverlayText.innerHTML='正在載入戰鬥資源<br><span style="font-size:14px;font-weight:500;color:#cbd7ff">'+done+' / '+total+'</span>';
+    }
+    function onlineBattleAssetUrls(ids){
+      const unique=Array.from(new Set((ids||[]).filter(Boolean).map(String)));
+      const urls=[];
+      unique.forEach(function(id){
+        // 棋盤立繪使用 wide，角色頭像／特效區也可能使用 full，兩種都在此解碼完畢。
+        urls.push('images/'+id+'_wide.png','images/'+id+'_full.png');
+      });
+      return urls;
+    }
+    function onlinePreloadBattleAssets(ids){
+      const urls=onlineBattleAssetUrls(ids);
+      const key=urls.slice().sort().join('|');
+      if(key && key===onlineBattleAssetKey && onlineBattleAssetPromise) return onlineBattleAssetPromise;
+      onlineBattleAssetKey=key;
+      onlineAssetLoading=true;
+      let done=0;
+      onlineSetAssetLoadingText(done,urls.length);
+      onlineBattleAssetPromise=Promise.all(urls.map(function(src){
+        if(window.__imgExistCache && window.__imgExistCache[src]===true){
+          done++; onlineSetAssetLoadingText(done,urls.length); return Promise.resolve();
+        }
+        return new Promise(function(resolve){
+          const img=new Image();
+          try{ img.fetchPriority='high'; }catch(e){}
+          img.decoding='async';
+          const finish=function(ok){
+            if(window.__imgExistCache) window.__imgExistCache[src]=ok;
+            const decoded=ok && img.decode ? img.decode().catch(function(){}) : Promise.resolve();
+            Promise.resolve(decoded).then(function(){ done++; onlineSetAssetLoadingText(done,urls.length); resolve(); });
+          };
+          img.onload=function(){ finish(true); };
+          img.onerror=function(){ finish(false); };
+          img.src=src;
+        });
+      })).then(function(){
+        onlineAssetLoading=false;
+        if(onlineOverlay) onlineOverlay.style.display='none';
+      },function(){
+        onlineAssetLoading=false;
+        if(onlineOverlay) onlineOverlay.style.display='none';
+      });
+      return onlineBattleAssetPromise;
+    }
 
     function onlineConfigured(){ return !!ONLINE_CONFIG.databaseURL; }
     function onlineSelectedTeam(){ return teams.find(function(t){ return t.id===onlineSelectedTeamId; }) || null; }
@@ -10149,9 +10200,21 @@ tutorialInjectDom();
         }
         onlinePrevController=onlineController(state);
         if(state.phase==='act' || state.phase==='end'){
-          showTopScreen('screen-battle');
-          document.body.classList.add('battle-mode');
-          render();
+          // 加入方第一次收到 game blob 時，也要先補齊同一組戰鬥立繪；
+          // 否則房主已預載完、加入方卻會直接看到角色慢慢跳出來。
+          const battleIds=(state.teamA||[]).concat(state.teamB||[]).map(function(u){ return u.baseId; });
+          const battleKey=onlineBattleAssetUrls(battleIds).slice().sort().join('|');
+          const revealBattle=function(){
+            if(state.phase!=='act' && state.phase!=='end') return;
+            showTopScreen('screen-battle');
+            document.body.classList.add('battle-mode');
+            render();
+          };
+          if(battleKey!==onlineBattleAssetKey || onlineAssetLoading){
+            onlinePreloadBattleAssets(battleIds).then(revealBattle);
+          } else {
+            revealBattle();
+          }
         }
       } catch(e){ console.warn('[Online] apply', e); }
       onlineApplying=false;
@@ -10388,9 +10451,12 @@ tutorialInjectDom();
         onlineBuildMatch(snap.val());
       });
     }
-    function onlineBuildMatch(meta){
+    async function onlineBuildMatch(meta){
       const a=meta&&meta.setupA, b=meta&&meta.setupB;
       if(!a || !b) return;
+      // 先把這一局雙方真正會用到的立繪下載／解碼完，完成後才建立戰鬥棋盤。
+      await onlinePreloadBattleAssets((a.characterIds||[]).concat(b.characterIds||[]));
+      if(!onlineInRoom || !onlineMetaRef) return;
       state=newState(); twoPlayerMode=true; currentMatchSize=3;
       state.selectedIds=a.characterIds.slice(0,3); state.selectedIdsB=b.characterIds.slice(0,3);
       state.customDeck=expandDeckDraft(a.deck); state.customDeckOrder=shuffle(state.customDeck.map(function(_,i){ return i; }));
@@ -10406,6 +10472,8 @@ tutorialInjectDom();
 
     function onlineUpdateLock(){
       if(!onlineOverlay) return;
+      // 戰鬥資源尚在下載時，保留進度層，不要被一般的回合鎖定更新蓋掉。
+      if(onlineAssetLoading) return;
       // No full-screen wait layer: the battle board remains visible throughout.
       onlineOverlay.style.display='none'; onlineOverlayText.textContent='';
     }
