@@ -7436,13 +7436,31 @@ function renderBattle(){
   const moveGrid = document.getElementById('act-movegrid');
   const actCardZone = document.getElementById('act-card-zone');
 
+  // Online players never see the opponent's hand or move controls. During the
+  // opponent's turn keep this area on the local player's information instead.
+  const onlineLocalSide = window.__onlineLocalSide;
+  const isOnlineOpponentTurn = !!onlineLocalSide && currentActUnit && currentActUnit.side!==onlineLocalSide;
+
 
   // 使用者反應單人對戰打AI「常常搞不清楚對方做了什麼」：第一版修法是輪到電腦對手時整個
   // actPanel 加 .hidden 藏起來（避免面板誤給對手用），但使用者接著反應「不希望我的操作介面
   // 不見」——版面整塊消失/清空、忽隱忽現會跳動。改成單人對戰下輪到電腦對手時，面板繼續顯示
   // 內容（那個角色目前的招式/卡面，純資訊、可以看但不能點），只是整塊變灰＋擋掉點擊
   // （見上面CSS #actPanel.opp-turn-disabled 的說明），不再整個隱藏。
-  if(state.phase==='act' && currentActUnit){
+  if(isOnlineOpponentTurn){
+    actPanel.classList.remove('hidden');
+    actPanel.classList.add('opp-turn-disabled');
+    actHint.textContent='對手回合中：等待你的角色行動';
+    actSlotRow.innerHTML='<span class="slotrow-label">你的手牌</span>';
+    moveGrid.innerHTML='<div style="color:var(--muted);font-size:12px;grid-column:1/-1;">輪到你時，這裡會顯示該角色可使用的招式。</div>';
+    actCardZone.innerHTML='';
+    const ownUnit=(onlineLocalSide==='A'?state.teamA:state.teamB).find(function(u){ return u.alive; });
+    if(ownUnit){
+      suitHandEntries(ownUnit).forEach(function(entry){ actCardZone.appendChild(renderCardFace(entry.card,{isCustom:entry.source==='custom'})); });
+      combinedFlowerHand(ownUnit).forEach(function(entry){ actCardZone.appendChild(renderCardFace(entry.card,{isCustom:entry.source==='custom'})); });
+    }
+    fitActCardsRow();
+  } else if(state.phase==='act' && currentActUnit){
     actPanel.classList.remove('hidden');
     const isOpponentAiTurn = !twoPlayerMode && currentActUnit.side==='B';
     actPanel.classList.toggle('opp-turn-disabled', isOpponentAiTurn);
@@ -9657,7 +9675,7 @@ tutorialInjectDom();
     let onlineRoomId = null, onlineRole = null, onlineInRoom = false;
     let onlineRootRef = null, onlineGameRef = null, onlineMetaRef = null;
     let onlineListRef = null, onlineRooms = {}, onlineMeta = null;
-    let onlineLastBlob = null, onlineApplying = false, onlinePrevController = 'A';
+    let onlineLastBlob = null, onlineApplying = false, onlinePrevController = 'A', onlineSetupShown = false;
     let onlineOverlay = null, onlineOverlayText = null, onlineScreen = null;
 
     function onlineConfigured(){ return !!ONLINE_CONFIG.databaseURL; }
@@ -9678,7 +9696,25 @@ tutorialInjectDom();
       __onlinePreviousRender.apply(this, arguments);
       try { onlineAfterRender(); } catch(e){ console.warn('[Online] render', e); }
     };
+    // In online matches, show only hand counts for the opponent. The source state is
+    // shared, but cards themselves remain private to their owner on each screen.
+    const __onlinePreviousHandSummary = renderHandSummary;
+    renderHandSummary = function(){
+      if(!onlineInRoom || !onlineRole) return __onlinePreviousHandSummary.apply(this, arguments);
+      const own=onlineRole, foe=own==='A'?'B':'A';
+      const cardCount=function(side){ return (side==='A'?state.handA:state.handB).length+(side==='A'?state.handCustomA:state.handCustomB).length; };
+      const row=document.getElementById('handSummaryRow');
+      row.innerHTML='<div class="hs-side side-'+own+'"><b>你的手牌</b><span class="hs-chip">共 <span class="n">'+cardCount(own)+'</span> 張</span></div>'+
+        '<div class="hs-side side-'+foe+'"><b>對手手牌</b><span class="hs-chip">共 <span class="n">'+cardCount(foe)+'</span> 張</span></div>'+
+        '<div class="hs-side side-shared"><b>🔗 共用牌庫</b><span class="hs-chip">牌庫 <span class="n">'+state.drawPublic.length+'</span></span><span class="hs-chip">棄牌堆 <span class="n">'+state.discardPublic.length+'</span></span></div>';
+    };
+    function onlineApplyPerspective(){
+      const board=document.getElementById('board');
+      if(board) board.classList.toggle('online-perspective-b', onlineInRoom && onlineRole==='B');
+      window.__onlineLocalSide=onlineInRoom?onlineRole:null;
+    }
     function onlineAfterRender(){
+      onlineApplyPerspective();
       if(!onlineInRoom || !onlineGameRef){ onlinePrevController=onlineController(state); onlineUpdateLock(); return; }
       onlineNormalize(state);
       const blob=JSON.stringify(state);
@@ -9745,12 +9781,14 @@ tutorialInjectDom();
       if(onlineGameRef) onlineGameRef.off();
       if(onlineMetaRef) onlineMetaRef.off();
       onlineRootRef=onlineGameRef=onlineMetaRef=null;
-      onlineRoomId=onlineRole=null; onlineInRoom=false; onlineMeta=null; onlineLastBlob=null;
+      onlineRoomId=onlineRole=null; onlineInRoom=false; onlineMeta=null; onlineLastBlob=null; onlineSetupShown=false; window.__onlineLocalSide=null;
       onlineUpdateLock();
     }
     function attachOnlineRoom(id, role){
       stopListing();
       onlineRoomId=id; onlineRole=role; onlineInRoom=true;
+      // Set the local perspective before the first remote state is rendered.
+      window.__onlineLocalSide=role;
       onlineRootRef=onlineDb.ref('rooms/'+id);
       onlineGameRef=onlineRootRef.child('game');
       onlineMetaRef=onlineRootRef.child('meta');
@@ -9762,6 +9800,7 @@ tutorialInjectDom();
           onlineMetaRef.onDisconnect().cancel();
         }
         renderOnlineLobby();
+        onlineHandleSetup();
       });
       renderOnlineLobby();
     }
@@ -9806,10 +9845,59 @@ tutorialInjectDom();
     }
     function startOnlineMatch(){
       if(onlineRole!=='A' || !onlineMeta || onlineMeta.status!=='ready') return;
-      onlineMetaRef.update({status:'playing',startedAt:Date.now()});
+      onlineMetaRef.update({status:'setup',setupA:null,setupB:null,setupStartedAt:Date.now()});
       try { onlineRootRef.onDisconnect().cancel(); } catch(e){}
-      twoPlayerMode=true;
-      goToTeamPick('two');
+    }
+    function onlineTeamPayload(team){
+      return {id:String(team.id||''),name:String(team.name||''),characterIds:team.characterIds.slice(0,3),deck:JSON.parse(JSON.stringify(team.deck||{}))};
+    }
+    function openOnlineTeamSetup(){
+      if(!onlineInRoom || !onlineRole || !onlineMeta || onlineMeta.status!=='setup') return;
+      if(!teams.length){ alert('請先在大廳建立至少一支隊伍，才能進行跨網對戰。'); goToLobby(); return; }
+      onlineSetupShown=true;
+      pendingMode='online'; pendingTeamIdA=null; pendingTeamIdB=null;
+      showTopScreen('screen-teampick');
+      document.getElementById('pieceChoice').value='random';
+      renderTeamPick();
+      document.getElementById('teampick-heading').textContent='跨網對戰：選擇你的隊伍';
+      const note=document.getElementById('teampick-noteams-hint'); if(note) note.textContent='選好後送出；對手也會在自己的裝置選擇隊伍。';
+    }
+    const __onlinePreviousConfirmTeamPick=confirmTeamPick;
+    confirmTeamPick=function(){
+      if(!(onlineInRoom && pendingMode==='online')) return __onlinePreviousConfirmTeamPick.apply(this,arguments);
+      const team=teams.find(function(t){ return t.id===pendingTeamIdA; });
+      if(!team) return;
+      const field=onlineRole==='A'?'setupA':'setupB';
+      onlineMetaRef.update({[field]:onlineTeamPayload(team)}).then(function(){
+        showTopScreen('screen-online'); renderOnlineLobby();
+      }).catch(function(e){ alert('送出隊伍失敗：'+e.message); });
+    };
+    function onlineHandleSetup(){
+      if(!onlineInRoom || !onlineMeta) return;
+      if(onlineMeta.status==='setup'){
+        const ownField=onlineRole==='A'?'setupA':'setupB';
+        if(!onlineMeta[ownField] && !onlineSetupShown) openOnlineTeamSetup();
+        if(onlineRole==='A' && onlineMeta.setupA && onlineMeta.setupB) onlineClaimMatchStart();
+      }
+    }
+    function onlineClaimMatchStart(){
+      onlineMetaRef.transaction(function(meta){
+        if(!meta || meta.status!=='setup' || !meta.setupA || !meta.setupB) return;
+        return Object.assign({},meta,{status:'starting'});
+      },function(err,committed,snap){
+        if(err || !committed) return;
+        onlineBuildMatch(snap.val());
+      });
+    }
+    function onlineBuildMatch(meta){
+      const a=meta&&meta.setupA, b=meta&&meta.setupB;
+      if(!a || !b) return;
+      state=newState(); twoPlayerMode=true; currentMatchSize=3;
+      state.selectedIds=a.characterIds.slice(0,3); state.selectedIdsB=b.characterIds.slice(0,3);
+      state.customDeck=expandDeckDraft(a.deck); state.customDeckOrder=shuffle(state.customDeck.map(function(_,i){ return i; }));
+      state.customDeckB=expandDeckDraft(b.deck); state.customDeckOrderB=shuffle(state.customDeckB.map(function(_,i){ return i; }));
+      onlinePrevController='A'; startGame();
+      onlineMetaRef.update({status:'playing',startedAt:Date.now()});
     }
     function copyOnlineLink(){
       const link=location.origin+location.pathname+'?room='+onlineRoomId;
@@ -9819,11 +9907,8 @@ tutorialInjectDom();
 
     function onlineUpdateLock(){
       if(!onlineOverlay) return;
-      let lock=false, msg='';
-      if(onlineInRoom && state && (state.phase==='act'||state.phase==='end') && onlineController(state)!==onlineRole){
-        lock=true; msg=(state.phase==='end')?'對戰結束':'對手回合，請稍候…';
-      }
-      onlineOverlay.style.display=lock?'flex':'none'; onlineOverlayText.textContent=msg;
+      // No full-screen wait layer: the battle board remains visible throughout.
+      onlineOverlay.style.display='none'; onlineOverlayText.textContent='';
     }
 
     function roomCardsHtml(){
@@ -9840,7 +9925,14 @@ tutorialInjectDom();
       let body='';
       if(onlineInRoom){
         const status=(onlineMeta&&onlineMeta.status)||'waiting';
-        if(onlineRole==='A'){
+        if(status==='setup' || status==='starting'){
+          const ownReady=!!(onlineMeta && onlineMeta[onlineRole==='A'?'setupA':'setupB']);
+          const foeReady=!!(onlineMeta && onlineMeta[onlineRole==='A'?'setupB':'setupA']);
+          body='<div class="online-wait-icon">'+(ownReady?'✅':'🧩')+'</div><h2>'+(!ownReady?'選擇你的隊伍':'隊伍已送出')+'</h2>'+
+            '<p>'+(!ownReady?'請在自己的裝置選擇一支隊伍。':(foeReady?'正在建立戰局…':'等待對手選擇隊伍…'))+'</p>'+
+            (!ownReady?'<button class="btn primary" id="onlineChooseTeam">選擇我的隊伍</button>':'')+
+            '<button class="btn online-cancel" id="onlineCancel">離開房間</button>';
+        } else if(onlineRole==='A'){
           const ready=status==='ready';
           body='<div class="online-wait-icon">'+(ready?'🤝':'⌛')+'</div>'+
             '<h2>'+ (ready?'對手已加入！':'房間已建立') +'</h2>'+
@@ -9865,6 +9957,7 @@ tutorialInjectDom();
       document.querySelectorAll('.online-join').forEach(function(btn){ btn.onclick=function(){ joinOnlineRoom(btn.dataset.room); }; });
       const copy=document.getElementById('onlineCopy'); if(copy) copy.onclick=copyOnlineLink;
       const start=document.getElementById('onlineStart'); if(start) start.onclick=startOnlineMatch;
+      const choose=document.getElementById('onlineChooseTeam'); if(choose) choose.onclick=openOnlineTeamSetup;
       const cancel=document.getElementById('onlineCancel'); if(cancel) cancel.onclick=leaveOnlineRoom;
     }
     function openOnlineLobby(){
@@ -9876,7 +9969,7 @@ tutorialInjectDom();
       if(!document.getElementById('screen-online')){
         TOP_SCREEN_IDS.push('screen-online');
         const css=document.createElement('style');
-        css.textContent='#screen-online{max-width:760px;margin:28px auto;padding:0;min-height:560px;background:linear-gradient(145deg,rgba(26,29,42,.98),rgba(11,13,21,.98));border:1px solid rgba(242,193,78,.42);border-radius:16px;box-shadow:0 16px 42px rgba(0,0,0,.52);color:#ececf3;overflow:hidden}.online-head{display:flex;align-items:center;justify-content:space-between;padding:18px 22px;border-bottom:1px solid rgba(242,193,78,.23);background:rgba(0,0,0,.16)}.online-title{font-size:23px;font-weight:800;color:#f2c14e}.online-sub{font-size:12px;color:#aeb2c4;margin-top:2px}.online-body{padding:22px}.online-toolbar{display:flex;gap:10px;margin-bottom:12px}.online-hint{color:#bfc2d0;font-size:13px;margin-bottom:16px}.online-room-list{display:grid;gap:10px}.online-room-card{display:flex;justify-content:space-between;align-items:center;gap:16px;padding:15px 16px;border:1px solid rgba(255,255,255,.13);border-radius:10px;background:rgba(255,255,255,.045)}.online-room-card b{display:block;color:#fff;letter-spacing:.06em}.online-room-card small{display:block;color:#aeb2c4;margin-top:4px}.online-empty{padding:35px 18px;text-align:center;color:#aeb2c4;border:1px dashed rgba(255,255,255,.18);border-radius:10px}.online-wait-icon{text-align:center;font-size:44px;margin:18px 0 8px}.online-body>h2,.online-body>p{text-align:center}.online-body>p{color:#bfc2d0}.online-code{font-family:monospace;font-size:28px;letter-spacing:.16em;text-align:center;color:#f2c14e;margin:22px auto;padding:12px;border:1px solid rgba(242,193,78,.32);border-radius:9px;max-width:280px}.online-body>#onlineCopy,.online-body>#onlineStart,.online-body>#onlineCancel{display:block;width:min(330px,100%);margin:10px auto}.online-cancel{opacity:.8}@media(max-width:600px){#screen-online{margin:10px;min-height:calc(100vh - 20px)}.online-room-card{align-items:flex-start;flex-direction:column}.online-room-card .online-join{width:100%}}';
+        css.textContent='#board.online-perspective-b{transform:scaleX(-1)}#board.online-perspective-b .cell{transform:scaleX(-1)}#screen-online{max-width:760px;margin:28px auto;padding:0;min-height:560px;background:linear-gradient(145deg,rgba(26,29,42,.98),rgba(11,13,21,.98));border:1px solid rgba(242,193,78,.42);border-radius:16px;box-shadow:0 16px 42px rgba(0,0,0,.52);color:#ececf3;overflow:hidden}.online-head{display:flex;align-items:center;justify-content:space-between;padding:18px 22px;border-bottom:1px solid rgba(242,193,78,.23);background:rgba(0,0,0,.16)}.online-title{font-size:23px;font-weight:800;color:#f2c14e}.online-sub{font-size:12px;color:#aeb2c4;margin-top:2px}.online-body{padding:22px}.online-toolbar{display:flex;gap:10px;margin-bottom:12px}.online-hint{color:#bfc2d0;font-size:13px;margin-bottom:16px}.online-room-list{display:grid;gap:10px}.online-room-card{display:flex;justify-content:space-between;align-items:center;gap:16px;padding:15px 16px;border:1px solid rgba(255,255,255,.13);border-radius:10px;background:rgba(255,255,255,.045)}.online-room-card b{display:block;color:#fff;letter-spacing:.06em}.online-room-card small{display:block;color:#aeb2c4;margin-top:4px}.online-empty{padding:35px 18px;text-align:center;color:#aeb2c4;border:1px dashed rgba(255,255,255,.18);border-radius:10px}.online-wait-icon{text-align:center;font-size:44px;margin:18px 0 8px}.online-body>h2,.online-body>p{text-align:center}.online-body>p{color:#bfc2d0}.online-code{font-family:monospace;font-size:28px;letter-spacing:.16em;text-align:center;color:#f2c14e;margin:22px auto;padding:12px;border:1px solid rgba(242,193,78,.32);border-radius:9px;max-width:280px}.online-body>#onlineCopy,.online-body>#onlineStart,.online-body>#onlineCancel{display:block;width:min(330px,100%);margin:10px auto}.online-cancel{opacity:.8}@media(max-width:600px){#screen-online{margin:10px;min-height:calc(100vh - 20px)}.online-room-card{align-items:flex-start;flex-direction:column}.online-room-card .online-join{width:100%}}';
         document.head.appendChild(css);
         onlineScreen=document.createElement('div'); onlineScreen.id='screen-online'; onlineScreen.className='panel hidden';
         document.getElementById('app').appendChild(onlineScreen);
