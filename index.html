@@ -9892,7 +9892,14 @@ tutorialInjectDom();
       // initial page wiring, and the handler must resolve the current multiplayer
       // confirmTeamPick function instead of an earlier single-player reference.
       const confirmBtn=document.getElementById('teampickConfirmBtn');
-      if(confirmBtn) confirmBtn.onclick=function(){ confirmTeamPick(); };
+      if(confirmBtn) confirmBtn.onclick=function(){
+        const team=teams.find(function(t){ return t.id===pendingTeamIdA; });
+        if(!team || !onlinePendingRoomAction) return;
+        const selectedAction=onlinePendingRoomAction;
+        onlinePendingRoomAction=null; pendingMode=null;
+        if(selectedAction.action==='create') createOnlineRoomAfterPick(team);
+        else joinOnlineRoomAfterPick(selectedAction.roomId, team);
+      };
       showTopScreen('screen-teampick');
       document.getElementById('pieceChoice').value='random';
       renderTeamPick();
