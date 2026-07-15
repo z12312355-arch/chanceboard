@@ -9999,7 +9999,7 @@ tutorialInjectDom();
     projectId:'chanceboard',
     appId:'1:144089217775:web:3659b974333dcf23a9b91a'
   };
-  let auth=null, currentUser=null, accountReady=false, preferenceSyncTimer=null;
+  let auth=null, currentUser=null, accountReady=false, authResolved=false, preferenceSyncTimer=null;
   window.__accountMode=false;
   const loadScript=function(src){ return new Promise(function(resolve,reject){
     if(document.querySelector('script[src="'+src+'"]')) return resolve();
@@ -10011,7 +10011,7 @@ tutorialInjectDom();
     await loadScript('https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js');
     try{ firebase.initializeApp(ACCOUNT_FIREBASE_CONFIG); }catch(e){}
     auth=firebase.auth();
-    auth.onAuthStateChanged(function(user){ currentUser=user; updateAccountLogin(); if(user) loadAccount(); });
+    auth.onAuthStateChanged(function(user){ authResolved=true; currentUser=user; updateAccountLogin(); if(user) loadAccount(); });
     return auth;
   }
   async function accountApi(action, body){
@@ -10063,8 +10063,9 @@ tutorialInjectDom();
   function setAccountMessage(msg){ const el=document.getElementById('accountLoginMessage'); if(el) el.textContent=msg||''; }
   function updateAccountLogin(){
     const box=document.getElementById('accountLoginBox'), enter=document.getElementById('loginEnterBtn'); if(!box||!enter) return;
-    enter.querySelector('.lobby-btn-label').textContent=currentUser?(accountReady?'以帳號進入遊戲':'載入帳號資料中…'):'訪客進入遊戲';
-    enter.disabled=!!currentUser&&!accountReady;
+    enter.querySelector('.lobby-btn-label').textContent=!authResolved?'確認登入狀態中…':(currentUser?(accountReady?'以帳號進入遊戲':'載入帳號資料中…'):'訪客進入遊戲');
+    // Do not allow a refresh race to turn an already signed-in player into a guest.
+    enter.disabled=!authResolved || (!!currentUser&&!accountReady);
     if(currentUser){
       box.innerHTML='<div class="account-email">已登入：'+escapeHtml(currentUser.email||'')+'</div><button type="button" class="account-action" id="accountLogoutBtn">登出帳號</button><div id="accountLoginMessage" class="account-message"></div>';
       document.getElementById('accountLogoutBtn').onclick=async function(){ await auth.signOut(); accountReady=false; window.__accountMode=false; window.__isAdmin=false; updateAdminButtons(); };
