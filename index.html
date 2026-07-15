@@ -9887,24 +9887,39 @@ tutorialInjectDom();
     function openOnlinePreRoomTeamPick(action, roomId){
       if(!teams.length){ alert('請先在大廳建立至少一支隊伍，才能進行跨網對戰。'); return; }
       onlinePendingRoomAction={action:action, roomId:roomId||null};
-      pendingMode='online-pre'; pendingTeamIdA=null; pendingTeamIdB=null;
-      // Rebind dynamically here as a final guard: this screen is opened after the
-      // initial page wiring, and the handler must resolve the current multiplayer
-      // confirmTeamPick function instead of an earlier single-player reference.
-      const confirmBtn=document.getElementById('teampickConfirmBtn');
-      if(confirmBtn) confirmBtn.onclick=function(){
-        const team=teams.find(function(t){ return t.id===pendingTeamIdA; });
-        if(!team || !onlinePendingRoomAction) return;
+      // Do not reuse screen-teampick here. That screen is also used by local play,
+      // and its "開始遊戲" handler can be rebound by the normal game flow. A
+      // dedicated online picker keeps room creation/joining completely separate.
+      pendingMode=null; pendingTeamIdA=null; pendingTeamIdB=null;
+      showTopScreen('screen-online');
+      if(!onlineScreen) return;
+      const actionLabel=action==='create'?'建立房間':'加入房間';
+      onlineScreen.innerHTML='<div class="online-head"><div><div class="online-title">🌐 '+actionLabel+'</div><div class="online-sub">先選擇本次對戰使用的隊伍</div></div><button class="btn small" id="onlineTeamPickBack">✕</button></div>'+ 
+        '<div class="online-body"><h2>選擇你的隊伍</h2><p>選擇後才會'+actionLabel+'，不會直接開始本機遊戲。</p><div id="onlineTeamPickList" class="online-room-list"></div><button class="btn primary" id="onlineTeamPickConfirm" disabled>確認'+actionLabel+'</button></div>';
+      const list=document.getElementById('onlineTeamPickList');
+      const confirm=document.getElementById('onlineTeamPickConfirm');
+      let selectedTeam=null;
+      teams.forEach(function(team){
+        const card=document.createElement('button');
+        card.type='button'; card.className='online-room-card';
+        card.style.cssText='width:100%;text-align:left;cursor:pointer;color:inherit;';
+        card.innerHTML='<span><b>'+escHtml(team.name||'未命名隊伍')+'</b><small>角色 '+(team.characterIds||[]).length+' 名・自訂卡組 10 張</small></span><span style="color:#f2c14e;font-weight:700;">選擇</span>';
+        card.onclick=function(){
+          selectedTeam=team;
+          list.querySelectorAll('.online-room-card').forEach(function(el){ el.style.borderColor='rgba(255,255,255,.13)'; el.style.background='rgba(255,255,255,.045)'; });
+          card.style.borderColor='rgba(242,193,78,.95)'; card.style.background='rgba(242,193,78,.13)';
+          confirm.disabled=false;
+        };
+        list.appendChild(card);
+      });
+      document.getElementById('onlineTeamPickBack').onclick=function(){ onlinePendingRoomAction=null; renderOnlineLobby(); };
+      confirm.onclick=function(){
+        if(!selectedTeam || !onlinePendingRoomAction) return;
         const selectedAction=onlinePendingRoomAction;
-        onlinePendingRoomAction=null; pendingMode=null;
-        if(selectedAction.action==='create') createOnlineRoomAfterPick(team);
-        else joinOnlineRoomAfterPick(selectedAction.roomId, team);
+        onlinePendingRoomAction=null;
+        if(selectedAction.action==='create') createOnlineRoomAfterPick(selectedTeam);
+        else joinOnlineRoomAfterPick(selectedAction.roomId, selectedTeam);
       };
-      showTopScreen('screen-teampick');
-      document.getElementById('pieceChoice').value='random';
-      renderTeamPick();
-      document.getElementById('teampick-heading').textContent=action==='create'?'建立房間：先選擇隊伍':'加入房間：先選擇隊伍';
-      const note=document.getElementById('teampick-noteams-hint'); if(note){ note.textContent='請先選擇一支已儲存的隊伍，確認後才會建立或加入房間。'; note.style.display='block'; }
     }
     function createOnlineRoom(){ openOnlinePreRoomTeamPick('create'); }
     function createOnlineRoomAfterPick(team){
