@@ -16,3 +16,11 @@ CREATE TABLE IF NOT EXISTS players (
   created_at INTEGER NOT NULL,
   updated_at INTEGER NOT NULL
 );
+
+-- One shared row for live game balance and economy settings.  Player data remains
+-- per-account in `players`; this table is deliberately global and admin-only.
+CREATE TABLE IF NOT EXISTS game_config (
+  config_key TEXT PRIMARY KEY,
+  value TEXT NOT NULL,
+  updated_at INTEGER NOT NULL
+);

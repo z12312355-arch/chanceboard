@@ -2367,7 +2367,9 @@ function loadPersistedAdminEdits(){
     (saved.cards||[]).forEach(sc=>{ const live = DB.cards.find(c=>c.id===sc.id); if(live) Object.assign(live, sc); });
   } catch(e){ /* 存的資料壞掉或無法讀取 localStorage，就當作沒存過，直接用內建預設值 */ }
 }
-loadPersistedAdminEdits();
+// Global balance is loaded from the protected D1 API after account sign-in.  Do
+// not restore old browser-only admin edits: those were device-local and could
+// make one player use different rules from everybody else.
 // 給後臺面板顯示用：localStorage 裡目前有沒有先前「套用」保存過的編輯（如果有，它會蓋在
 // 資料來源之上——不管資料來源是外部 chanceboard_db.js 還是內建備援快照）。用函式即時檢查
 // （不是常數），這樣按「全部還原」清掉 localStorage 之後，面板上的提示也能立刻反映最新狀態。
@@ -2381,6 +2383,25 @@ const CARD_BY_ID = {}; DB.cards.forEach(c=>CARD_BY_ID[c.id]=c);
 const CARD_BY_NAME = {}; DB.cards.forEach(c=>CARD_BY_NAME[c.name]=c);
 const STATUS_BY_NAME = {}; DB.statuses.forEach(s=>STATUS_BY_NAME[s.name]=s);
 const DECKW_BY_CARDID = {}; DB.deckWeights.forEach(w=>DECKW_BY_CARDID[w.cardId]=w);
+
+let globalEconomySettings = {dailyGold:200,dailyDiamond:5,goldGachaOneCost:100,goldGachaTenCost:1000,diamondGachaOneCost:10,diamondGachaTenCost:100};
+function applyGlobalGameConfig(config){
+  if(!config || typeof config!=='object') return;
+  ['characters','moves','cards'].forEach(function(key){
+    if(!Array.isArray(config[key])) return;
+    const liveList=DB[key]||[];
+    config[key].forEach(function(saved){
+      const live=liveList.find(function(item){ return String(item.id)===String(saved && saved.id); });
+      if(live && saved && typeof saved==='object') Object.assign(live,saved);
+    });
+  });
+  if(config.settings && typeof config.settings==='object') globalEconomySettings=Object.assign({},globalEconomySettings,config.settings);
+  if(typeof updateGachaCostDisplay==='function') updateGachaCostDisplay();
+  if(typeof renderShopGrid==='function' && document.getElementById('shopCardGrid')) renderShopGrid();
+}
+function globalGameConfigPayload(){
+  return {characters:DB.characters,moves:DB.moves,cards:DB.cards,settings:globalEconomySettings};
+}
 const SUIT_CARD_IDS = DB.cards.filter(c=>c.isSuitCard).map(c=>c.id); // ['001'..'004']
 const FLOWER_CARD_IDS = DB.cards.filter(c=>!c.isSuitCard).map(c=>c.id);
 const DECKBUILD_CARD_IDS = SUIT_CARD_IDS.concat(FLOWER_CARD_IDS); // custom deck can include suit cards too
@@ -6414,8 +6435,8 @@ function updateGachaCostDisplay(){
   const c10 = document.getElementById('gachaCost10');
   if(!c1 || !c10) return;
   const isGold = gachaActiveCurrency==='gold';
-  const cost1 = isGold ? GACHA_GOLD_COST_1 : GACHA_DIAMOND_COST_1;
-  const cost10 = isGold ? GACHA_GOLD_COST_10 : GACHA_DIAMOND_COST_10;
+  const cost1 = isGold ? globalEconomySettings.goldGachaOneCost : globalEconomySettings.diamondGachaOneCost;
+  const cost10 = isGold ? globalEconomySettings.goldGachaTenCost : globalEconomySettings.diamondGachaTenCost;
   const icon = isGold ? '💰' : '💎';
   c1.textContent = icon+' '+cost1;
   c10.textContent = icon+' '+cost10;
@@ -6443,8 +6464,8 @@ function setGachaCurrency(currency){
 function doGachaPull(count){
   const isGold = gachaActiveCurrency==='gold';
   const cost = isGold
-    ? (count===1 ? GACHA_GOLD_COST_1 : GACHA_GOLD_COST_10)
-    : (count===1 ? GACHA_DIAMOND_COST_1 : GACHA_DIAMOND_COST_10);
+    ? (count===1 ? globalEconomySettings.goldGachaOneCost : globalEconomySettings.goldGachaTenCost)
+    : (count===1 ? globalEconomySettings.diamondGachaOneCost : globalEconomySettings.diamondGachaTenCost);
   const balance = isGold ? goldAmount : diamondAmount;
   if(balance < cost){
     alert('「'+(isGold?'金幣':'鑽石')+'」不夠喔，還差 '+(cost-balance)+'，先去對戰或簽到賺一點再回來吧！');
@@ -8185,6 +8206,7 @@ fsaTryRestoreHandle();
 function openAdminPanel(){
   document.getElementById('adminBackdrop').classList.remove('hidden');
   if(!adminSelectedCharId && DB.characters.length) adminSelectedCharId = DB.characters[0].id;
+  renderAdminAccountManager();
   renderAdminCharList();
   renderAdminForm();
   renderAdminDbSourceInfo();
@@ -8224,13 +8246,12 @@ async function applyAdminCardShopPrices(){
     if(v==='' || isNaN(n) || n<0){ anyInvalid = true; return; }
     CARD_BY_ID[cardId].shopPrice = n;
   });
-  persistAdminEditsToLocalStorage();
   msg.textContent = '⏳ 套用中…'; msg.className = 'admin-msg';
-  const writeResult = await writeLinkedDbFile();
-  if(writeResult.ok) lastLinkedWriteError = null;
-  const desc = describeApplyResult(writeResult);
-  msg.textContent = (anyInvalid ? '⚠️ 有價格是空白／非數字／負數，那幾張沒套用（其餘已套用）。' : '') + desc.text;
-  msg.className = anyInvalid ? 'admin-msg err' : desc.cls;
+  try{
+    await saveGlobalAdminConfig();
+    msg.textContent=(anyInvalid ? '⚠️ 有價格無效，該項未套用；其餘價格已全域儲存。' : '✅ 卡牌價格已全域儲存。');
+    msg.className=anyInvalid ? 'admin-msg err' : 'admin-msg';
+  }catch(e){ msg.textContent='❌ 全域儲存失敗：'+e.message; msg.className='admin-msg err'; }
   renderAdminDbSourceInfo();
   // 商店畫面如果剛好開著，改完價格馬上反映（不用手動重整）。
   renderShopGrid();
@@ -8241,9 +8262,7 @@ async function resetAdminCardShopPrices(){
     const live = CARD_BY_ID[cardId];
     if(orig && live) delete live.shopPrice; // 沒有shopPrice欄位 = cardShopPrice()退回DEFAULT_CARD_SHOP_PRICE
   });
-  persistAdminEditsToLocalStorage();
-  const r = await writeLinkedDbFile();
-  lastLinkedWriteError = (linkedDbHandle && !r.ok) ? r : null;
+  try{ await saveGlobalAdminConfig(); }catch(e){ alert('全域還原失敗：'+e.message); }
   renderAdminCardShopList();
   renderAdminDbSourceInfo();
   renderShopGrid();
@@ -8381,7 +8400,95 @@ function readText(id){
   return el ? el.value : undefined;
 }
 
-// 根據 writeLinkedDbFile() 的結果，決定「套用」按下去之後要顯示的訊息文字。
+async function saveGlobalAdminConfig(){
+  if(typeof window.__adminAccountApi!=='function') throw new Error('請先以管理者帳號登入。');
+  const result=await window.__adminAccountApi('admin-config',{config:globalGameConfigPayload()});
+  applyGlobalGameConfig(result.config);
+  return result.config;
+}
+let adminManagedPlayers=[];
+let adminManagedPlayer=null;
+function adminManagerField(label,id,type,value){
+  return '<label style="display:block;margin:7px 0 3px;font-size:12px;color:var(--muted)">'+label+'<input id="'+id+'" type="'+(type||'text')+'" value="'+String(value==null?'':value).replace(/&/g,'&amp;').replace(/"/g,'&quot;')+'" style="display:block;width:100%;margin-top:3px"></label>';
+}
+function adminManagerJson(label,id,value){
+  return '<label style="display:block;margin:7px 0 3px;font-size:12px;color:var(--muted)">'+label+'<textarea id="'+id+'" rows="4" style="display:block;width:100%;margin-top:3px;resize:vertical">'+JSON.stringify(value==null?{}:value,null,2).replace(/</g,'&lt;')+'</textarea></label>';
+}
+function renderAdminAccountManager(){
+  const form=document.getElementById('admin-form');
+  if(!form) return;
+  let box=document.getElementById('admin-account-manager');
+  if(!box){
+    box=document.createElement('section');
+    box.id='admin-account-manager';
+    box.className='admin-section';
+    box.style.cssText='margin:12px 0;padding:12px;border:1px solid var(--line);border-radius:10px;background:rgba(0,0,0,.16)';
+    form.parentNode.insertBefore(box,form);
+  }
+  box.innerHTML='<h3 style="margin:0 0 8px">☁️ 全域帳號與經濟管理</h3>'
+    +'<p style="margin:0 0 9px;font-size:12px;color:var(--muted)">角色、招式、卡牌價格、抽卡成本與每日獎勵會儲存在 D1，所有玩家重新載入後都會收到相同設定。</p>'
+    +'<div class="admin-grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px">'
+    +adminManagerField('每日金幣','global-daily-gold','number',globalEconomySettings.dailyGold)
+    +adminManagerField('每日鑽石','global-daily-diamond','number',globalEconomySettings.dailyDiamond)
+    +adminManagerField('金幣單抽','global-gold-one','number',globalEconomySettings.goldGachaOneCost)
+    +adminManagerField('金幣十抽','global-gold-ten','number',globalEconomySettings.goldGachaTenCost)
+    +adminManagerField('鑽石單抽','global-diamond-one','number',globalEconomySettings.diamondGachaOneCost)
+    +adminManagerField('鑽石十抽','global-diamond-ten','number',globalEconomySettings.diamondGachaTenCost)
+    +'</div><button type="button" class="btn primary small" id="admin-save-economy">儲存全域抽卡／每日設定</button>'
+    +'<hr style="border:0;border-top:1px solid var(--line);margin:14px 0"><h3 style="margin:0 0 8px">👤 玩家帳號資料</h3>'
+    +'<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><select id="admin-player-select" style="min-width:260px;max-width:100%;flex:1"><option value="">載入玩家清單後選擇帳號</option></select><button type="button" class="btn small" id="admin-refresh-players">重新整理玩家</button></div>'
+    +'<div id="admin-player-editor" style="margin-top:8px;color:var(--muted);font-size:12px">請先選擇玩家。</div><div id="admin-manager-msg" class="admin-msg"></div>';
+  document.getElementById('admin-save-economy').onclick=async function(){
+    const read=id=>Number(document.getElementById(id).value);
+    const next={dailyGold:read('global-daily-gold'),dailyDiamond:read('global-daily-diamond'),goldGachaOneCost:read('global-gold-one'),goldGachaTenCost:read('global-gold-ten'),diamondGachaOneCost:read('global-diamond-one'),diamondGachaTenCost:read('global-diamond-ten')};
+    const msg=document.getElementById('admin-manager-msg');
+    if(Object.values(next).some(n=>!Number.isInteger(n)||n<0)){msg.textContent='❌ 請輸入有效的非負整數。';msg.className='admin-msg err';return;}
+    globalEconomySettings=Object.assign({},globalEconomySettings,next);
+    try{await saveGlobalAdminConfig();msg.textContent='✅ 全域抽卡與每日獎勵設定已儲存。';msg.className='admin-msg';}catch(e){msg.textContent='❌ 儲存失敗：'+e.message;msg.className='admin-msg err';}
+  };
+  document.getElementById('admin-refresh-players').onclick=refreshAdminManagedPlayers;
+  document.getElementById('admin-player-select').onchange=function(){if(this.value) loadAdminManagedPlayer(this.value);};
+  if(adminManagedPlayers.length) populateAdminPlayerSelect();
+}
+function adminManagerMessage(text,error){const el=document.getElementById('admin-manager-msg');if(el){el.textContent=text;el.className=error?'admin-msg err':'admin-msg';}}
+function populateAdminPlayerSelect(){
+  const select=document.getElementById('admin-player-select'); if(!select) return;
+  const selected=adminManagedPlayer&&adminManagedPlayer.uid;
+  select.replaceChildren();
+  const first=document.createElement('option'); first.value=''; first.textContent='選擇要管理的帳號'; select.appendChild(first);
+  adminManagedPlayers.forEach(function(player){const option=document.createElement('option');option.value=player.uid;option.textContent=(player.email||player.uid)+' ・ '+player.gold+' 金 / '+player.diamond+' 鑽';if(player.uid===selected)option.selected=true;select.appendChild(option);});
+}
+async function refreshAdminManagedPlayers(){
+  try{const result=await window.__adminAccountApi('admin-players');adminManagedPlayers=result.players||[];populateAdminPlayerSelect();adminManagerMessage('✅ 已載入 '+adminManagedPlayers.length+' 個帳號。');}
+  catch(e){adminManagerMessage('❌ 無法讀取玩家：'+e.message,true);}
+}
+async function loadAdminManagedPlayer(uid){
+  try{const result=await window.__adminAccountApi('admin-player?uid='+encodeURIComponent(uid));adminManagedPlayer=result.player;renderAdminManagedPlayerEditor();}
+  catch(e){adminManagerMessage('❌ 無法讀取玩家資料：'+e.message,true);}
+}
+function renderAdminManagedPlayerEditor(){
+  const holder=document.getElementById('admin-player-editor');if(!holder||!adminManagedPlayer)return;
+  const player=adminManagedPlayer,state=player.state;
+  holder.style.color='var(--text)';
+  holder.innerHTML='<div style="font-size:12px;color:var(--muted);margin-bottom:5px">'+(player.email||'無 Email')+'<br>UID：'+player.uid+'</div>'
+    +'<div class="admin-grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px">'+adminManagerField('金幣','managed-gold','number',state.gold)+adminManagerField('鑽石','managed-diamond','number',state.diamond)+adminManagerField('每日獎勵日期（清空可重領）','managed-daily','text',state.dailyBonusDate||'')+'</div>'
+    +'<label style="font-size:12px"><input id="managed-tutorial" type="checkbox" '+(state.tutorialDone?'checked':'')+'> 已完成新手教學</label> '
+    +'<label style="font-size:12px">新手陣營 <select id="managed-faction"><option value="black" '+(state.tutorialFaction==='black'?'selected':'')+'>小黑</option><option value="white" '+(state.tutorialFaction==='white'?'selected':'')+'>小白</option></select></label> '
+    +adminManagerField('大廳立繪角色 ID（清空＝預設）','managed-hero','text',state.lobbyHeroId||'')
+    +adminManagerJson('擁有角色 ID（陣列）','managed-owned',state.ownedCharIds)+adminManagerJson('角色星級（物件）','managed-stars',state.charStars)+adminManagerJson('持有卡牌（物件）','managed-cards',state.ownedCardCounts)+adminManagerJson('隊伍（陣列；每副牌合計必須 10 張）','managed-teams',state.teams)+adminManagerJson('帳號設定（物件）','managed-settings',state.settings)
+    +'<button type="button" class="btn primary small" id="admin-save-player">儲存此帳號</button>';
+  document.getElementById('admin-save-player').onclick=saveAdminManagedPlayer;
+}
+async function saveAdminManagedPlayer(){
+  if(!adminManagedPlayer)return;
+  const parse=id=>JSON.parse(document.getElementById(id).value);
+  let state;
+  try{const hero=document.getElementById('managed-hero').value.trim();state={gold:Number(document.getElementById('managed-gold').value),diamond:Number(document.getElementById('managed-diamond').value),dailyBonusDate:document.getElementById('managed-daily').value.trim(),tutorialDone:document.getElementById('managed-tutorial').checked,tutorialFaction:document.getElementById('managed-faction').value,lobbyHeroId:hero||null,ownedCharIds:parse('managed-owned'),charStars:parse('managed-stars'),ownedCardCounts:parse('managed-cards'),teams:parse('managed-teams'),settings:parse('managed-settings')};}
+  catch(e){adminManagerMessage('❌ JSON 格式錯誤：'+e.message,true);return;}
+  try{const result=await window.__adminAccountApi('admin-player-update',{uid:adminManagedPlayer.uid,state:state});adminManagedPlayer=result.player;renderAdminManagedPlayerEditor();adminManagerMessage('✅ 帳號資料已更新。');await refreshAdminManagedPlayers();}
+  catch(e){adminManagerMessage('❌ 儲存帳號資料失敗：'+e.message,true);}
+}
+// 舊版會寫入本機檔案／localStorage；現在一律寫入 D1 的全域設定。
 function describeApplyResult(writeResult){
   if(writeResult.ok){
     return { text: '✅ 已套用，並直接寫回資料庫檔案 chanceboard_db.js（下次開遊戲會直接讀到這次的修改，換電腦、換瀏覽器也一樣）', cls: 'admin-msg' };
@@ -8414,12 +8521,9 @@ async function applyAdminChar(charId){
   c.hp = hp; c.atk = atk; c.def = def; c.spd = spd;
   c.element = document.getElementById('admin-char-element').value;
   c.gachaWeight = gachaWeight;
-  persistAdminEditsToLocalStorage();
   msg.textContent = '⏳ 套用中…'; msg.className = 'admin-msg';
-  const writeResult = await writeLinkedDbFile();
-  if(writeResult.ok) lastLinkedWriteError = null;
-  const desc = describeApplyResult(writeResult);
-  msg.textContent = desc.text; msg.className = desc.cls;
+  try{ await saveGlobalAdminConfig(); msg.textContent='✅ 已儲存為全域設定，所有帳號下次載入會套用。'; msg.className='admin-msg'; }
+  catch(e){ msg.textContent='❌ 全域儲存失敗：'+e.message; msg.className='admin-msg err'; return; }
   // 只更新左側清單跟表單標題文字（不整個重畫表單），避免剛顯示的成功訊息被重畫掉。
   renderAdminCharList();
   const titleDisplay = document.getElementById('admin-char-title-display');
@@ -8467,12 +8571,9 @@ async function applyAdminMove(moveId){
   m.description = document.getElementById('admin-move-'+moveId+'-description').value;
   m.effectOps = effectOpsParsed;
   m.name = moveName;
-  persistAdminEditsToLocalStorage();
   msg.textContent = '⏳ 套用中…'; msg.className = 'admin-msg';
-  const writeResult = await writeLinkedDbFile();
-  if(writeResult.ok) lastLinkedWriteError = null;
-  const desc = describeApplyResult(writeResult);
-  msg.textContent = desc.text; msg.className = desc.cls;
+  try{ await saveGlobalAdminConfig(); msg.textContent='✅ 已儲存為全域設定，所有帳號下次載入會套用。'; msg.className='admin-msg'; }
+  catch(e){ msg.textContent='❌ 全域儲存失敗：'+e.message; msg.className='admin-msg err'; return; }
   const titleDisplay = document.getElementById('admin-move-'+moveId+'-title-display');
   if(titleDisplay) titleDisplay.textContent = (CLASS_ICON[m.slot]||'🔹')+' '+m.name+'（'+m.slot+'招）';
   renderAdminDbSourceInfo();
@@ -8487,9 +8588,7 @@ async function resetAdminChar(charId){
   if(!orig || !live) return;
   Object.keys(live).forEach(k=>{ delete live[k]; });
   Object.assign(live, JSON.parse(JSON.stringify(orig)));
-  persistAdminEditsToLocalStorage();
-  const r = await writeLinkedDbFile();
-  lastLinkedWriteError = (linkedDbHandle && !r.ok) ? r : null;
+  try{ await saveGlobalAdminConfig(); }catch(e){ alert('全域還原失敗：'+e.message); }
   renderAdminCharList(); renderAdminForm(); renderAdminDbSourceInfo();
 }
 async function resetAdminMove(moveId){
@@ -8498,9 +8597,7 @@ async function resetAdminMove(moveId){
   if(!orig || !live) return;
   Object.keys(live).forEach(k=>{ delete live[k]; });
   Object.assign(live, JSON.parse(JSON.stringify(orig)));
-  persistAdminEditsToLocalStorage();
-  const r = await writeLinkedDbFile();
-  lastLinkedWriteError = (linkedDbHandle && !r.ok) ? r : null;
+  try{ await saveGlobalAdminConfig(); }catch(e){ alert('全域還原失敗：'+e.message); }
   renderAdminForm(); renderAdminDbSourceInfo();
 }
 async function resetAdminAll(){
@@ -8512,11 +8609,7 @@ async function resetAdminAll(){
     const orig = ORIGINAL_DB_SNAPSHOT.moves.find(x=>x.id===m.id);
     if(orig){ Object.keys(m).forEach(k=>delete m[k]); Object.assign(m, JSON.parse(JSON.stringify(orig))); }
   });
-  // 全部還原＝連永久保存的那份也一起清掉，而不是把「還原後的預設值」重新存一次
-  // （效果一樣，但這樣比較乾淨，localStorage 裡不會留著一份跟內建預設值重複的資料）。
-  try{ localStorage.removeItem(ADMIN_LS_KEY); } catch(e){}
-  const r = await writeLinkedDbFile();
-  lastLinkedWriteError = (linkedDbHandle && !r.ok) ? r : null;
+  try{ await saveGlobalAdminConfig(); }catch(e){ alert('全域還原失敗：'+e.message); }
   renderAdminCharList(); renderAdminForm(); renderAdminDbSourceInfo();
 }
 
@@ -10370,6 +10463,8 @@ tutorialInjectDom();
     if(!res.ok) throw new Error(data.error||'帳號資料讀取失敗。');
     return data;
   }
+  // 後臺全域設定與玩家管理共用同一個、已驗證 Firebase 身分的 API 入口。
+  window.__adminAccountApi=accountApi;
   function applyAccountState(p){
     if(!p) return;
     goldAmount=Number(p.gold)||0; diamondAmount=Number(p.diamond)||0;
@@ -10396,6 +10491,17 @@ tutorialInjectDom();
     const visible=!!window.__isAdmin;
     ['adminOpenBtn','lobbyAdminBtn'].forEach(function(id){ const el=document.getElementById(id); if(el) el.style.display=visible?'':'none'; });
   }
+  // 這些舊按鈕只能改目前瀏覽器的記憶體、localStorage 或下載一份檔案，並不會同步到玩家；
+  // 全數撤下，改由 D1 的全域設定與帳號管理器處理。
+  function removeUnsupportedAdminControls(){
+    ['adminLinkDbBtn','adminUnlinkDbBtn','adminExportHtmlBtn','adminExportJsonBtn','adminResetGachaBtn','adminUnlockAllMaxStarBtn','adminResetCardsBtn','adminMaxAllFlowerCardsBtn','adminAddGoldBtn','adminAddDiamondBtn','adminResetDailyBonusBtn','adminResetTutorialBtn'].forEach(function(id){
+      const el=document.getElementById(id); if(el) el.remove();
+    });
+    renderAdminDbSourceInfo=function(){
+      const source=document.getElementById('admin-db-source');
+      if(source) source.textContent='☁️ 資料來源：D1 全域設定（角色／招式／卡牌價格／抽卡與每日獎勵會同步給所有玩家）';
+    };
+  }
   async function checkAdmin(){
     window.__isAdmin=false;
     try{ const result=await accountApi('admin'); window.__isAdmin=!!result.admin; }catch(e){}
@@ -10403,8 +10509,9 @@ tutorialInjectDom();
   }
   async function loadAccount(){
     try{
-      const data=await accountApi('bootstrap',{}); accountReady=true; window.__accountMode=true; applyAccountState(data.state);
+      const data=await accountApi('bootstrap',{}); accountReady=true; window.__accountMode=true; applyGlobalGameConfig(data.config); applyAccountState(data.state);
       await checkAdmin();
+      if(window.__isAdmin) removeUnsupportedAdminControls();
       updateAccountLogin();
     }catch(e){ accountReady=false; window.__accountMode=false; window.__isAdmin=false; updateAdminButtons(); setAccountMessage('帳號後端尚未完成：'+e.message); }
   }
