@@ -9900,7 +9900,7 @@ tutorialInjectDom();
     projectId:'chanceboard',
     appId:'1:144089217775:web:3659b974333dcf23a9b91a'
   };
-  let auth=null, currentUser=null, accountReady=false, syncTimer=null;
+  let auth=null, currentUser=null, accountReady=false, preferenceSyncTimer=null;
   window.__accountMode=false;
   const loadScript=function(src){ return new Promise(function(resolve,reject){
     if(document.querySelector('script[src="'+src+'"]')) return resolve();
@@ -9993,7 +9993,17 @@ tutorialInjectDom();
   }
   // Account-only actions are sent to D1. Local guest behavior remains unchanged.
   const guestSaveTeams=saveTeams;
-  saveTeams=function(){ if(!accountReady) return guestSaveTeams(); clearTimeout(syncTimer); syncTimer=setTimeout(async function(){ try{ const d=await accountApi('teams',{teams:teams}); applyAccountState(d.state); }catch(e){ console.warn('[Account] teams',e); } },350); };
+  saveTeams=function(){
+    if(!accountReady) return guestSaveTeams();
+    // Team data is important enough to save immediately. Previously this used the
+    // same debounce timer as preferences, so a later setting update could cancel
+    // the team request and the team vanished after the next login.
+    const snapshot=JSON.parse(JSON.stringify(teams));
+    accountApi('teams',{teams:snapshot}).catch(function(e){
+      console.warn('[Account] teams',e);
+      alert('隊伍尚未同步成功：'+e.message+'\n請確認網路後再儲存一次。');
+    });
+  };
   const guestGacha=doGachaPull;
   doGachaPull=async function(count){
     if(!accountReady) return guestGacha(count);
@@ -10055,7 +10065,7 @@ tutorialInjectDom();
   const guestSaveSettings=saveSettings, guestSaveLobbyHeroChoice=saveLobbyHeroChoice;
   function queuePreferences(){
     if(!accountReady) return;
-    clearTimeout(syncTimer); syncTimer=setTimeout(async function(){
+    clearTimeout(preferenceSyncTimer); preferenceSyncTimer=setTimeout(async function(){
       try{ const d=await accountApi('preferences',{settings:{speedIdx:autoBattleSpeedIdx,sound:soundEnabled,music:musicEnabled},tutorialFaction:tutorialFaction,lobbyHeroId:loadLobbyHeroChoice()}); applyAccountState(d.state); }
       catch(e){ console.warn('[Account] preferences',e); }
     },350);
