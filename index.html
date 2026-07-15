@@ -1870,6 +1870,11 @@
             <span class="lobby-btn-label">雙人對戰</span>
             <span class="lobby-btn-desc">本機雙人，黑白方各挑一隊</span>
           </button>
+          <button type="button" class="lobby-btn" id="lobbyOnlineBtn">
+            <span class="lobby-btn-icon">🌐</span>
+            <span class="lobby-btn-label">跨網對戰</span>
+            <span class="lobby-btn-desc">瀏覽房間、建立房間，與其他玩家即時對戰</span>
+          </button>
           <button type="button" class="lobby-btn" id="lobbyTeamsBtn">
             <span class="lobby-btn-icon">🛡️</span>
             <span class="lobby-btn-label">隊伍</span>
@@ -9599,11 +9604,13 @@ tutorialInjectDom();
   }
 
   /* ---- 啟動 ---- */
-  if(document.body){ buildUI(); } else {
+  // 介面已由下方的「房間大廳」版本接管；保留此舊同步核心僅供相容，
+  // 不再建立浮動面板或處理邀請連結。
+  if(false && document.body){ buildUI(); } else if(false) {
     document.addEventListener('DOMContentLoaded', buildUI);
   }
   // 邀請連結帶 ?room=XXXX 時自動加入（免輸入房號）
-  try {
+  if(false) try {
     const m = /[?&]room=([A-Za-z0-9]+)/.exec(location.search);
     if(m){
       const auto = m[1].toUpperCase();
@@ -9618,6 +9625,260 @@ tutorialInjectDom();
   } catch(err){ console.warn('[MP] 多人連線模組初始化失敗（不影響單機）：', err); }
 })();
 /* ==================== 跨網對戰模組結束 ==================== */
+
+/* ==================== 跨網房間大廳 ====================
+   取代舊的左上角浮動面板。等待中的房間只在 meta.status==='waiting'
+   時出現在清單；加入動作用 Firebase transaction 原子搶位，避免兩位
+   玩家同時點同一房而都以為自己加入成功。 */
+(function setupOnlineRoomLobby(){
+  try {
+    const FB_SDK_ONLINE = [
+      'https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js',
+      'https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js'
+    ];
+    const ONLINE_CONFIG = {
+      apiKey: 'AIzaSyBGg5KcXJmiQGCdCnEQ_hn4knulcemyKhY',
+      authDomain: 'chanceboard.firebaseapp.com',
+      databaseURL: 'https://chanceboard-default-rtdb.asia-southeast1.firebasedatabase.app',
+      projectId: 'chanceboard',
+      appId: '1:144089217775:web:3659b974333dcf23a9b91a'
+    };
+
+    let onlineDb = null, onlineReady = false;
+    let onlineRoomId = null, onlineRole = null, onlineInRoom = false;
+    let onlineRootRef = null, onlineGameRef = null, onlineMetaRef = null;
+    let onlineListRef = null, onlineRooms = {}, onlineMeta = null;
+    let onlineLastBlob = null, onlineApplying = false, onlinePrevController = 'A';
+    let onlineOverlay = null, onlineOverlayText = null, onlineScreen = null;
+
+    function onlineConfigured(){ return !!ONLINE_CONFIG.databaseURL; }
+    function onlineNormalize(st){ if(st){ st.autoBattle=false; st.autoBattleB=false; } return st; }
+    function onlineController(st){
+      if(!st) return 'A';
+      if(st.phase==='act'){
+        const u = (st.teamA||[]).concat(st.teamB||[]).find(function(x){ return x && x.id===st.actingUnitId; });
+        return u ? u.side : onlinePrevController;
+      }
+      return 'A';
+    }
+
+    /* 把本地動作送上去。舊模組仍包住 render()，但因為它已不會入房，
+       只有此模組會對 Firebase 寫入狀態。 */
+    const __onlinePreviousRender = render;
+    render = function(){
+      __onlinePreviousRender.apply(this, arguments);
+      try { onlineAfterRender(); } catch(e){ console.warn('[Online] render', e); }
+    };
+    function onlineAfterRender(){
+      if(!onlineInRoom || !onlineGameRef){ onlinePrevController=onlineController(state); onlineUpdateLock(); return; }
+      onlineNormalize(state);
+      const blob=JSON.stringify(state);
+      if(!onlineApplying && blob!==onlineLastBlob){
+        if(onlinePrevController===onlineRole){
+          onlineGameRef.set({blob:blob, by:onlineRole, ts:Date.now()}).catch(function(e){ console.warn('[Online] push', e); });
+        }
+        onlineLastBlob=blob;
+      }
+      onlinePrevController=onlineController(state);
+      onlineUpdateLock();
+    }
+    function onlineApplyRemote(val){
+      if(!val || !val.blob || val.blob===onlineLastBlob) return;
+      onlineApplying=true;
+      try {
+        state=onlineNormalize(JSON.parse(val.blob));
+        onlineLastBlob=val.blob;
+        onlinePrevController=onlineController(state);
+        if(state.phase==='act' || state.phase==='end'){
+          showTopScreen('screen-battle');
+          document.body.classList.add('battle-mode');
+          render();
+        }
+      } catch(e){ console.warn('[Online] apply', e); }
+      onlineApplying=false;
+      onlineUpdateLock();
+    }
+
+    function loadOnlineFirebase(done){
+      if(window.firebase && window.firebase.database){ done(); return; }
+      let i=0;
+      (function next(){
+        if(i>=FB_SDK_ONLINE.length){ done(); return; }
+        const s=document.createElement('script');
+        s.src=FB_SDK_ONLINE[i++]; s.onload=next;
+        s.onerror=function(){ alert('無法載入 Firebase，請確認網路連線後重試。'); };
+        document.head.appendChild(s);
+      })();
+    }
+    function ensureOnlineFirebase(done){
+      loadOnlineFirebase(function(){
+        if(!onlineReady){
+          try { firebase.initializeApp(ONLINE_CONFIG); } catch(e){}
+          onlineDb=firebase.database(); onlineReady=true;
+        }
+        done();
+      });
+    }
+
+    function onlineGenId(){ return Math.random().toString(36).slice(2,7).toUpperCase(); }
+    function stopListing(){
+      if(onlineListRef){ onlineListRef.off(); onlineListRef=null; }
+    }
+    function startListing(){
+      if(onlineListRef || !onlineDb) return;
+      onlineListRef=onlineDb.ref('rooms').orderByChild('meta/status').equalTo('waiting');
+      onlineListRef.on('value', function(snap){ onlineRooms=snap.val()||{}; renderOnlineLobby(); });
+    }
+    function detachOnlineRoom(){
+      if(onlineGameRef) onlineGameRef.off();
+      if(onlineMetaRef) onlineMetaRef.off();
+      onlineRootRef=onlineGameRef=onlineMetaRef=null;
+      onlineRoomId=onlineRole=null; onlineInRoom=false; onlineMeta=null; onlineLastBlob=null;
+      onlineUpdateLock();
+    }
+    function attachOnlineRoom(id, role){
+      stopListing();
+      onlineRoomId=id; onlineRole=role; onlineInRoom=true;
+      onlineRootRef=onlineDb.ref('rooms/'+id);
+      onlineGameRef=onlineRootRef.child('game');
+      onlineMetaRef=onlineRootRef.child('meta');
+      onlineGameRef.on('value', function(snap){ onlineApplyRemote(snap.val()); });
+      onlineMetaRef.on('value', function(snap){
+        onlineMeta=snap.val();
+        // 加入者在房主按「開始設定」後，不再把斷線狀態改回等待房。
+        if(onlineRole==='B' && onlineMeta && onlineMeta.status==='playing'){
+          onlineMetaRef.onDisconnect().cancel();
+        }
+        renderOnlineLobby();
+      });
+      renderOnlineLobby();
+    }
+
+    function createOnlineRoom(){
+      ensureOnlineFirebase(function(){
+        const id=onlineGenId(), root=onlineDb.ref('rooms/'+id);
+        root.transaction(function(current){
+          if(current) return; // 極低機率撞號時不覆蓋既有房
+          return {meta:{status:'waiting',createdAt:Date.now()}};
+        }, function(err, committed){
+          if(err || !committed){ alert('建立房間失敗，請再試一次。'); return; }
+          attachOnlineRoom(id,'A');
+          // 房主離開「等待中」畫面就刪除房，清單不會留下幽靈房。
+          onlineRootRef.onDisconnect().remove();
+        });
+      });
+    }
+    function joinOnlineRoom(id){
+      ensureOnlineFirebase(function(){
+        const root=onlineDb.ref('rooms/'+id), metaRef=root.child('meta');
+        metaRef.transaction(function(meta){
+          if(!meta || meta.status!=='waiting') return;
+          return Object.assign({},meta,{status:'ready',guestJoinedAt:Date.now()});
+        }, function(err, committed){
+          if(err){ alert('加入房間失敗，請重試。'); return; }
+          if(!committed){ alert('這個房間剛剛已被其他玩家加入或已關閉。'); return; }
+          attachOnlineRoom(id,'B');
+          // 開戰前如果加入者斷線，房間回到可加入狀態。
+          onlineMetaRef.onDisconnect().update({status:'waiting',guestJoinedAt:null});
+        });
+      });
+    }
+    function leaveOnlineRoom(){
+      const root=onlineRootRef, role=onlineRole, status=onlineMeta && onlineMeta.status;
+      if(!root){ goToLobby(); return; }
+      if(role==='A' && status!=='playing') root.remove();
+      else if(role==='B' && status==='ready') root.child('meta').update({status:'waiting',guestJoinedAt:null});
+      try { root.onDisconnect().cancel(); root.child('meta').onDisconnect().cancel(); } catch(e){}
+      detachOnlineRoom();
+      goToLobby();
+    }
+    function startOnlineMatch(){
+      if(onlineRole!=='A' || !onlineMeta || onlineMeta.status!=='ready') return;
+      onlineMetaRef.update({status:'playing',startedAt:Date.now()});
+      try { onlineRootRef.onDisconnect().cancel(); } catch(e){}
+      twoPlayerMode=true;
+      goToTeamPick('two');
+    }
+    function copyOnlineLink(){
+      const link=location.origin+location.pathname+'?room='+onlineRoomId;
+      if(navigator.clipboard) navigator.clipboard.writeText(link);
+      alert('邀請連結已複製：\n'+link);
+    }
+
+    function onlineUpdateLock(){
+      if(!onlineOverlay) return;
+      let lock=false, msg='';
+      if(onlineInRoom && state && (state.phase==='act'||state.phase==='end') && onlineController(state)!==onlineRole){
+        lock=true; msg=(state.phase==='end')?'對戰結束':'對手回合，請稍候…';
+      }
+      onlineOverlay.style.display=lock?'flex':'none'; onlineOverlayText.textContent=msg;
+    }
+
+    function roomCardsHtml(){
+      const rows=Object.keys(onlineRooms).map(function(id){ return {id:id,meta:onlineRooms[id]&&onlineRooms[id].meta}; })
+        .filter(function(r){ return r.meta && r.meta.status==='waiting'; })
+        .sort(function(a,b){ return (b.meta.createdAt||0)-(a.meta.createdAt||0); });
+      if(!rows.length) return '<div class="online-empty">目前沒有等待中的房間。建立一間，等待第一位對手吧！</div>';
+      return rows.map(function(r){
+        return '<div class="online-room-card"><div><b>房間 '+r.id+'</b><small>等待一位玩家加入</small></div><button class="btn primary online-join" data-room="'+r.id+'">加入</button></div>';
+      }).join('');
+    }
+    function renderOnlineLobby(){
+      if(!onlineScreen) return;
+      let body='';
+      if(onlineInRoom){
+        const status=(onlineMeta&&onlineMeta.status)||'waiting';
+        if(onlineRole==='A'){
+          const ready=status==='ready';
+          body='<div class="online-wait-icon">'+(ready?'🤝':'⌛')+'</div>'+
+            '<h2>'+ (ready?'對手已加入！':'房間已建立') +'</h2>'+
+            '<p>'+ (ready?'可以開始設定對戰。':'正在等待其他玩家加入這個房間…') +'</p>'+
+            '<div class="online-code">'+onlineRoomId+'</div>'+
+            '<button class="btn" id="onlineCopy">複製邀請連結</button>'+
+            (ready?'<button class="btn primary" id="onlineStart">開始對戰設定</button>':'')+
+            '<button class="btn online-cancel" id="onlineCancel">取消並返回大廳</button>';
+        } else {
+          body='<div class="online-wait-icon">🤝</div><h2>已加入房間</h2><p>等待房主開始對戰設定…</p>'+
+            '<div class="online-code">'+onlineRoomId+'</div><button class="btn online-cancel" id="onlineCancel">離開房間</button>';
+        }
+      } else {
+        body='<div class="online-toolbar"><button class="btn primary" id="onlineCreate">＋ 建立房間</button><button class="btn" id="onlineRefresh">↻ 重新整理</button></div>'+
+          '<div class="online-hint">選擇一個等待中的房間即可加入；建立房間後等待對手加入。</div>'+
+          '<div id="onlineRoomList" class="online-room-list">'+roomCardsHtml()+'</div>';
+      }
+      onlineScreen.innerHTML='<div class="online-head"><div><div class="online-title">🌐 跨網對戰</div><div class="online-sub">即時房間大廳</div></div><button class="btn small" id="onlineBack">✕</button></div><div class="online-body">'+body+'</div>';
+      document.getElementById('onlineBack').onclick=function(){ onlineInRoom?leaveOnlineRoom():goToLobby(); };
+      const create=document.getElementById('onlineCreate'); if(create) create.onclick=createOnlineRoom;
+      const refresh=document.getElementById('onlineRefresh'); if(refresh){ refresh.onclick=function(){ stopListing(); startListing(); renderOnlineLobby(); }; }
+      document.querySelectorAll('.online-join').forEach(function(btn){ btn.onclick=function(){ joinOnlineRoom(btn.dataset.room); }; });
+      const copy=document.getElementById('onlineCopy'); if(copy) copy.onclick=copyOnlineLink;
+      const start=document.getElementById('onlineStart'); if(start) start.onclick=startOnlineMatch;
+      const cancel=document.getElementById('onlineCancel'); if(cancel) cancel.onclick=leaveOnlineRoom;
+    }
+    function openOnlineLobby(){
+      if(!onlineConfigured()){ alert('Firebase 尚未設定。'); return; }
+      showTopScreen('screen-online');
+      ensureOnlineFirebase(function(){ if(!onlineInRoom) startListing(); renderOnlineLobby(); });
+    }
+    function buildOnlineLobby(){
+      if(!document.getElementById('screen-online')){
+        TOP_SCREEN_IDS.push('screen-online');
+        const css=document.createElement('style');
+        css.textContent='#screen-online{max-width:760px;margin:28px auto;padding:0;min-height:560px;background:linear-gradient(145deg,rgba(26,29,42,.98),rgba(11,13,21,.98));border:1px solid rgba(242,193,78,.42);border-radius:16px;box-shadow:0 16px 42px rgba(0,0,0,.52);color:#ececf3;overflow:hidden}.online-head{display:flex;align-items:center;justify-content:space-between;padding:18px 22px;border-bottom:1px solid rgba(242,193,78,.23);background:rgba(0,0,0,.16)}.online-title{font-size:23px;font-weight:800;color:#f2c14e}.online-sub{font-size:12px;color:#aeb2c4;margin-top:2px}.online-body{padding:22px}.online-toolbar{display:flex;gap:10px;margin-bottom:12px}.online-hint{color:#bfc2d0;font-size:13px;margin-bottom:16px}.online-room-list{display:grid;gap:10px}.online-room-card{display:flex;justify-content:space-between;align-items:center;gap:16px;padding:15px 16px;border:1px solid rgba(255,255,255,.13);border-radius:10px;background:rgba(255,255,255,.045)}.online-room-card b{display:block;color:#fff;letter-spacing:.06em}.online-room-card small{display:block;color:#aeb2c4;margin-top:4px}.online-empty{padding:35px 18px;text-align:center;color:#aeb2c4;border:1px dashed rgba(255,255,255,.18);border-radius:10px}.online-wait-icon{text-align:center;font-size:44px;margin:18px 0 8px}.online-body>h2,.online-body>p{text-align:center}.online-body>p{color:#bfc2d0}.online-code{font-family:monospace;font-size:28px;letter-spacing:.16em;text-align:center;color:#f2c14e;margin:22px auto;padding:12px;border:1px solid rgba(242,193,78,.32);border-radius:9px;max-width:280px}.online-body>#onlineCopy,.online-body>#onlineStart,.online-body>#onlineCancel{display:block;width:min(330px,100%);margin:10px auto}.online-cancel{opacity:.8}@media(max-width:600px){#screen-online{margin:10px;min-height:calc(100vh - 20px)}.online-room-card{align-items:flex-start;flex-direction:column}.online-room-card .online-join{width:100%}}';
+        document.head.appendChild(css);
+        onlineScreen=document.createElement('div'); onlineScreen.id='screen-online'; onlineScreen.className='panel hidden';
+        document.getElementById('app').appendChild(onlineScreen);
+      } else onlineScreen=document.getElementById('screen-online');
+      onlineOverlay=document.createElement('div'); onlineOverlay.style.cssText='position:fixed;inset:0;z-index:99998;display:none;align-items:center;justify-content:center;background:rgba(6,7,11,.45);backdrop-filter:blur(1px);color:#fff;font-size:20px;font-weight:700;text-align:center;padding:24px;text-shadow:0 2px 6px #000;';
+      onlineOverlayText=document.createElement('div'); onlineOverlay.appendChild(onlineOverlayText); document.body.appendChild(onlineOverlay);
+      const lobbyBtn=document.getElementById('lobbyOnlineBtn'); if(lobbyBtn) lobbyBtn.onclick=openOnlineLobby;
+      // 邀請連結仍可直接進房，作為房間清單以外的便利入口。
+      const match=/[?&]room=([A-Za-z0-9]+)/.exec(location.search);
+      if(match){ ensureOnlineFirebase(function(){ joinOnlineRoom(match[1].toUpperCase()); }); }
+    }
+    if(document.body) buildOnlineLobby(); else document.addEventListener('DOMContentLoaded',buildOnlineLobby);
+  } catch(e){ console.warn('[Online] 房間大廳初始化失敗（不影響單機）',e); }
+})();
 
 })();
 </script>
