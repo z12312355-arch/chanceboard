@@ -615,7 +615,9 @@
      以前一樣大」這個要求。 */
   /* padding 左右都設 0（不是 0 2px 0）：#act-card-zone 有 padding-left 的話，花牌欄第一張花牌會比
      #actCardsRow 的 gap 多推出幾 px，導致「小卡欄→花牌欄」的間隔跟其他卡片間隔對不齊。 */
-  body.battle-mode #act-card-zone{margin:1px 0 0;padding:0;gap:10px;}
+  /* 手牌剛好抽完時，仍保留一排手牌的空間；否則整個出手面板會忽然縮高，
+     同一排的招式按鈕也跟著被 fitBattleLayout() 重算得比較小。 */
+  body.battle-mode #act-card-zone{margin:1px 0 0;padding:0;gap:10px;min-height:72px;}
   /* 使用者反應「點擊花牌後，他會因為抬起來，所以被擋住」：.cardface.picked 原本的設計（見那條
      基準規則）選中時用 translateY(-11px) 整張卡「跳起來」當作選中提示，這個效果在有充裕留白的
      組卡畫面很好看，但這裡（戰鬥中的出手面板）上面 #act-movegrid 跟這排花牌之間只留了幾 px 的
@@ -1151,7 +1153,10 @@
      不受這裡背景改成漸層影響。 */
   .unit{background:linear-gradient(165deg,#22263a 0%,#1a1d29 60%,#15171f 100%);border:1px solid rgba(255,255,255,.06);border-radius:8px;position:relative;overflow:hidden;box-shadow:0 2px 6px rgba(0,0,0,.35);will-change:transform;}
   /* 移動中的分身會掛在 body 上方，不受棋盤格 overflow:hidden 裁切；角色穿越格子縫隙時不會消失。 */
-  .move-ghost{position:fixed !important;z-index:1000 !important;display:block !important;margin:0 !important;pointer-events:none !important;will-change:transform,width,height;}
+.move-ghost{position:fixed !important;z-index:1000 !important;display:block !important;margin:0 !important;pointer-events:none !important;will-change:transform,width,height;overflow:visible !important;}
+/* 分身離開棋盤格後不再受格子的響應式尺寸限制：移動途中沿用起點量到的立繪尺寸，
+   不會在跨格時突然縮成小圖。 */
+.move-ghost .unit-art-img{max-width:none !important;max-height:none !important;}
   /* 同上一條 .cell 的修正：.unit 是角色卡本體（立繪疊在它上面當背景層），本身也是實色漸層，
      跟 .cell 疊在一起把整個棋盤格蓋死。一樣調到跟其他面板同等級的低不透明度。 */
   body.battle-mode .unit{background:linear-gradient(165deg, rgba(34,38,58,.5) 0%, rgba(26,29,41,.5) 60%, rgba(21,23,31,.5) 100%);}
@@ -5349,6 +5354,26 @@ function playPendingEffects(){
     const ghost = el.cloneNode(true);
     ghost.removeAttribute('id');
     ghost.classList.add('move-ghost');
+    // The clone is moved outside #board, so it no longer inherits the joining
+    // player's mirrored-board context. Reapply the exact left/right artwork rule
+    // here: the unit displayed on the right faces left on both players' screens.
+    const boardEl = document.getElementById('board');
+    const perspectiveB = !!(boardEl && boardEl.classList.contains('online-perspective-b'));
+    const movingUnit = (state.teamA||[]).concat(state.teamB||[]).find(function(unit){ return unit.id===m.unitId; });
+    const rightSide = perspectiveB ? 'A' : 'B';
+    const sourceImages = el.querySelectorAll('.unit-art-img');
+    ghost.querySelectorAll('.unit-art-img').forEach(function(img,index){
+      const source = sourceImages[index];
+      if(source){
+        const sourceRect = source.getBoundingClientRect();
+        // Keep the same artwork dimensions throughout the travel animation instead
+        // of letting the detached clone fall back to a smaller responsive size.
+        img.style.width=sourceRect.width+'px';
+        img.style.height=sourceRect.height+'px';
+        img.style.maxWidth='none'; img.style.maxHeight='none';
+      }
+      img.style.transform=(movingUnit && movingUnit.side===rightSide)?'scaleX(-1)':'';
+    });
     const oldWidth = m.width || newRect.width;
     const oldHeight = m.height || newRect.height;
     ghost.style.left = m.fromLeft+'px';
