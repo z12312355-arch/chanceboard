@@ -1149,7 +1149,7 @@
   /* 角色卡背景從單一平面色改成淡淡漸層＋一圈邊框＋外陰影，讓卡片本身在格子背景（也是漸層）上
      浮起來一點，不是完全貼平；陣亡/暈眩等狀態的變化（.dead、.stealth等）都是疊加透明度/濾鏡，
      不受這裡背景改成漸層影響。 */
-  .unit{background:linear-gradient(165deg,#22263a 0%,#1a1d29 60%,#15171f 100%);border:1px solid rgba(255,255,255,.06);border-radius:8px;position:relative;overflow:hidden;box-shadow:0 2px 6px rgba(0,0,0,.35);}
+  .unit{background:linear-gradient(165deg,#22263a 0%,#1a1d29 60%,#15171f 100%);border:1px solid rgba(255,255,255,.06);border-radius:8px;position:relative;overflow:hidden;box-shadow:0 2px 6px rgba(0,0,0,.35);will-change:transform;}
   /* 同上一條 .cell 的修正：.unit 是角色卡本體（立繪疊在它上面當背景層），本身也是實色漸層，
      跟 .cell 疊在一起把整個棋盤格蓋死。一樣調到跟其他面板同等級的低不透明度。 */
   body.battle-mode .unit{background:linear-gradient(165deg, rgba(34,38,58,.5) 0%, rgba(26,29,41,.5) 60%, rgba(21,23,31,.5) 100%);}
@@ -5305,10 +5305,10 @@ function playPendingEffects(){
     el.style.zIndex = '30';
     void el.offsetWidth; // force reflow
     requestAnimationFrame(()=>{
-      el.style.transition = 'transform .38s cubic-bezier(.3,.7,.3,1)';
+    el.style.transition = 'transform .58s cubic-bezier(.22,.78,.24,1)';
       el.style.transform = '';
     });
-    setTimeout(()=>{ el.style.transition=''; el.style.transform=''; el.style.zIndex=prevZ; }, 420);
+    setTimeout(()=>{ el.style.transition=''; el.style.transform=''; el.style.zIndex=prevZ; }, 620);
   });
   if(!effects.length) return;
   effects.forEach(fx=>{
@@ -6069,6 +6069,7 @@ function moveActingUnitTo(slot){
   const unit = getActingUnit();
   if(!unit || hasStatus(unit,'禁足')) return;
   if(slot!==unit.slot && !hasFreeMove(unit) && !isAdjacentSlot(unit.slot, slot)) return; // 一次只能移動一格，不能前後直接互跳（瞬步不受此限）
+  if(state.actMoveTarget===slot) return;
   queueMoveAnimation(unit);
   state.actMoveTarget = slot;
   render();
@@ -6126,13 +6127,21 @@ function suitHandEntries(unit){
 }
 function pickActCard(idx){
   if(state.phase!=='act') return;
-  state.actPending = (state.actPending===idx) ? null : idx;
+  const actingId=state.actingUnitId, moveTarget=state.actMoveTarget;
+  const next = (state.actPending===idx) ? null : idx;
+  if(state.actPending===next) return;
+  state.actPending = next;
   render();
+  if(state.phase==='act' && state.actingUnitId===actingId) state.actMoveTarget=moveTarget;
 }
 function pickActMove(slotKey){
   if(state.phase!=='act') return;
-  state.actMovePicked = (state.actMovePicked===slotKey) ? null : slotKey;
+  const actingId=state.actingUnitId, moveTarget=state.actMoveTarget;
+  const next = (state.actMovePicked===slotKey) ? null : slotKey;
+  if(state.actMovePicked===next) return;
+  state.actMovePicked = next;
   render();
+  if(state.phase==='act' && state.actingUnitId===actingId) state.actMoveTarget=moveTarget;
 }
 function showActInfo(type, key){
   actInfoRequest = {type, key};
@@ -7285,6 +7294,9 @@ function renderBattle(){
   }
 
   const board = document.getElementById('board');
+  // Controls such as a move/flower selection rebuild the board synchronously. Keep the
+  // old board composited until the new DOM is ready so users do not see a one-frame flash.
+  board.classList.add('board-updating');
   board.innerHTML = '';
   const layout = [['A',1],['A',2],['A',3],['B',1],['B',2],['B',3]];
   layout.forEach(([side,slot], colIndex)=>{
@@ -7702,6 +7714,7 @@ function renderBattle(){
   // 放在 renderBattle() 最後：這時棋盤格(#board)、出手面板(#actPanel)、戰鬥紀錄(#logPanelWrap)
   // 都已經是這一輪最新的內容，量出來的高度才準——renderBattle() 幾乎每個動作/每個 tick 都會被
   // render() 呼叫一次（見 render()），所以不用另外在別的地方（例如切換到戰鬥畫面那一刻）額外呼叫。
+  board.classList.remove('board-updating');
   fitBattleLayout();
 }
 
