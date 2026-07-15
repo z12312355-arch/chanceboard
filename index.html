@@ -6242,6 +6242,8 @@ let actionDeadlineTimer = null;
 let actionDeadlineRaf = null;
 let actionTimedOutForId = null;
 let actionButtonWasLocked = false;
+// 同一位角色、同一個 deadline 只允許記錄一次逾時；Firebase 回傳同一份狀態時不能重複待機。
+let actionTimeoutHandledKey = null;
 
 function isLocalActionController(unit){
   if(!unit) return false;
@@ -6291,8 +6293,11 @@ function scheduleActionDeadline(){
   }
   const unitId = unit.id;
   const delay = Math.max(0, state.turnDeadlineAt-Date.now());
+  const timeoutKey = unitId+'@'+state.turnDeadlineAt;
   actionDeadlineTimer = setTimeout(function(){
     if(state.phase!=='act' || state.actingUnitId!==unitId || !isLocalActionController(getActingUnit())) return;
+    if(actionTimeoutHandledKey===timeoutKey) return;
+    actionTimeoutHandledKey=timeoutKey;
     actionTimedOutForId = unitId;
     // 逾時一律待機，不會把玩家先前點過但尚未確認的招式／花牌自動打出去。
     state.actPending = null; state.actMovePicked = null; state.actMoveTarget = null; actDiscardPending = [];
@@ -10225,6 +10230,8 @@ tutorialInjectDom();
       if(board){
         const perspectiveB=onlineInRoom && onlineRole==='B';
         board.classList.toggle('online-perspective-b', perspectiveB);
+        // 戰鬥紀錄不在 #board 裡，因此視角 class 同時掛在 body，供紀錄顏色覆寫使用。
+        document.body.classList.toggle('online-perspective-b', perspectiveB);
         // The board/cell perspective is already mirrored for the joining player;
         // mirror the character artwork explicitly after every render as well.
         board.querySelectorAll('.unit-art-img').forEach(function(img){
@@ -10247,7 +10254,7 @@ tutorialInjectDom();
       colorStyle.textContent=(onlineInRoom && onlineRole==='B') ?
         '#board.online-perspective-b .cell.side-A{border-top-color:var(--b)!important;box-shadow:inset 0 3px 10px -6px var(--b),inset 0 1px 0 rgba(255,255,255,.05),inset 0 0 24px rgba(0,0,0,.25)}.online-perspective-b .obchip.side-A,.online-perspective-b .hs-side.side-A{border-left-color:var(--b)!important}'+
         '#board.online-perspective-b .cell.side-B{border-top-color:var(--a)!important;box-shadow:inset 0 3px 10px -6px var(--a),inset 0 1px 0 rgba(255,255,255,.05),inset 0 0 24px rgba(0,0,0,.25)}.online-perspective-b .obchip.side-B,.online-perspective-b .hs-side.side-B{border-left-color:var(--a)!important}'+
-        '.online-perspective-b #log .aside{color:var(--b)!important}.online-perspective-b #log .bside{color:var(--a)!important}': '';
+        'body.online-perspective-b #log .aside{color:var(--a)!important}body.online-perspective-b #log .bside{color:var(--b)!important}': '';
       onlineRefreshAutoBattleControls();
     }
     function onlineAfterRender(){
