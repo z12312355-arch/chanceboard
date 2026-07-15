@@ -9883,6 +9883,142 @@ tutorialInjectDom();
   } catch(e){ console.warn('[Online] 房間大廳初始化失敗（不影響單機）',e); }
 })();
 
+/* ============ Firebase Auth + Cloudflare D1 account mode ============ */
+(function setupAccountLogin(){
+  const ACCOUNT_FIREBASE_CONFIG={
+    apiKey:'AIzaSyBGg5KcXJmiQGCdCnEQ_hn4knulcemyKhY',
+    authDomain:'chanceboard.firebaseapp.com',
+    projectId:'chanceboard',
+    appId:'1:144089217775:web:3659b974333dcf23a9b91a'
+  };
+  let auth=null, currentUser=null, accountReady=false, syncTimer=null;
+  window.__accountMode=false;
+  const loadScript=function(src){ return new Promise(function(resolve,reject){
+    if(document.querySelector('script[src="'+src+'"]')) return resolve();
+    const s=document.createElement('script'); s.src=src; s.onload=resolve; s.onerror=reject; document.head.appendChild(s);
+  }); };
+  async function getAuth(){
+    if(auth) return auth;
+    await loadScript('https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js');
+    await loadScript('https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js');
+    try{ firebase.initializeApp(ACCOUNT_FIREBASE_CONFIG); }catch(e){}
+    auth=firebase.auth();
+    auth.onAuthStateChanged(function(user){ currentUser=user; updateAccountLogin(); if(user) loadAccount(); });
+    return auth;
+  }
+  async function accountApi(action, body){
+    if(!currentUser) throw new Error('請先登入帳號。');
+    const token=await currentUser.getIdToken();
+    const res=await fetch('/api/account/'+action,{method:body===undefined?'GET':'POST',headers:{Authorization:'Bearer '+token,'content-type':'application/json'},body:body===undefined?undefined:JSON.stringify(body)});
+    const data=await res.json().catch(function(){ return {}; });
+    if(!res.ok) throw new Error(data.error||'帳號資料讀取失敗。');
+    return data;
+  }
+  function applyAccountState(p){
+    if(!p) return;
+    goldAmount=Number(p.gold)||0; diamondAmount=Number(p.diamond)||0;
+    ownedCharIds=Array.isArray(p.ownedCharIds)?p.ownedCharIds:[];
+    charStars=p.charStars&&typeof p.charStars==='object'?p.charStars:{};
+    ownedCardCounts=p.ownedCardCounts&&typeof p.ownedCardCounts==='object'?p.ownedCardCounts:{};
+    teams=Array.isArray(p.teams)?p.teams:[];
+    tutorialFaction=p.tutorialFaction==='white'?'white':'black';
+    if(p.settings&&typeof p.settings==='object'){
+      if(Number.isInteger(p.settings.speedIdx)) autoBattleSpeedIdx=p.settings.speedIdx;
+      if(typeof p.settings.sound==='boolean') soundEnabled=p.settings.sound;
+      if(typeof p.settings.music==='boolean') musicEnabled=p.settings.music;
+    }
+    try{
+      localStorage.setItem(TUTORIAL_DONE_KEY,p.tutorialDone?'1':'');
+      localStorage.setItem(TUTORIAL_FACTION_KEY,tutorialFaction);
+      if(p.lobbyHeroId) localStorage.setItem(LOBBY_HERO_KEY,p.lobbyHeroId); else localStorage.removeItem(LOBBY_HERO_KEY);
+    }catch(e){}
+    refreshCurrencyDisplays();
+    if(typeof renderGachaCollectionGrid==='function' && document.getElementById('gachaCollectionGrid')) renderGachaCollectionGrid();
+    if(typeof renderShopGrid==='function' && document.getElementById('shopCardGrid')) renderShopGrid();
+  }
+  async function loadAccount(){
+    try{
+      const data=await accountApi('bootstrap',{}); accountReady=true; window.__accountMode=true; applyAccountState(data.state);
+      const admin=document.getElementById('lobbyAdminBtn'); if(admin) admin.style.display='none';
+      updateAccountLogin();
+    }catch(e){ accountReady=false; window.__accountMode=false; setAccountMessage('帳號後端尚未完成：'+e.message); }
+  }
+  function setAccountMessage(msg){ const el=document.getElementById('accountLoginMessage'); if(el) el.textContent=msg||''; }
+  function updateAccountLogin(){
+    const box=document.getElementById('accountLoginBox'), enter=document.getElementById('loginEnterBtn'); if(!box||!enter) return;
+    enter.querySelector('.lobby-btn-label').textContent=currentUser?(accountReady?'以帳號進入遊戲':'載入帳號資料中…'):'訪客進入遊戲';
+    enter.disabled=!!currentUser&&!accountReady;
+    if(currentUser){
+      box.innerHTML='<div class="account-email">已登入：'+escapeHtml(currentUser.email||'')+'</div><button type="button" class="account-action" id="accountLogoutBtn">登出帳號</button><div id="accountLoginMessage" class="account-message"></div>';
+      document.getElementById('accountLogoutBtn').onclick=async function(){ await auth.signOut(); accountReady=false; window.__accountMode=false; };
+    }else{
+      box.innerHTML='<button type="button" class="account-action" id="accountOpenBtn">登入／註冊帳號</button><div class="account-note">使用帳號後，角色、卡牌、金幣與隊伍會在不同裝置同步。</div><div id="accountLoginMessage" class="account-message"></div>';
+      document.getElementById('accountOpenBtn').onclick=openAccountDialog;
+    }
+  }
+  function escapeHtml(v){ const d=document.createElement('div'); d.textContent=v; return d.innerHTML; }
+  function openAccountDialog(){
+    const modal=document.getElementById('accountAuthModal'); modal.classList.remove('hidden');
+    document.getElementById('accountAuthClose').onclick=function(){ modal.classList.add('hidden'); };
+    document.getElementById('accountAuthModal').onclick=function(e){ if(e.target===modal) modal.classList.add('hidden'); };
+    document.getElementById('accountSignIn').onclick=function(){ submitAuth(false); };
+    document.getElementById('accountRegister').onclick=function(){ submitAuth(true); };
+  }
+  async function submitAuth(register){
+    const email=document.getElementById('accountEmail').value.trim(), password=document.getElementById('accountPassword').value;
+    const msg=document.getElementById('accountAuthMessage'); msg.textContent='處理中…';
+    try{
+      const a=await getAuth();
+      if(register) await a.createUserWithEmailAndPassword(email,password); else await a.signInWithEmailAndPassword(email,password);
+      document.getElementById('accountAuthModal').classList.add('hidden');
+    }catch(e){ msg.textContent=e.message||'登入失敗。'; }
+  }
+  function installLoginUi(){
+    const login=document.getElementById('loginContent'); if(!login) return;
+    const style=document.createElement('style'); style.textContent='#accountLoginBox{margin:12px auto 0;text-align:center;max-width:420px}.account-action{background:#263f78;color:#fff;border:1px solid #5d8df0;border-radius:7px;padding:8px 14px;cursor:pointer;font:inherit}.account-note,.account-message,.account-email{font-size:12px;margin-top:7px;color:#d6d9e9}.account-message{color:#ffd27a}.account-auth-modal{position:fixed;inset:0;z-index:100000;background:rgba(0,0,0,.7);display:flex;align-items:center;justify-content:center;padding:16px}.account-auth-panel{width:min(390px,100%);background:#1d2234;border:1px solid #596789;border-radius:12px;padding:22px;color:#fff;box-shadow:0 16px 50px #000}.account-auth-panel h2{margin:0 0 14px}.account-auth-panel input{width:100%;padding:10px;margin:6px 0;border-radius:6px;border:1px solid #657090;background:#111522;color:#fff}.account-auth-actions{display:flex;gap:8px;margin-top:10px}.account-auth-actions button{flex:1;padding:9px;border-radius:6px;border:1px solid #7699e8;background:#2f579e;color:#fff;cursor:pointer}.account-auth-actions button:first-child{background:#384052}.account-auth-help{color:#adb4cb;font-size:12px;margin-top:11px;line-height:1.5}'; document.head.appendChild(style);
+    const box=document.createElement('div'); box.id='accountLoginBox';
+    document.getElementById('loginEnterBtn').insertAdjacentElement('afterend',box);
+    const modal=document.createElement('div'); modal.id='accountAuthModal'; modal.className='account-auth-modal hidden';
+    modal.innerHTML='<div class="account-auth-panel"><button type="button" id="accountAuthClose" style="float:right">×</button><h2>帳號登入</h2><input id="accountEmail" type="email" placeholder="Email"><input id="accountPassword" type="password" placeholder="密碼（至少 6 字元）"><div class="account-auth-actions"><button type="button" id="accountSignIn">登入</button><button type="button" id="accountRegister">註冊新帳號</button></div><div id="accountAuthMessage" class="account-message"></div><div class="account-auth-help">訪客資料與帳號資料分開保存；帳號資料可在不同裝置使用。</div></div>';
+    document.body.appendChild(modal); updateAccountLogin(); getAuth().catch(function(){ setAccountMessage('無法載入登入服務，請檢查網路。'); });
+  }
+  // Account-only actions are sent to D1. Local guest behavior remains unchanged.
+  const guestSaveTeams=saveTeams;
+  saveTeams=function(){ if(!accountReady) return guestSaveTeams(); clearTimeout(syncTimer); syncTimer=setTimeout(async function(){ try{ const d=await accountApi('teams',{teams:teams}); applyAccountState(d.state); }catch(e){ console.warn('[Account] teams',e); } },350); };
+  const guestGacha=doGachaPull;
+  doGachaPull=async function(count){
+    if(!accountReady) return guestGacha(count);
+    try{ const d=await accountApi('gacha',{currency:gachaActiveCurrency,count:count}); applyAccountState(d.state); gachaShowResult(d.results.map(function(r){ return {char:CHAR_BY_ID[r.id],isNew:r.isNew,starLevel:r.starLevel}; })); }
+    catch(e){ alert(e.message); }
+  };
+  const guestBuyCard=buyCard;
+  buyCard=async function(cardId){
+    if(!accountReady) return guestBuyCard(cardId);
+    try{ const d=await accountApi('shop-buy',{cardId:cardId}); applyAccountState(d.state); }
+    catch(e){ alert(e.message); }
+  };
+  const guestDailyClaim=claimDailyBonusIfNeeded;
+  claimDailyBonusIfNeeded=async function(){
+    if(!accountReady) return guestDailyClaim();
+    try{ const d=await accountApi('daily-claim',{}); applyAccountState(d.state); }catch(e){ console.warn('[Account] daily claim',e); }
+  };
+  const guestSaveSettings=saveSettings, guestSaveLobbyHeroChoice=saveLobbyHeroChoice;
+  function queuePreferences(){
+    if(!accountReady) return;
+    clearTimeout(syncTimer); syncTimer=setTimeout(async function(){
+      try{ const d=await accountApi('preferences',{settings:{speedIdx:autoBattleSpeedIdx,sound:soundEnabled,music:musicEnabled},tutorialFaction:tutorialFaction,lobbyHeroId:loadLobbyHeroChoice()}); applyAccountState(d.state); }
+      catch(e){ console.warn('[Account] preferences',e); }
+    },350);
+  }
+  saveSettings=function(){ if(!accountReady) return guestSaveSettings(); queuePreferences(); };
+  saveLobbyHeroChoice=function(id){ if(!accountReady) return guestSaveLobbyHeroChoice(id); try{ localStorage.setItem(LOBBY_HERO_KEY,id); }catch(e){} queuePreferences(); };
+  const guestAddGold=addGold, guestAddDiamond=addDiamond;
+  addGold=function(n){ if(accountReady) return; return guestAddGold(n); };
+  addDiamond=function(n){ if(accountReady) return; return guestAddDiamond(n); };
+  document.addEventListener('DOMContentLoaded',installLoginUi);
+  if(document.readyState!=='loading') installLoginUi();
+})();
+
 })();
 </script>
 </body>
