@@ -7072,7 +7072,7 @@ function renderUnitBlock(u, isActing, compact, displaySlot){
   const unitArtSrc = 'images/'+u.baseId+'_wide.png';
   const unitArtExtraOnload = " var av=this.closest('.unit').querySelector('.char-avatar.tiny'); if(av) av.style.display='none';";
   const unitArtHtml = '<div class="unit-art">'
-    + imgLayerHtml(unitArtFallbackSvg, unitArtSrc, 'unit-art-img'+(u.side==='B'?' mirror':''), unitArtExtraOnload)
+    + imgLayerHtml(unitArtFallbackSvg, unitArtSrc, 'unit-art-img', unitArtExtraOnload)
     + '</div>';
   // 大立繪已經確定讀得到的話，頭像列那顆小圓形頭像本來就會被上面的 onload 隱藏掉（避免同一個
   // 角色同時露出兩張臉），但那是等大立繪的 <img> 真的 onload 之後才會發生（非同步）——這裡直接
@@ -9710,7 +9710,13 @@ tutorialInjectDom();
     };
     function onlineApplyPerspective(){
       const board=document.getElementById('board');
-      if(board) board.classList.toggle('online-perspective-b', onlineInRoom && onlineRole==='B');
+      if(board){
+        const perspectiveB=onlineInRoom && onlineRole==='B';
+        board.classList.toggle('online-perspective-b', perspectiveB);
+        // The board/cell perspective is already mirrored for the joining player;
+        // mirror the character artwork explicitly after every render as well.
+        board.querySelectorAll('.unit-art-img').forEach(function(img){ img.style.transform=perspectiveB?'scaleX(-1)':''; });
+      }
       window.__onlineLocalSide=onlineInRoom?onlineRole:null;
     }
     function onlineAfterRender(){
