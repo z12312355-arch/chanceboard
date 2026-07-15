@@ -6467,7 +6467,8 @@ function renderTeamList(){
   teams.forEach(team=>{
     const card = document.createElement('div');
     card.className = 'teamcard';
-    const portraits = team.characterIds.map(id=>{
+    // 顯示順序與戰鬥棋盤一致：前、中、後在隊伍卡片上由右到左排列。
+    const portraits = team.characterIds.slice().reverse().map(id=>{
       const c = CHAR_BY_ID[id];
       if(!c) return '<div class="teamcard-mini teamcard-mini-missing">？</div>';
       return '<div class="teamcard-mini"><img src="'+charFullThumbSrc(c.id)+'" alt="" onerror="'+charFullThumbOnErrorAttr(c.id)+'"></div>';
@@ -6877,7 +6878,8 @@ function renderTeamPick(){
       const card = document.createElement('div');
       card.className = 'teamcard teampick-card';
       card.dataset.teamId = team.id;
-      const portraits = team.characterIds.map(id=>{
+      // 隊伍選擇卡片也沿用戰鬥站位的視覺順序，不改實際 characterIds 資料。
+      const portraits = team.characterIds.slice().reverse().map(id=>{
         const c = CHAR_BY_ID[id];
         if(!c) return '<div class="teamcard-mini teamcard-mini-missing">？</div>';
         return '<div class="teamcard-mini"><img src="'+charFullThumbSrc(c.id)+'" alt="" onerror="'+charFullThumbOnErrorAttr(c.id)+'"></div>';
@@ -10418,7 +10420,7 @@ tutorialInjectDom();
     }
     function onlineTeamSummaryHtml(team, extraClass){
       const ids=(team && team.characterIds ? team.characterIds : []).slice(0,3);
-      const portraits=ids.map(function(id,i){ return onlineTeamPortraitHtml(id,'online-'+String(team.id||'team')+'-'+i+'-'+id); }).join('');
+      const portraits=ids.slice().reverse().map(function(id,i){ return onlineTeamPortraitHtml(id,'online-'+String(team.id||'team')+'-'+i+'-'+id); }).join('');
       return '<div class="online-team-summary '+(extraClass||'')+'">'+
         '<b class="online-team-name">'+escHtml(team ? (team.name||'未命名隊伍') : '尚未選擇隊伍')+'</b>'+
         '<div class="online-team-portraits">'+portraits+'</div></div>';
