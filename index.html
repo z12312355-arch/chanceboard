@@ -7165,7 +7165,10 @@ function renderHandSummary(){
   // 想改成依「現在誰的回合」動態切換對方是誰，這裡要改成看 currentActUnit.side 決定。
   // 手牌數＝公牌(state.handB) + 本回合發到的自訂卡(state.handCustomB) 加總，兩種都算「手上能用
   // 的牌」，跟出手面板「手上花色張數」算法的口徑一致。
-  const oppHandCount = state.handB.length + state.handCustomB.length;
+  const opponentHandSide = window.__onlineLocalSide==='B' ? 'A' : 'B';
+  const oppHandCount = opponentHandSide==='A'
+    ? state.handA.length + state.handCustomA.length
+    : state.handB.length + state.handCustomB.length;
   // 使用者要求「牌庫／棄牌堆／對方手牌」這三個文字標籤改用圖示（跟檔案其他地方 ELEMENT_ICON／
   // 🔗／⚫⚪自動戰鬥同一套「圖示代替文字」語言一致，也比較省這排本來就很擠的橫向空間）；圖示本身
   // 意思不夠直覺，額外補 title tooltip，滑鼠移上去還是看得到完整文字說明。
@@ -9709,6 +9712,9 @@ tutorialInjectDom();
         '<div class="hs-side side-'+foe+'"><b>對手手牌</b><span class="hs-chip">共 <span class="n">'+cardCount(foe)+'</span> 張</span></div>'+
         '<div class="hs-side side-shared"><b>🔗 共用牌庫</b><span class="hs-chip">牌庫 <span class="n">'+state.drawPublic.length+'</span></span><span class="hs-chip">棄牌堆 <span class="n">'+state.discardPublic.length+'</span></span></div>';
     };
+    // Online matches reuse the local-match top information layout. Only the
+    // perspective/color layer below changes; opponent card contents remain hidden.
+    renderHandSummary = function(){ return __onlinePreviousHandSummary.apply(this, arguments); };
     function onlineApplyPerspective(){
       const board=document.getElementById('board');
       if(board){
