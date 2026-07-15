@@ -4295,9 +4295,10 @@ let pendingEffects = [];
 // resolved target (still queues the caster's "cast" flourish for that move's slot/flavor).
 function queueMoveEffect(caster, moveSlot, hits, moveName){
   if(window.__fastBattleMode) return;
-  pendingEffects.push({casterId: caster.id, casterBaseId: caster.baseId, casterSide: caster.side, casterName: caster.name, moveSlot, moveName: moveName||null, hits: hits.map(h=>({
+  pendingEffects.push({id:Date.now()+'-'+Math.random().toString(36).slice(2),casterId: caster.id, casterBaseId: caster.baseId, casterSide: caster.side, casterName: caster.name, moveSlot, moveName: moveName||null, hits: hits.map(h=>({
     targetId: h.target.id, isMiss: !!h.isMiss, isCrit: !!h.isCrit, dmg: h.dmg||0, isKill: !!h.isKill
   }))});
+  if(window.__onlineLocalSide) state.lastMoveEvent=pendingEffects[pendingEffects.length-1];
 }
 function queueHealEffect(target, amount){
   if(window.__fastBattleMode || amount<=0) return;
@@ -4405,7 +4406,8 @@ function computeMoveSplashCenter(casterSide){
   const halfW = renderW/2 + SAFE_MARGIN;
   const halfH = (renderH+nameLabelH)/2 + SAFE_MARGIN;
   // 自己這邊(A)固定在左半邊置中，對方(B)固定在右半邊置中——跟角色卡位置完全無關。
-  const targetX = casterSide==='B' ? window.innerWidth*0.75 : window.innerWidth*0.25;
+  const displayCasterSide = window.__onlineLocalSide==='B' ? (casterSide==='A'?'B':'A') : casterSide;
+  const targetX = displayCasterSide==='B' ? window.innerWidth*0.75 : window.innerWidth*0.25;
   const cx = Math.min(Math.max(targetX, halfW), Math.max(halfW, window.innerWidth-halfW));
   // 垂直置中改成在「扣掉順序條之後、也扣掉出手面板之前」的區域裡置中（topStripH ~
   // bottomBound），不是整個視窗。
@@ -9679,7 +9681,7 @@ tutorialInjectDom();
     let onlineRoomId = null, onlineRole = null, onlineInRoom = false;
     let onlineRootRef = null, onlineGameRef = null, onlineMetaRef = null;
     let onlineListRef = null, onlineRooms = {}, onlineMeta = null;
-    let onlineLastBlob = null, onlineApplying = false, onlinePrevController = 'A', onlineSetupShown = false;
+    let onlineLastBlob = null, onlineApplying = false, onlinePrevController = 'A', onlineSetupShown = false, onlineLastFxId = null;
     let onlineOverlay = null, onlineOverlayText = null, onlineScreen = null;
 
     function onlineConfigured(){ return !!ONLINE_CONFIG.databaseURL; }
@@ -9749,6 +9751,7 @@ tutorialInjectDom();
       onlineApplyPerspective();
       if(!onlineInRoom || !onlineGameRef){ onlinePrevController=onlineController(state); onlineUpdateLock(); return; }
       onlineNormalize(state);
+      if(state.lastMoveEvent && state.lastMoveEvent.id) onlineLastFxId=state.lastMoveEvent.id;
       const blob=JSON.stringify(state);
       if(!onlineApplying && blob!==onlineLastBlob){
         if(onlinePrevController===onlineRole){
@@ -9765,6 +9768,10 @@ tutorialInjectDom();
       try {
         state=onlineNormalize(JSON.parse(val.blob));
         onlineLastBlob=val.blob;
+        if(state.lastMoveEvent && state.lastMoveEvent.id && state.lastMoveEvent.id!==onlineLastFxId){
+          pendingEffects.push(state.lastMoveEvent);
+          onlineLastFxId=state.lastMoveEvent.id;
+        }
         onlinePrevController=onlineController(state);
         if(state.phase==='act' || state.phase==='end'){
           showTopScreen('screen-battle');
@@ -9813,7 +9820,7 @@ tutorialInjectDom();
       if(onlineGameRef) onlineGameRef.off();
       if(onlineMetaRef) onlineMetaRef.off();
       onlineRootRef=onlineGameRef=onlineMetaRef=null;
-      onlineRoomId=onlineRole=null; onlineInRoom=false; onlineMeta=null; onlineLastBlob=null; onlineSetupShown=false; window.__onlineLocalSide=null; twoPlayerMode=false;
+      onlineRoomId=onlineRole=null; onlineInRoom=false; onlineMeta=null; onlineLastBlob=null; onlineLastFxId=null; onlineSetupShown=false; window.__onlineLocalSide=null; twoPlayerMode=false;
       onlineUpdateLock();
     }
     function attachOnlineRoom(id, role){
