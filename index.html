@@ -9722,7 +9722,11 @@ tutorialInjectDom();
           const localUnit=(state.teamA||[]).concat(state.teamB||[]).find(function(u){ return u.id===unitId; });
           // Only the joining player's own B-side artwork is mirrored. The host's
           // right-side opponent artwork must keep its normal orientation.
-          img.style.transform=(perspectiveB && localUnit && localUnit.side==='B')?'scaleX(-1)':'';
+          // Keep the artwork facing toward the centre of the board: the unit
+          // shown on the left faces right, and the unit shown on the right
+          // faces left. In B's perspective the physical sides are swapped.
+          const rightSide = perspectiveB ? 'A' : 'B';
+          img.style.transform=(localUnit && localUnit.side===rightSide)?'scaleX(-1)':'';
         });
       }
       window.__onlineLocalSide=onlineInRoom?onlineRole:null;
