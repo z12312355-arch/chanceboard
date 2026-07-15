@@ -4461,7 +4461,8 @@ function showMoveSplash(casterEl, baseId, moveSlot, moveName, casterSide, caster
   wrap.style.left = cx+'px';
   wrap.style.top = cy+'px';
   // 使用者要求「招式的字，把角色的名字移除」：名字標籤原本是「角色名・招式名」，改成只顯示招式名。
-  wrap.innerHTML = '<img src="images/'+baseId+'_'+key+'.png" class="move-splash-img'+(casterSide==='B'?' mirror':'')+'" alt="" onerror="this.parentNode&&this.parentNode.remove()">'
+  const displayCasterSide = window.__onlineLocalSide==='B' ? (casterSide==='A'?'B':'A') : casterSide;
+  wrap.innerHTML = '<img src="images/'+baseId+'_'+key+'.png" class="move-splash-img'+(displayCasterSide==='B'?' mirror':'')+'" alt="" onerror="this.parentNode&&this.parentNode.remove()">'
     + '<div class="move-splash-name">'+(moveName||'')+'</div>';
   // 直接用行內樣式鎖定圖片實際渲染尺寸＝夾限邊界算出來的尺寸，兩邊永遠一致（見上面的註解）。
   const imgEl = wrap.querySelector('.move-splash-img');
