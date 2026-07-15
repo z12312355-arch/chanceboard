@@ -9715,7 +9715,14 @@ tutorialInjectDom();
         board.classList.toggle('online-perspective-b', perspectiveB);
         // The board/cell perspective is already mirrored for the joining player;
         // mirror the character artwork explicitly after every render as well.
-        board.querySelectorAll('.unit-art-img').forEach(function(img){ img.style.transform=perspectiveB?'scaleX(-1)':''; });
+        board.querySelectorAll('.unit-art-img').forEach(function(img){
+          const unit=img.closest('.unit');
+          const unitId=unit ? unit.id.replace(/^unit-/,'') : '';
+          const localUnit=(state.teamA||[]).concat(state.teamB||[]).find(function(u){ return u.id===unitId; });
+          // Only the joining player's own B-side artwork is mirrored. The host's
+          // right-side opponent artwork must keep its normal orientation.
+          img.style.transform=(perspectiveB && localUnit && localUnit.side==='B')?'scaleX(-1)':'';
+        });
       }
       window.__onlineLocalSide=onlineInRoom?onlineRole:null;
     }
