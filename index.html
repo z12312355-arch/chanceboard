@@ -3535,6 +3535,11 @@ const PIECE_BG_IMAGE = {
   '王(King)': 'background/king.png',
 };
 function applyBattleBackground(pieceName){
+  // Online updates call render/applyBattleBackground for every opponent action. Do not
+  // replace the CSS URL when the piece has not changed: the old cache-busting URL caused
+  // the browser to reload the background on every action, which looked like a screen flash.
+  if(window.__activeBattleBackgroundPiece===pieceName && document.body.style.getPropertyValue('--battle-bg-image')) return;
+  window.__activeBattleBackgroundPiece=pieceName;
   const path = PIECE_BG_IMAGE[pieceName];
   // 使用者反應「調亮了圖片頂端還是完全沒變」：background/*.png 這幾個檔名固定沒換過，改的
   // 只是同檔名底下的像素內容，瀏覽器（尤其 file:// 本機開啟）很容易直接吃舊的磁碟快取版本，
@@ -3756,9 +3761,16 @@ function addLog(type, html){ state.log.push({type, html}); }
 // 內容必須完全一樣（同一份 state.log），不用各自維護一份重複的 map/join 邏輯。
 function buildLogHtml(){
   return state.log.map(l=>{
-    if(l.type==='round') return '<div class="rmark">'+l.html+'</div>';
-    return '<div>'+l.html+'</div>';
+    const html = localizeOnlineLogHtml(l.html);
+    if(l.type==='round') return '<div class="rmark">'+html+'</div>';
+    return '<div>'+html+'</div>';
   }).join('');
+}
+function localizeOnlineLogHtml(html){
+  if(window.__onlineLocalSide!=='B') return html;
+  return String(html||'')
+    .replace(/(<span class="aside">)【[^】]*】(<\/span>)/g, '$1【對方】$2')
+    .replace(/(<span class="bside">)【[^】]*】(<\/span>)/g, '$1【我方】$2');
 }
 // 使用者要求「戰鬥介面裡，黑方的描述換成我方，白方的描述換成對方」：跟這個檔案其他地方已經有的
 // 慣例（見「對方手牌數」那個資訊卡、renderBattle() 出招插畫的左右配置等）一樣，預設黑方(A)是
@@ -4038,11 +4050,11 @@ function runOp(op, ctx){
       targets.forEach(t=>{ t.hp = Math.max(0, Math.round(t.hp/2)); if(t.hp<=0){ t.alive=false; t._justDied=true; } addLog('fx', unitName(t)+' 的血量被減半，剩 '+t.hp); });
       break;
     case 'knockback':
-      targets.forEach(t=>{ t.slot = op.dist==='near'?frontSlot(t.side):(op.dist==='far'?(frontSlot(t.side)===1?3:1):2);
+      targets.forEach(t=>{ moveUnitSlotWithAnimation(t, op.dist==='near'?frontSlot(t.side):(op.dist==='far'?(frontSlot(t.side)===1?3:1):2));
         addLog('fx', unitName(t)+' 被擊至'+slotDistLabel(t.side,t.slot)); });
       break;
     case 'selfMove':
-      ctx.mover.slot = op.dist==='near'?frontSlot(ctx.mover.side):(op.dist==='far'?(frontSlot(ctx.mover.side)===1?3:1):2);
+      moveUnitSlotWithAnimation(ctx.mover, op.dist==='near'?frontSlot(ctx.mover.side):(op.dist==='far'?(frontSlot(ctx.mover.side)===1?3:1):2));
       addLog('fx', unitName(ctx.mover)+' 移動至'+slotDistLabel(ctx.mover.side,ctx.mover.slot));
       break;
     case 'drainStatus': {
@@ -4297,7 +4309,7 @@ let pendingEffects = [];
 // resolved target (still queues the caster's "cast" flourish for that move's slot/flavor).
 function queueMoveEffect(caster, moveSlot, hits, moveName){
   if(window.__fastBattleMode) return;
-  pendingEffects.push({id:Date.now()+'-'+Math.random().toString(36).slice(2),casterId: caster.id, casterBaseId: caster.baseId, casterSide: caster.side, casterName: caster.name, moveSlot, moveName: moveName||null, hits: hits.map(h=>({
+  pendingEffects.push({id:Date.now()+'-'+Math.random().toString(36).slice(2),casterId: caster.id, casterBaseId: caster.baseId, casterSide: caster.side, casterName: caster.name, movedUnitIds: pendingMoveAnims.map(m=>m.unitId), moveSlot, moveName: moveName||null, hits: hits.map(h=>({
     targetId: h.target.id, isMiss: !!h.isMiss, isCrit: !!h.isCrit, dmg: h.dmg||0, isKill: !!h.isKill
   }))});
   if(window.__onlineLocalSide) state.lastMoveEvent=pendingEffects[pendingEffects.length-1];
@@ -4320,7 +4332,18 @@ function queueMoveAnimation(unit){
   const el = document.getElementById('unit-'+unit.id);
   if(!el) return; // 還沒渲染過（理論上不會發生，防呆）
   const r = el.getBoundingClientRect();
-  pendingMoveAnims.push({unitId: unit.id, fromLeft: r.left, fromTop: r.top});
+  // Keep the first position if one action moves a unit more than once (for example a
+  // passive that grants a two-slot movement). The next render contains the final slot,
+  // so one continuous animation is clearer than several ghosts starting at the same cell.
+  if(pendingMoveAnims.some(m=>m.unitId===unit.id)) return;
+  pendingMoveAnims.push({unitId: unit.id, fromLeft: r.left, fromTop: r.top, width:r.width, height:r.height});
+}
+
+function moveUnitSlotWithAnimation(unit, newSlot){
+  if(!unit || newSlot==null || unit.slot===newSlot) return false;
+  queueMoveAnimation(unit);
+  unit.slot=newSlot;
+  return true;
 }
 
 function spawnFx(el, className, innerHTML, ttlMs){
@@ -5294,8 +5317,11 @@ function playPendingEffects(){
     const el = document.getElementById('unit-'+m.unitId);
     if(!el) return;
     const newRect = el.getBoundingClientRect();
-    const dx = m.fromLeft - newRect.left;
-    const dy = m.fromTop - newRect.top;
+    // The ghost starts at the old position, therefore the transform must point from
+    // old -> new. The previous subtraction was reversed, so moving forward animated
+    // backwards even though the game state ended in the correct slot.
+    const dx = newRect.left - m.fromLeft;
+    const dy = newRect.top - m.fromTop;
     if(!dx && !dy) return; // 位置沒變（理論上不會排進來，防呆）
     // 不再直接移動目的地格子裡的 el：格子有 overflow:hidden，會把跨越縫隙的
     // 角色裁掉。複製一個固定定位的分身掛到 body，讓它在整個棋盤上方完整移動。
@@ -7738,9 +7764,12 @@ function renderBattle(){
 function renderEnd(){
   const box = document.getElementById('endscreen');
   const winnerSide = state.winner; // 'A' | 'B' | 'draw'
+  const localSide = window.__onlineLocalSide==='B' ? 'B' : 'A';
+  const opponentSide = localSide==='A' ? 'B' : 'A';
+  const ownWon = winnerSide && winnerSide!=='draw' && winnerSide===localSide;
   let title, badgeIcon, stateClass;
   if(winnerSide==='draw'){ title='平手'; badgeIcon='⚖️'; stateClass='end-draw'; }
-  else if(winnerSide==='A'){ title='我方獲勝！'; badgeIcon='🏆'; stateClass='end-win-a'; }
+  else if(ownWon){ title='我方獲勝！'; badgeIcon='🏆'; stateClass='end-win-a'; }
   else { title='對方獲勝！'; badgeIcon='🏆'; stateClass='end-win-b'; }
 
   // 卡片化角色清單：跟戰鬥畫面的 .unit 卡一樣，頭像優先用真的立繪（charAvatarInnerHtml 內建
@@ -7758,8 +7787,8 @@ function renderEnd(){
       (u.alive?'':'<div class="end-card-ko">☠️</div>')+
     '</div>';
   };
-  const teamBlock = (team,label,sideKey)=>
-    '<div class="end-team end-team-'+sideKey+(winnerSide===sideKey?' winner':'')+'">'+
+  const teamBlock = (team,label,actualSide,visualSide)=>
+    '<div class="end-team end-team-'+visualSide+(winnerSide===actualSide?' winner':'')+'">'+
       '<div class="end-team-label">'+label+'</div>'+
       '<div class="end-team-cards">'+team.map(rosterCard).join('')+'</div>'+
     '</div>';
@@ -7770,12 +7799,14 @@ function renderEnd(){
     ? '<div class="end-gold-reward">💰 本局獲得金幣 +'+state.lastBattleGoldReward+'</div>'
     : '';
   box.className = stateClass;
+  const ownTeam = localSide==='A' ? state.teamA : state.teamB;
+  const opponentTeam = opponentSide==='A' ? state.teamA : state.teamB;
   box.innerHTML =
     '<div class="end-badge">'+badgeIcon+'</div>'+
     '<div class="end-title">'+title+'</div>'+
-    '<div class="end-reason">'+state.winnerReason+'</div>'+
+    '<div class="end-reason">'+localizeOnlineWinnerReason(state.winnerReason)+'</div>'+
     goldRewardHtml+
-    '<div class="end-teams">'+teamBlock(state.teamA,'我方','A')+teamBlock(state.teamB,'對方','B')+'</div>'+
+    '<div class="end-teams">'+teamBlock(ownTeam,'我方',localSide,'A')+teamBlock(opponentTeam,'對方',opponentSide,'B')+'</div>'+
     // 使用者要求「新增返回大廳的按鈕」：結束畫面原本只有「再玩一局」（回到同模式的挑隊伍畫面）
     // 跟「查看戰鬥紀錄」，沒有能直接離開對戰流程回大廳的路徑，只能先進「再玩一局」再從
     // 挑隊伍畫面按返回。新增一顆直接回大廳的按鈕，見下面 backToLobbyFromBattle()。
@@ -7787,6 +7818,10 @@ function renderEnd(){
   document.getElementById('lobbyBtn2').onclick = backToLobbyFromBattle;
   // 內容剛換掉，量一次現在需不需要縮小才塞得下（見 fitEndScreenToViewport() 的說明）。
   fitEndScreenToViewport();
+}
+function localizeOnlineWinnerReason(reason){
+  if(window.__onlineLocalSide!=='B') return reason;
+  return String(reason||'').replace(/我方/g,'@@ONLINE_OPPONENT@@').replace(/對方/g,'我方').replace(/@@ONLINE_OPPONENT@@/g,'對方');
 }
 
 /* ============================================================ */
@@ -9724,6 +9759,7 @@ tutorialInjectDom();
     // 跨網自動戰鬥是每位玩家瀏覽器各自的偏好，絕不寫入共用的 game blob。
     // 這樣 A 開啟代打時，B 的畫面不會被開啟；而且 AI 只會在目前玩家自己的回合出手。
     let onlineAutoBattleEnabled = false, onlineAutoBattleTimer = null, onlineAutoBattleExecuting = false;
+    let onlineTeamPickerExpanded = false;
     let onlineOverlay = null, onlineOverlayText = null, onlineScreen = null;
 
     function onlineConfigured(){ return !!ONLINE_CONFIG.databaseURL; }
@@ -9735,7 +9771,12 @@ tutorialInjectDom();
     function loadOnlineSelectedTeam(){
       if(onlineSelectedTeam()) return onlineSelectedTeam();
       try { onlineSelectedTeamId=localStorage.getItem(ONLINE_TEAM_KEY)||null; } catch(e){ onlineSelectedTeamId=null; }
-      return onlineSelectedTeam();
+      const remembered=onlineSelectedTeam();
+      if(remembered) return remembered;
+      // 第一次開啟跨網大廳時直接使用第一支隊伍，免去多一層選隊流程。
+      const first=teams[0]||null;
+      if(first) saveOnlineSelectedTeam(first);
+      return first;
     }
     // 共用狀態不保存自動戰鬥開關：它們是每個玩家本機的 UI／代打設定，
     // 不是可讓對手控制的遊戲規則。真正出招後的結果仍照常同步。
@@ -9805,6 +9846,7 @@ tutorialInjectDom();
     // perspective/color layer below changes; opponent card contents remain hidden.
     renderHandSummary = function(){ return __onlinePreviousHandSummary.apply(this, arguments); };
     function onlineApplyPerspective(){
+      window.__onlineLocalSide=onlineInRoom?onlineRole:null;
       const board=document.getElementById('board');
       if(board){
         const perspectiveB=onlineInRoom && onlineRole==='B';
@@ -9832,11 +9874,6 @@ tutorialInjectDom();
         '#board.online-perspective-b .cell.side-A{border-top-color:var(--b)!important;box-shadow:inset 0 3px 10px -6px var(--b),inset 0 1px 0 rgba(255,255,255,.05),inset 0 0 24px rgba(0,0,0,.25)}.online-perspective-b .obchip.side-A,.online-perspective-b .hs-side.side-A{border-left-color:var(--b)!important}'+
         '#board.online-perspective-b .cell.side-B{border-top-color:var(--a)!important;box-shadow:inset 0 3px 10px -6px var(--a),inset 0 1px 0 rgba(255,255,255,.05),inset 0 0 24px rgba(0,0,0,.25)}.online-perspective-b .obchip.side-B,.online-perspective-b .hs-side.side-B{border-left-color:var(--a)!important}'+
         '.online-perspective-b #log .aside{color:var(--b)!important}.online-perspective-b #log .bside{color:var(--a)!important}': '';
-      if(onlineInRoom && onlineRole==='B'){
-        const log=document.getElementById('log');
-        if(log) log.innerHTML=log.innerHTML.replace(/【我方】/g,'@@OPP@@').replace(/【對方】/g,'【我方】').replace(/@@OPP@@/g,'【對方】');
-      }
-      window.__onlineLocalSide=onlineInRoom?onlineRole:null;
       onlineRefreshAutoBattleControls();
     }
     function onlineAfterRender(){
@@ -9848,6 +9885,8 @@ tutorialInjectDom();
       const syncState=JSON.parse(JSON.stringify(state));
       // A slot choice is a local preview until the player confirms the move.
       syncState.actMoveTarget=null;
+      syncState.actMovePicked=null;
+      syncState.actPending=null;
       const blob=JSON.stringify(syncState);
       if(!onlineApplying && blob!==onlineLastBlob){
         if(onlinePrevController===onlineRole){
@@ -9863,12 +9902,28 @@ tutorialInjectDom();
       if(!val || !val.blob || val.blob===onlineLastBlob) return;
       onlineApplying=true;
       try {
-        state=onlineNormalize(JSON.parse(val.blob));
+        const incoming=onlineNormalize(JSON.parse(val.blob));
+        const keepPreview = incoming.phase==='act' &&
+          incoming.actingUnitId===state.actingUnitId &&
+          onlineController(incoming)===onlineRole;
+        const localPreview = keepPreview ? {
+          actMoveTarget:state.actMoveTarget,
+          actMovePicked:state.actMovePicked,
+          actPending:state.actPending
+        } : null;
+        state=incoming;
+        if(localPreview) Object.assign(state,localPreview);
+        window.__onlineLocalSide=onlineInRoom?onlineRole:null;
         onlineLastBlob=val.blob;
         if(state.selectedPiece) applyBattleBackground(state.selectedPiece);
         if(state.lastMoveEvent && state.lastMoveEvent.id && state.lastMoveEvent.id!==onlineLastFxId){
-          const movingUnit=(state.teamA||[]).concat(state.teamB||[]).find(function(u){ return u.id===state.lastMoveEvent.casterId; });
-          if(movingUnit) queueMoveAnimation(movingUnit);
+          const allUnits=(state.teamA||[]).concat(state.teamB||[]);
+          const movingIds=Array.isArray(state.lastMoveEvent.movedUnitIds) && state.lastMoveEvent.movedUnitIds.length
+            ? state.lastMoveEvent.movedUnitIds : [state.lastMoveEvent.casterId];
+          movingIds.forEach(function(id){
+            const movingUnit=allUnits.find(function(u){ return u.id===id; });
+            if(movingUnit) queueMoveAnimation(movingUnit);
+          });
         }
         if(state.lastMoveEvent && state.lastMoveEvent.id && !state.lastMoveEvent.moveOnly && state.lastMoveEvent.id!==onlineLastFxId){
           pendingEffects.push(state.lastMoveEvent);
@@ -9999,7 +10054,7 @@ tutorialInjectDom();
       };
     }
     function createOnlineRoom(){
-      const team=onlineSelectedTeam();
+      const team=onlineSelectedTeam()||loadOnlineSelectedTeam();
       if(!team){ openOnlinePreRoomTeamPick('create'); return; }
       createOnlineRoomAfterPick(team);
     }
@@ -10018,7 +10073,7 @@ tutorialInjectDom();
       });
     }
     function joinOnlineRoom(id){
-      const team=onlineSelectedTeam();
+      const team=onlineSelectedTeam()||loadOnlineSelectedTeam();
       if(!team){ openOnlinePreRoomTeamPick('join', id); return; }
       joinOnlineRoomAfterPick(id, team);
     }
@@ -10137,6 +10192,39 @@ tutorialInjectDom();
       onlineOverlay.style.display='none'; onlineOverlayText.textContent='';
     }
 
+    // 大廳的隊伍圖卡：優先顯示角色立繪，圖片尚未產生或讀取失敗時保留 SVG 頭像備援。
+    function onlineTeamPortraitHtml(charId, key){
+      const c=CHAR_BY_ID[charId];
+      const safeId=String(charId||'');
+      return '<div class="online-team-portrait" title="'+escHtml(c ? c.name : '未知角色')+'">'+
+        '<span class="online-team-avatar">'+charAvatarHtml(safeId,key)+'</span>'+
+        '<img src="images/'+safeId+'_wide.png" alt="" onerror="this.remove()">'+
+        '<span class="online-team-portrait-name">'+escHtml(c ? c.name : '未知角色')+'</span></div>';
+    }
+    function onlineTeamSummaryHtml(team, extraClass){
+      const ids=(team && team.characterIds ? team.characterIds : []).slice(0,3);
+      const portraits=ids.map(function(id,i){ return onlineTeamPortraitHtml(id,'online-'+String(team.id||'team')+'-'+i+'-'+id); }).join('');
+      return '<div class="online-team-summary '+(extraClass||'')+'">'+
+        '<div class="online-team-summary-copy"><span class="online-team-kicker">本次出戰隊伍</span><b>'+escHtml(team ? (team.name||'未命名隊伍') : '尚未選擇隊伍')+'</b><small>3 名角色・自訂卡組 10 張</small></div>'+
+        '<div class="online-team-portraits">'+portraits+'</div></div>';
+    }
+    function onlineTeamPickerHtml(selectedTeam){
+      const expanded=onlineTeamPickerExpanded;
+      let chooser='';
+      if(expanded){
+        chooser='<div class="online-team-option-grid">'+teams.map(function(team){
+          const selected=selectedTeam && String(team.id)===String(selectedTeam.id);
+          return '<button type="button" class="online-team-option'+(selected?' selected':'')+'" data-online-team="'+escHtml(team.id)+'">'+
+            onlineTeamSummaryHtml(team,'online-team-option-summary')+
+            '<span class="online-team-option-check">'+(selected?'✓ 已選擇':'選擇此隊')+'</span></button>';
+        }).join('')+'</div>';
+      }
+      return '<section class="online-team-select">'+
+        '<div class="online-team-select-top">'+onlineTeamSummaryHtml(selectedTeam,'online-team-current')+
+          '<button class="btn small online-change-team" id="onlineChangeTeam">'+(expanded?'收起隊伍':'更換隊伍')+'</button></div>'+chooser+
+        '</section>';
+    }
+
     function roomCardsHtml(){
       const rows=Object.keys(onlineRooms).map(function(id){ return {id:id,meta:onlineRooms[id]&&onlineRooms[id].meta}; })
         .filter(function(r){ return r.meta && r.meta.status==='waiting'; })
@@ -10172,17 +10260,24 @@ tutorialInjectDom();
             '<div class="online-code">'+onlineRoomId+'</div><button class="btn online-cancel" id="onlineCancel">離開房間</button>';
         }
       } else {
-        const selectedTeam=onlineSelectedTeam();
-        body='<div class="online-hint">本次隊伍：<b>'+escHtml(selectedTeam ? selectedTeam.name : '尚未選擇')+'</b>　<button class="btn small" id="onlineChangeTeam">更換隊伍</button></div>'+
+        const selectedTeam=loadOnlineSelectedTeam();
+        body=onlineTeamPickerHtml(selectedTeam)+
           '<div class="online-toolbar"><button class="btn primary" id="onlineCreate">＋ 建立房間</button><button class="btn" id="onlineRefresh">↻ 重新整理</button></div>'+
-          '<div class="online-hint">選擇一個等待中的房間即可加入；建立房間後等待對手加入。</div>'+
+          '<div class="online-hint online-lobby-guide">選擇等待中的房間即可加入；建立房間後等待對手加入。</div>'+
           '<div id="onlineRoomList" class="online-room-list">'+roomCardsHtml()+'</div>';
       }
       onlineScreen.innerHTML='<div class="online-head"><div><div class="online-title">🌐 跨網對戰</div><div class="online-sub">即時房間大廳</div></div><button class="btn small" id="onlineBack">✕</button></div><div class="online-body">'+body+'</div>';
       document.getElementById('onlineBack').onclick=function(){ onlineInRoom?leaveOnlineRoom():goToLobby(); };
       const create=document.getElementById('onlineCreate'); if(create) create.onclick=createOnlineRoom;
       const refresh=document.getElementById('onlineRefresh'); if(refresh){ refresh.onclick=function(){ stopListing(); startListing(); renderOnlineLobby(); }; }
-      const changeTeam=document.getElementById('onlineChangeTeam'); if(changeTeam) changeTeam.onclick=function(){ openOnlinePreRoomTeamPick('lobby'); };
+      const changeTeam=document.getElementById('onlineChangeTeam'); if(changeTeam) changeTeam.onclick=function(){ onlineTeamPickerExpanded=!onlineTeamPickerExpanded; renderOnlineLobby(); };
+      document.querySelectorAll('[data-online-team]').forEach(function(card){
+        card.onclick=function(){
+          const team=teams.find(function(t){ return String(t.id)===String(card.getAttribute('data-online-team')); });
+          if(!team) return;
+          saveOnlineSelectedTeam(team); onlineTeamPickerExpanded=false; renderOnlineLobby();
+        };
+      });
       document.querySelectorAll('.online-join').forEach(function(btn){ btn.onclick=function(){ joinOnlineRoom(btn.dataset.room); }; });
       const copy=document.getElementById('onlineCopy'); if(copy) copy.onclick=copyOnlineLink;
       const start=document.getElementById('onlineStart'); if(start) start.onclick=startOnlineMatch;
@@ -10192,9 +10287,11 @@ tutorialInjectDom();
     function openOnlineLobby(){
       if(!onlineConfigured()){ alert('Firebase 尚未設定。'); return; }
       if(onlineInRoom){ showTopScreen('screen-online'); renderOnlineLobby(); return; }
-      // Every visit begins with a team choice. The last choice is preselected,
-      // so returning players normally only need one confirmation click.
-      openOnlinePreRoomTeamPick('lobby');
+      if(!teams.length){ alert('請先在大廳建立至少一支隊伍，才能進行跨網對戰。'); return; }
+      // 每次從大廳點進跨網對戰，預設回到第一支隊伍；可在同頁立即更換。
+      saveOnlineSelectedTeam(teams[0]); onlineTeamPickerExpanded=false;
+      showTopScreen('screen-online');
+      ensureOnlineFirebase(function(){ if(!onlineInRoom) startListing(); renderOnlineLobby(); });
     }
 
     // 原本兩顆按鈕分別直接綁定 A／B 方。跨網時改為同一顆「我方」按鈕：
@@ -10221,6 +10318,9 @@ tutorialInjectDom();
         const css=document.createElement('style');
         css.textContent='#board.online-perspective-b{transform:scaleX(-1)}#board.online-perspective-b .cell{transform:scaleX(-1)}#screen-online{max-width:760px;margin:28px auto;padding:0;min-height:560px;background:linear-gradient(145deg,rgba(26,29,42,.98),rgba(11,13,21,.98));border:1px solid rgba(242,193,78,.42);border-radius:16px;box-shadow:0 16px 42px rgba(0,0,0,.52);color:#ececf3;overflow:hidden}.online-head{display:flex;align-items:center;justify-content:space-between;padding:18px 22px;border-bottom:1px solid rgba(242,193,78,.23);background:rgba(0,0,0,.16)}.online-title{font-size:23px;font-weight:800;color:#f2c14e}.online-sub{font-size:12px;color:#aeb2c4;margin-top:2px}.online-body{padding:22px}.online-toolbar{display:flex;gap:10px;margin-bottom:12px}.online-hint{color:#bfc2d0;font-size:13px;margin-bottom:16px}.online-room-list{display:grid;gap:10px}.online-room-card{display:flex;justify-content:space-between;align-items:center;gap:16px;padding:15px 16px;border:1px solid rgba(255,255,255,.13);border-radius:10px;background:rgba(255,255,255,.045)}.online-room-card b{display:block;color:#fff;letter-spacing:.06em}.online-room-card small{display:block;color:#aeb2c4;margin-top:4px}.online-empty{padding:35px 18px;text-align:center;color:#aeb2c4;border:1px dashed rgba(255,255,255,.18);border-radius:10px}.online-wait-icon{text-align:center;font-size:44px;margin:18px 0 8px}.online-body>h2,.online-body>p{text-align:center}.online-body>p{color:#bfc2d0}.online-code{font-family:monospace;font-size:28px;letter-spacing:.16em;text-align:center;color:#f2c14e;margin:22px auto;padding:12px;border:1px solid rgba(242,193,78,.32);border-radius:9px;max-width:280px}.online-body>#onlineCopy,.online-body>#onlineStart,.online-body>#onlineCancel{display:block;width:min(330px,100%);margin:10px auto}.online-cancel{opacity:.8}@media(max-width:600px){#screen-online{margin:10px;min-height:calc(100vh - 20px)}.online-room-card{align-items:flex-start;flex-direction:column}.online-room-card .online-join{width:100%}}';
         document.head.appendChild(css);
+        const teamCss=document.createElement('style');
+        teamCss.textContent='/* Online lobby team selection */#screen-online{max-width:900px}.online-team-select{margin:-2px 0 16px;padding:14px;border:1px solid rgba(242,193,78,.3);border-radius:14px;background:linear-gradient(110deg,rgba(242,193,78,.12),rgba(53,78,138,.12) 48%,rgba(8,10,18,.18));box-shadow:inset 0 1px 0 rgba(255,255,255,.06)}.online-team-select-top{display:flex;align-items:center;justify-content:space-between;gap:16px}.online-team-summary{display:flex;align-items:center;gap:18px;min-width:0;flex:1}.online-team-summary-copy{min-width:122px;display:flex;flex-direction:column;gap:3px}.online-team-kicker{font-size:10px;letter-spacing:.12em;color:#f2c14e;font-weight:800}.online-team-summary b{font-size:17px;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.online-team-summary small{font-size:11px;color:#bfc2d0}.online-team-portraits{display:flex;gap:7px;min-width:0}.online-team-portrait{position:relative;display:block;width:66px;height:76px;overflow:hidden;border-radius:9px;border:1px solid rgba(242,193,78,.42);background:linear-gradient(180deg,#27314d,#121827);box-shadow:0 4px 10px rgba(0,0,0,.28)}.online-team-avatar,.online-team-portrait img{position:absolute;inset:0;width:100%;height:100%}.online-team-avatar{display:flex;align-items:center;justify-content:center;background:radial-gradient(circle at 50% 28%,#4c608c,#172033 68%)}.online-team-avatar .char-avatar-svg{width:58px;height:58px}.online-team-portrait img{z-index:1;object-fit:contain;object-position:50% 44%;filter:drop-shadow(0 2px 2px rgba(0,0,0,.6))}.online-team-portrait-name{position:absolute;z-index:2;left:0;right:0;bottom:0;padding:9px 3px 3px;background:linear-gradient(transparent,rgba(4,6,13,.94));color:#fff;font-size:9px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:center;text-shadow:0 1px 2px #000}.online-change-team{flex:0 0 auto}.online-team-option-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:10px;margin-top:14px}.online-team-option{position:relative;display:block;width:100%;padding:12px;text-align:left;color:inherit;cursor:pointer;border:1px solid rgba(255,255,255,.14);border-radius:12px;background:rgba(7,10,19,.52);transition:.16s transform,.16s border-color,.16s background}.online-team-option:hover{transform:translateY(-2px);border-color:rgba(242,193,78,.72);background:rgba(242,193,78,.08)}.online-team-option.selected{border-color:#f2c14e;background:rgba(242,193,78,.13);box-shadow:inset 0 0 0 1px rgba(242,193,78,.25)}.online-team-option .online-team-summary{gap:12px}.online-team-option .online-team-summary-copy{min-width:104px}.online-team-option .online-team-summary b{font-size:14px}.online-team-option .online-team-portrait{width:50px;height:62px}.online-team-option .online-team-avatar .char-avatar-svg{width:45px;height:45px}.online-team-option-check{display:block;margin-top:8px;color:#f2c14e;font-size:11px;font-weight:800}.online-lobby-guide{margin:5px 0 12px}@media(max-width:600px){#screen-online{max-width:none;margin:8px;min-height:calc(100vh - 16px)}.online-head{padding:15px 16px}.online-body{padding:14px}.online-team-select{padding:11px}.online-team-select-top{align-items:stretch;flex-direction:column;gap:10px}.online-team-summary{align-items:flex-start;flex-direction:column;gap:10px}.online-team-summary-copy{min-width:0;width:100%}.online-team-summary b{font-size:16px}.online-team-portraits{width:100%;gap:6px}.online-team-portrait{width:calc((100% - 12px)/3);height:102px}.online-team-avatar .char-avatar-svg{width:76px;height:76px}.online-team-portrait-name{font-size:10px;padding-bottom:5px}.online-change-team{width:100%;padding:8px 12px}.online-team-option-grid{grid-template-columns:1fr;gap:8px;margin-top:10px}.online-team-option{padding:10px}.online-team-option .online-team-summary{align-items:center;flex-direction:row}.online-team-option .online-team-summary-copy{width:auto;flex:1}.online-team-option .online-team-portraits{width:auto;flex:0 0 auto}.online-team-option .online-team-portrait{width:44px;height:54px}.online-team-option .online-team-avatar .char-avatar-svg{width:39px;height:39px}.online-toolbar{display:grid;grid-template-columns:1fr 1fr}.online-toolbar .btn{min-width:0;padding:9px 6px}.online-room-card{padding:13px}.online-room-card .online-join{width:100%}}';
+        document.head.appendChild(teamCss);
         onlineScreen=document.createElement('div'); onlineScreen.id='screen-online'; onlineScreen.className='panel hidden';
         document.getElementById('app').appendChild(onlineScreen);
       } else onlineScreen=document.getElementById('screen-online');
