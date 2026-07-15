@@ -1150,6 +1150,8 @@
      浮起來一點，不是完全貼平；陣亡/暈眩等狀態的變化（.dead、.stealth等）都是疊加透明度/濾鏡，
      不受這裡背景改成漸層影響。 */
   .unit{background:linear-gradient(165deg,#22263a 0%,#1a1d29 60%,#15171f 100%);border:1px solid rgba(255,255,255,.06);border-radius:8px;position:relative;overflow:hidden;box-shadow:0 2px 6px rgba(0,0,0,.35);will-change:transform;}
+  /* 移動中的分身會掛在 body 上方，不受棋盤格 overflow:hidden 裁切；角色穿越格子縫隙時不會消失。 */
+  .move-ghost{position:fixed !important;z-index:1000 !important;display:block !important;margin:0 !important;pointer-events:none !important;will-change:transform,width,height;}
   /* 同上一條 .cell 的修正：.unit 是角色卡本體（立繪疊在它上面當背景層），本身也是實色漸層，
      跟 .cell 疊在一起把整個棋盤格蓋死。一樣調到跟其他面板同等級的低不透明度。 */
   body.battle-mode .unit{background:linear-gradient(165deg, rgba(34,38,58,.5) 0%, rgba(26,29,41,.5) 60%, rgba(21,23,31,.5) 100%);}
@@ -5295,20 +5297,32 @@ function playPendingEffects(){
     const dx = m.fromLeft - newRect.left;
     const dy = m.fromTop - newRect.top;
     if(!dx && !dy) return; // 位置沒變（理論上不會排進來，防呆）
-    // FLIP：先用 transform 把角色卡「拉回」舊位置（沒有 transition，瞬間跳回，肉眼看不出來），
-    // 強制一次 reflow 讓瀏覽器把這個起始狀態畫面定住，下一個影格再把 transform 歸零＋補上
-    // transition，角色卡就會從舊格子滑動到新格子（新格子的位置本來就已經是 render() 剛畫好的
-    // 最終位置）。滑動途中暫時墊高 z-index，避免中途穿過其他角色卡時被蓋住。
-    el.style.transition = 'none';
-    el.style.transform = 'translate('+dx+'px,'+dy+'px)';
-    const prevZ = el.style.zIndex;
-    el.style.zIndex = '30';
-    void el.offsetWidth; // force reflow
+    // 不再直接移動目的地格子裡的 el：格子有 overflow:hidden，會把跨越縫隙的
+    // 角色裁掉。複製一個固定定位的分身掛到 body，讓它在整個棋盤上方完整移動。
+    const ghost = el.cloneNode(true);
+    ghost.removeAttribute('id');
+    ghost.classList.add('move-ghost');
+    const oldWidth = m.width || newRect.width;
+    const oldHeight = m.height || newRect.height;
+    ghost.style.left = m.fromLeft+'px';
+    ghost.style.top = m.fromTop+'px';
+    ghost.style.width = oldWidth+'px';
+    ghost.style.height = oldHeight+'px';
+    ghost.style.transform = 'translate(0,0)';
+    ghost.style.transition = 'transform .58s cubic-bezier(.22,.78,.24,1), width .58s ease, height .58s ease';
+    document.body.appendChild(ghost);
+    const previousVisibility = el.style.visibility;
+    el.style.visibility = 'hidden';
+    void ghost.offsetWidth;
     requestAnimationFrame(()=>{
-    el.style.transition = 'transform .58s cubic-bezier(.22,.78,.24,1)';
-      el.style.transform = '';
+      ghost.style.transform = 'translate('+dx+'px,'+dy+'px)';
+      ghost.style.width = newRect.width+'px';
+      ghost.style.height = newRect.height+'px';
     });
-    setTimeout(()=>{ el.style.transition=''; el.style.transform=''; el.style.zIndex=prevZ; }, 620);
+    setTimeout(()=>{
+      if(ghost.parentNode) ghost.parentNode.removeChild(ghost);
+      el.style.visibility = previousVisibility;
+    }, 620);
   });
   if(!effects.length) return;
   effects.forEach(fx=>{
