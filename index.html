@@ -6035,6 +6035,7 @@ function scheduleAutoLoop(){
 // 跟 scheduleAutoLoop() 的差別只在時間到了之後呼叫 aiHandleTurn()（電腦對手固定的AI決策
 // 邏輯，本來就不經過 confirmAct() 那一套UI專用暫存欄位）而不是 autoDecideCurrentTurn()。
 function scheduleOpponentAiTurn(unit){
+  if(window.__onlineLocalSide) return;
   const capturedState = state;
   const capturedUnitId = unit.id;
   setTimeout(()=>{
@@ -9794,12 +9795,15 @@ tutorialInjectDom();
       if(onlineGameRef) onlineGameRef.off();
       if(onlineMetaRef) onlineMetaRef.off();
       onlineRootRef=onlineGameRef=onlineMetaRef=null;
-      onlineRoomId=onlineRole=null; onlineInRoom=false; onlineMeta=null; onlineLastBlob=null; onlineSetupShown=false; window.__onlineLocalSide=null;
+      onlineRoomId=onlineRole=null; onlineInRoom=false; onlineMeta=null; onlineLastBlob=null; onlineSetupShown=false; window.__onlineLocalSide=null; twoPlayerMode=false;
       onlineUpdateLock();
     }
     function attachOnlineRoom(id, role){
       stopListing();
       onlineRoomId=id; onlineRole=role; onlineInRoom=true;
+      // Online matches are always human-vs-human; this must be set on the
+      // joining browser before its first remote game state is rendered.
+      twoPlayerMode=true;
       // Set the local perspective before the first remote state is rendered.
       window.__onlineLocalSide=role;
       onlineRootRef=onlineDb.ref('rooms/'+id);
