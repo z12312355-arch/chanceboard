@@ -1070,7 +1070,7 @@ window.CHANCEBOARD_DB = {
       "critRate": null,
       "cooldown": null,
       "coefficient": 1,
-      "description": "出招後自己進入必中狀態(6回合)，攻擊必定命中",
+      "description": "出招後自己進入必中狀態(5回合)，攻擊必定命中",
       "expectedValue": 0,
       "strength": 1,
       "ownerName": "圖卡勒絲(Twocolors)",
@@ -1082,7 +1082,7 @@ window.CHANCEBOARD_DB = {
           "mode": "value",
           "target": "self",
           "chance": 1.0,
-          "durSec": 60
+          "durSec": 50
         }
       ],
       "effectTrigger": "postAction",

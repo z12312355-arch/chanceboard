@@ -5546,7 +5546,6 @@ function resolveMove(unit, move, ownTeam, enemyTeam){
       const roll = Math.random()<=chance;
       if(move.effectTrigger==='onHit' && roll) executeOps(unit, target, move.effectOps, ctx);
       if(move.effectTrigger==='onCrit' && isCrit && roll) executeOps(unit, target, move.effectOps, ctx);
-      if(move.effectTrigger==='postAction' && roll) executeOps(unit, target, move.effectOps, ctx);
       if(move.effectTrigger==='onKill' && !target.alive && roll) executeOps(unit, target, move.effectOps, ctx);
     }
     // 被動的「onHit」觸發：跟招式本身的onHit效果是兩件獨立的事（例如絲妲兒的電子磁場，不論用
@@ -5558,6 +5557,15 @@ function resolveMove(unit, move, ownTeam, enemyTeam){
       if(Math.random()<=pChance) executeOps(unit, target, passive.effectOps, ctx);
     }
   });
+  // 「攻擊後」效果以「完成一次出手」為觸發點，而不是以「命中某個目標」為條件。
+  // 因此攻擊被閃避／未命中時，疼痛針、彩虹緞帶等仍會照招式文字結算；
+  // 群體攻擊也只會結算一次，不會因命中多名目標重複套用自身／隊伍效果。
+  if(move.effectTrigger==='postAction' && move.effectOps && move.effectOps.length){
+    const chance=move.effectChance!=null?move.effectChance:1;
+    if(Math.random()<=chance){
+      executeOps(unit, null, move.effectOps, {mover:unit, moveTarget:null, ownTeam, enemyTeam, moveName:move.name});
+    }
+  }
   // One cast flourish for the whole move-use (not per-target — a group-hit move shouldn't
   // repeat its 劍/槍/法/願 cast animation once per target), plus each target's own hit/miss/
   // crit/kill reaction, all queued together and played back after the next render().
