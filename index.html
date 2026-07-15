@@ -9702,12 +9702,24 @@ tutorialInjectDom();
     let onlineDb = null, onlineReady = false;
     let onlineRoomId = null, onlineRole = null, onlineInRoom = false;
     let onlinePendingRoomAction = null;
+    let onlineSelectedTeamId = null;
+    const ONLINE_TEAM_KEY = 'chanceboard_online_last_team_v1';
     let onlineRootRef = null, onlineGameRef = null, onlineMetaRef = null;
     let onlineListRef = null, onlineRooms = {}, onlineMeta = null;
     let onlineLastBlob = null, onlineApplying = false, onlinePrevController = 'A', onlineSetupShown = false, onlineLastFxId = null;
     let onlineOverlay = null, onlineOverlayText = null, onlineScreen = null;
 
     function onlineConfigured(){ return !!ONLINE_CONFIG.databaseURL; }
+    function onlineSelectedTeam(){ return teams.find(function(t){ return t.id===onlineSelectedTeamId; }) || null; }
+    function saveOnlineSelectedTeam(team){
+      onlineSelectedTeamId=team ? team.id : null;
+      try { if(team) localStorage.setItem(ONLINE_TEAM_KEY, String(team.id)); else localStorage.removeItem(ONLINE_TEAM_KEY); } catch(e){}
+    }
+    function loadOnlineSelectedTeam(){
+      if(onlineSelectedTeam()) return onlineSelectedTeam();
+      try { onlineSelectedTeamId=localStorage.getItem(ONLINE_TEAM_KEY)||null; } catch(e){ onlineSelectedTeamId=null; }
+      return onlineSelectedTeam();
+    }
     function onlineNormalize(st){ if(st){ st.autoBattle=false; st.autoBattleB=false; } return st; }
     function onlineController(st){
       if(!st) return 'A';
@@ -9893,12 +9905,12 @@ tutorialInjectDom();
       pendingMode=null; pendingTeamIdA=null; pendingTeamIdB=null;
       showTopScreen('screen-online');
       if(!onlineScreen) return;
-      const actionLabel=action==='create'?'建立房間':'加入房間';
+      const actionLabel=action==='create'?'建立房間':(action==='join'?'加入房間':'進入房間大廳');
       onlineScreen.innerHTML='<div class="online-head"><div><div class="online-title">🌐 '+actionLabel+'</div><div class="online-sub">先選擇本次對戰使用的隊伍</div></div><button class="btn small" id="onlineTeamPickBack">✕</button></div>'+ 
         '<div class="online-body"><h2>選擇你的隊伍</h2><p>選擇後才會'+actionLabel+'，不會直接開始本機遊戲。</p><div id="onlineTeamPickList" class="online-room-list"></div><button class="btn primary" id="onlineTeamPickConfirm" disabled>確認'+actionLabel+'</button></div>';
       const list=document.getElementById('onlineTeamPickList');
       const confirm=document.getElementById('onlineTeamPickConfirm');
-      let selectedTeam=null;
+      let selectedTeam=loadOnlineSelectedTeam();
       teams.forEach(function(team){
         const card=document.createElement('button');
         card.type='button'; card.className='online-room-card';
@@ -9911,17 +9923,26 @@ tutorialInjectDom();
           confirm.disabled=false;
         };
         list.appendChild(card);
+        if(selectedTeam && selectedTeam.id===team.id) card.click();
       });
       document.getElementById('onlineTeamPickBack').onclick=function(){ onlinePendingRoomAction=null; renderOnlineLobby(); };
       confirm.onclick=function(){
         if(!selectedTeam || !onlinePendingRoomAction) return;
         const selectedAction=onlinePendingRoomAction;
-        onlinePendingRoomAction=null;
+        saveOnlineSelectedTeam(selectedTeam); onlinePendingRoomAction=null;
         if(selectedAction.action==='create') createOnlineRoomAfterPick(selectedTeam);
-        else joinOnlineRoomAfterPick(selectedAction.roomId, selectedTeam);
+        else if(selectedAction.action==='join') joinOnlineRoomAfterPick(selectedAction.roomId, selectedTeam);
+        else {
+          showTopScreen('screen-online');
+          ensureOnlineFirebase(function(){ if(!onlineInRoom) startListing(); renderOnlineLobby(); });
+        }
       };
     }
-    function createOnlineRoom(){ openOnlinePreRoomTeamPick('create'); }
+    function createOnlineRoom(){
+      const team=onlineSelectedTeam();
+      if(!team){ openOnlinePreRoomTeamPick('create'); return; }
+      createOnlineRoomAfterPick(team);
+    }
     function createOnlineRoomAfterPick(team){
       ensureOnlineFirebase(function(){
         const id=onlineGenId(), root=onlineDb.ref('rooms/'+id);
@@ -9936,7 +9957,11 @@ tutorialInjectDom();
         });
       });
     }
-    function joinOnlineRoom(id){ openOnlinePreRoomTeamPick('join', id); }
+    function joinOnlineRoom(id){
+      const team=onlineSelectedTeam();
+      if(!team){ openOnlinePreRoomTeamPick('join', id); return; }
+      joinOnlineRoomAfterPick(id, team);
+    }
     function joinOnlineRoomAfterPick(id, team){
       ensureOnlineFirebase(function(){
         const root=onlineDb.ref('rooms/'+id), metaRef=root.child('meta');
@@ -10087,7 +10112,9 @@ tutorialInjectDom();
             '<div class="online-code">'+onlineRoomId+'</div><button class="btn online-cancel" id="onlineCancel">離開房間</button>';
         }
       } else {
-        body='<div class="online-toolbar"><button class="btn primary" id="onlineCreate">＋ 建立房間</button><button class="btn" id="onlineRefresh">↻ 重新整理</button></div>'+
+        const selectedTeam=onlineSelectedTeam();
+        body='<div class="online-hint">本次隊伍：<b>'+escHtml(selectedTeam ? selectedTeam.name : '尚未選擇')+'</b>　<button class="btn small" id="onlineChangeTeam">更換隊伍</button></div>'+
+          '<div class="online-toolbar"><button class="btn primary" id="onlineCreate">＋ 建立房間</button><button class="btn" id="onlineRefresh">↻ 重新整理</button></div>'+
           '<div class="online-hint">選擇一個等待中的房間即可加入；建立房間後等待對手加入。</div>'+
           '<div id="onlineRoomList" class="online-room-list">'+roomCardsHtml()+'</div>';
       }
@@ -10095,6 +10122,7 @@ tutorialInjectDom();
       document.getElementById('onlineBack').onclick=function(){ onlineInRoom?leaveOnlineRoom():goToLobby(); };
       const create=document.getElementById('onlineCreate'); if(create) create.onclick=createOnlineRoom;
       const refresh=document.getElementById('onlineRefresh'); if(refresh){ refresh.onclick=function(){ stopListing(); startListing(); renderOnlineLobby(); }; }
+      const changeTeam=document.getElementById('onlineChangeTeam'); if(changeTeam) changeTeam.onclick=function(){ openOnlinePreRoomTeamPick('lobby'); };
       document.querySelectorAll('.online-join').forEach(function(btn){ btn.onclick=function(){ joinOnlineRoom(btn.dataset.room); }; });
       const copy=document.getElementById('onlineCopy'); if(copy) copy.onclick=copyOnlineLink;
       const start=document.getElementById('onlineStart'); if(start) start.onclick=startOnlineMatch;
@@ -10103,8 +10131,10 @@ tutorialInjectDom();
     }
     function openOnlineLobby(){
       if(!onlineConfigured()){ alert('Firebase 尚未設定。'); return; }
-      showTopScreen('screen-online');
-      ensureOnlineFirebase(function(){ if(!onlineInRoom) startListing(); renderOnlineLobby(); });
+      if(onlineInRoom){ showTopScreen('screen-online'); renderOnlineLobby(); return; }
+      // Every visit begins with a team choice. The last choice is preselected,
+      // so returning players normally only need one confirmation click.
+      openOnlinePreRoomTeamPick('lobby');
     }
     function buildOnlineLobby(){
       if(!document.getElementById('screen-online')){
