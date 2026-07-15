@@ -7276,6 +7276,9 @@ function renderBattle(){
   // confirmAct() 真正套用 unit.slot 之後、下一次 render() 才會看到角色真的搬過去。
   const pendingMoveTarget = null;
   function displaySlotOf(u){
+    // Slot buttons are previews only. The real unit.slot changes during
+    // confirmAct(); until then, render the acting unit at its pending target.
+    if(state.actingUnitId===u.id && state.actMoveTarget!=null) return state.actMoveTarget;
     return u.slot;
   }
 
