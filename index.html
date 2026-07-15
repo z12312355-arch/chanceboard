@@ -573,7 +573,8 @@
      對手時面板繼續顯示（內容仍然是那個角色目前的招式/卡面，純資訊），只是整塊變灰、擋掉點擊，
      避免玩家誤以為可以操作對方、也避免版面忽隱忽現跳動。見 renderBattle() 裡 isOpponentAiTurn
      那段的說明。 */
-  #actPanel.opp-turn-disabled{opacity:.5;pointer-events:none;}
+  /* 對手回合仍完整保留本機玩家的出手資訊；只禁止點擊，不把內容淡化。 */
+  #actPanel.opp-turn-disabled{opacity:1;pointer-events:none;}
   /* 寬度原本改成跟棋盤（#board）一格一樣寬：#logPanelWrap 跟 #board 同樣是 #battleRightCol 的
      子層，寬度基準相同，所以直接用「(100% - 5個8px間距)/6」算出單一棋盤格寬度即可，不用另外
      量測 #board 實際寬度。使用者先要求「往右延伸寬*1.5」，後來進一步要求「延伸到跟上面棋盤
@@ -2804,7 +2805,9 @@ function charFullThumbOnErrorAttr(id){
 function preloadCharThumbs(){
   try{
     (DB.characters||[]).forEach(function(c){
-      ['images/'+c.id+'_full_thumb.png', 'images/'+c.id+'_full.png', 'images/'+c.id+'_wide.png'].forEach(function(src){
+      // 首頁只預載體積較小的縮圖，避免 20 多名角色的大立繪同時搶網路，
+      // 反而讓真正即將看到的第一張圖變慢。
+      ['images/'+c.id+'_full_thumb.png'].forEach(function(src){
         const img = new Image();
         img.decoding = 'async';
         img.onload = function(){ window.__imgExistCache[src] = true; };
@@ -2814,6 +2817,25 @@ function preloadCharThumbs(){
         // 直接畫出來的點陣圖——沒被插進畫面的 Image 物件，很多瀏覽器會把解碼這步延後到真的
         // 要畫出來那一刻才做。呼叫 img.decode()（Promise，跑在背景，不會擋住畫面）強迫瀏覽器
         // 現在就把解碼做完，之後不管進哪個畫面，圖片都已經是解碼好可以直接畫出來的狀態。
+        if(img.decode) img.decode().catch(function(){});
+      });
+    });
+  }catch(e){}
+}
+// 即將投入戰鬥的三名角色才以高優先度下載＋解碼完整立繪。
+// 這個時機比真正進戰鬥畫面早，因此首次看見角色時通常已在瀏覽器快取中。
+function preloadBattleArtForTeam(team){
+  try{
+    const ids=(team&&team.characterIds)||[];
+    ids.slice(0,3).forEach(function(id){
+      ['images/'+id+'_full.png','images/'+id+'_wide.png'].forEach(function(src){
+        if(window.__imgExistCache && window.__imgExistCache[src]===false) return;
+        const img=new Image();
+        try{ img.fetchPriority='high'; }catch(e){}
+        img.decoding='async';
+        img.onload=function(){ window.__imgExistCache[src]=true; };
+        img.onerror=function(){ window.__imgExistCache[src]=false; };
+        img.src=src;
         if(img.decode) img.decode().catch(function(){});
       });
     });
@@ -3801,7 +3823,11 @@ function localizeOnlineLogHtml(html){
 // 顯示「我方／對方」而不是「黑方／白方」。雙人對戰（兩位玩家共用同一台裝置、輪流操作黑白方）
 // 這個框架嚴格說並不成立——白方那位玩家的視角裡，白方才是「我方」——但這是跟既有「對方手牌數」
 // 那個資訊卡完全相同、已經被接受的簡化（見那裡的說明），沒有另外為雙人模式切換文字。
-function sideTag(u){ return u.side==='A' ? '<span class="aside">【我方】</span>' : '<span class="bside">【對方】</span>'; }
+function sideTag(u){
+  // 跨網 B 方也必須以自己的視角看待陣營，不能把 A 永遠硬編成「我方」。
+  const localSide = window.__onlineLocalSide || 'A';
+  return u.side===localSide ? '<span class="aside">【我方】</span>' : '<span class="bside">【對方】</span>';
+}
 // 使用者要求角色名稱一律去掉括弧＋括弧內的英文別名（見 stripParenAlias 的說明），unitName()
 // 是整個檔案（戰鬥紀錄、出手提示…）取得「圖示+姓名」顯示字串的共用入口，直接在這裡處理一次，
 // 不用每個呼叫端各自記得再套一層 stripParenAlias。
@@ -7577,10 +7603,33 @@ function renderBattle(){
     actPanel.classList.remove('hidden');
     actPanel.classList.add('opp-turn-disabled');
     actHint.textContent='對手回合中：等待你的角色行動';
-    actSlotRow.innerHTML='<span class="slotrow-label">你的手牌</span>';
-    moveGrid.innerHTML='<div style="color:var(--muted);font-size:12px;grid-column:1/-1;">輪到你時，這裡會顯示該角色可使用的招式。</div>';
-    actCardZone.innerHTML='';
+    // 對手行動時仍顯示「自己」下一次可用的完整操作資訊；所有控制都由外層
+    // .opp-turn-disabled 擋住，因此看起來與自己回合一致，但絕不會誤出手。
     const ownUnit=(onlineLocalSide==='A'?state.teamA:state.teamB).find(function(u){ return u.alive; });
+    actSlotRow.innerHTML='<span class="slotrow-label">移動到：</span>';
+    if(ownUnit){
+      (onlineLocalSide==='B' ? [3,2,1] : [1,2,3]).forEach(function(s){
+        const b=document.createElement('button');
+        b.className='btn slotbtn'+(ownUnit.slot===s?' current':'');
+        b.textContent=slotDistLabel(ownUnit.side,s);
+        b.disabled=true;
+        actSlotRow.appendChild(b);
+      });
+      moveGrid.innerHTML='';
+      [['sword','劍'],['gun','槍'],['magic','法'],['wish','願']].forEach(function(pair){
+        const key=pair[0], move=ownUnit.moves[key];
+        if(!move) return;
+        const info=moveButtonLabel(ownUnit,key,move);
+        if(!info) return;
+        const wrap=document.createElement('div'); wrap.className='movebtn-wrap';
+        const b=document.createElement('button');
+        b.className='btn movebtn'; b.disabled=true; b.innerHTML=info.html;
+        wrap.appendChild(b); moveGrid.appendChild(wrap);
+      });
+    } else {
+      moveGrid.innerHTML='<div style="color:var(--muted);font-size:12px;grid-column:1/-1;">沒有可行動的角色。</div>';
+    }
+    actCardZone.innerHTML='';
     if(ownUnit){
       suitHandEntries(ownUnit).forEach(function(entry){ actCardZone.appendChild(renderCardFace(entry.card,{isCustom:entry.source==='custom'})); });
       combinedFlowerHand(ownUnit).forEach(function(entry){ actCardZone.appendChild(renderCardFace(entry.card,{isCustom:entry.source==='custom'})); });
@@ -9932,6 +9981,8 @@ tutorialInjectDom();
     function saveOnlineSelectedTeam(team){
       onlineSelectedTeamId=team ? team.id : null;
       try { if(team) localStorage.setItem(ONLINE_TEAM_KEY, String(team.id)); else localStorage.removeItem(ONLINE_TEAM_KEY); } catch(e){}
+      // 選定隊伍的當下就預先準備戰鬥立繪，不等按下建房／加入或進入戰鬥才開始下載。
+      if(team && typeof preloadBattleArtForTeam==='function') preloadBattleArtForTeam(team);
     }
     function loadOnlineSelectedTeam(){
       if(onlineSelectedTeam()) return onlineSelectedTeam();
