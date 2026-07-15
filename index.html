@@ -7478,7 +7478,7 @@ function renderBattle(){
     actHint.innerHTML = (isOpponentAiTurn ? '對方回合中：' : '輪到 ')+sideTag(currentActUnit)+unitName(currentActUnit)+(rooted?' <b style="color:var(--bad)">（禁足中，無法移動）</b>':'');
 
     actSlotRow.innerHTML = '<span class="slotrow-label">移動到：</span>';
-    [1,2,3].forEach(s=>{
+    (window.__onlineLocalSide==='B' ? [3,2,1] : [1,2,3]).forEach(s=>{
       const b = document.createElement('button');
       const isSelected = moveTarget===s;
       const reachable = s===currentActUnit.slot || hasFreeMove(currentActUnit) || isAdjacentSlot(currentActUnit.slot, s);
@@ -9729,6 +9729,14 @@ tutorialInjectDom();
           img.style.transform=(localUnit && localUnit.side===rightSide)?'scaleX(-1)':'';
         });
       }
+      let colorStyle=document.getElementById('online-perspective-colors');
+      if(!colorStyle){
+        colorStyle=document.createElement('style'); colorStyle.id='online-perspective-colors'; document.head.appendChild(colorStyle);
+      }
+      colorStyle.textContent=(onlineInRoom && onlineRole==='B') ?
+        '#board.online-perspective-b .cell.side-A,.online-perspective-b .obchip.side-A,.online-perspective-b .hs-side.side-A{border-color:var(--b)!important;box-shadow:inset 0 3px 10px -6px var(--b)}'+
+        '#board.online-perspective-b .cell.side-B,.online-perspective-b .obchip.side-B,.online-perspective-b .hs-side.side-B{border-color:var(--a)!important;box-shadow:inset 0 3px 10px -6px var(--a)}'+
+        '.online-perspective-b #log .aside{color:var(--b)!important}.online-perspective-b #log .bside{color:var(--a)!important}': '';
       window.__onlineLocalSide=onlineInRoom?onlineRole:null;
     }
     function onlineAfterRender(){
