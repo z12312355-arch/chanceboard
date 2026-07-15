@@ -9685,6 +9685,7 @@ tutorialInjectDom();
 
     let onlineDb = null, onlineReady = false;
     let onlineRoomId = null, onlineRole = null, onlineInRoom = false;
+    let onlinePendingRoomAction = null;
     let onlineRootRef = null, onlineGameRef = null, onlineMetaRef = null;
     let onlineListRef = null, onlineRooms = {}, onlineMeta = null;
     let onlineLastBlob = null, onlineApplying = false, onlinePrevController = 'A', onlineSetupShown = false, onlineLastFxId = null;
@@ -9838,7 +9839,7 @@ tutorialInjectDom();
       if(onlineGameRef) onlineGameRef.off();
       if(onlineMetaRef) onlineMetaRef.off();
       onlineRootRef=onlineGameRef=onlineMetaRef=null;
-      onlineRoomId=onlineRole=null; onlineInRoom=false; onlineMeta=null; onlineLastBlob=null; onlineLastFxId=null; onlineSetupShown=false; window.__onlineLocalSide=null; twoPlayerMode=false;
+      onlineRoomId=onlineRole=null; onlineInRoom=false; onlineMeta=null; onlineLastBlob=null; onlineLastFxId=null; onlineSetupShown=false; onlinePendingRoomAction=null; window.__onlineLocalSide=null; twoPlayerMode=false;
       onlineUpdateLock();
     }
     function attachOnlineRoom(id, role){
@@ -9867,12 +9868,23 @@ tutorialInjectDom();
       renderOnlineLobby();
     }
 
-    function createOnlineRoom(){
+    function openOnlinePreRoomTeamPick(action, roomId){
+      if(!teams.length){ alert('請先在大廳建立至少一支隊伍，才能進行跨網對戰。'); return; }
+      onlinePendingRoomAction={action:action, roomId:roomId||null};
+      pendingMode='online-pre'; pendingTeamIdA=null; pendingTeamIdB=null;
+      showTopScreen('screen-teampick');
+      document.getElementById('pieceChoice').value='random';
+      renderTeamPick();
+      document.getElementById('teampick-heading').textContent=action==='create'?'建立房間：先選擇隊伍':'加入房間：先選擇隊伍';
+      const note=document.getElementById('teampick-noteams-hint'); if(note){ note.textContent='請先選擇一支已儲存的隊伍，確認後才會建立或加入房間。'; note.style.display='block'; }
+    }
+    function createOnlineRoom(){ openOnlinePreRoomTeamPick('create'); }
+    function createOnlineRoomAfterPick(team){
       ensureOnlineFirebase(function(){
         const id=onlineGenId(), root=onlineDb.ref('rooms/'+id);
         root.transaction(function(current){
           if(current) return; // 極低機率撞號時不覆蓋既有房
-          return {meta:{status:'waiting',createdAt:Date.now()}};
+          return {meta:{status:'waiting',createdAt:Date.now(),setupA:onlineTeamPayload(team)}};
         }, function(err, committed){
           if(err || !committed){ alert('建立房間失敗，請再試一次。'); return; }
           attachOnlineRoom(id,'A');
@@ -9881,12 +9893,13 @@ tutorialInjectDom();
         });
       });
     }
-    function joinOnlineRoom(id){
+    function joinOnlineRoom(id){ openOnlinePreRoomTeamPick('join', id); }
+    function joinOnlineRoomAfterPick(id, team){
       ensureOnlineFirebase(function(){
         const root=onlineDb.ref('rooms/'+id), metaRef=root.child('meta');
         metaRef.transaction(function(meta){
           if(!meta || meta.status!=='waiting') return;
-          return Object.assign({},meta,{status:'ready',guestJoinedAt:Date.now()});
+          return Object.assign({},meta,{status:'ready',guestJoinedAt:Date.now(),setupB:onlineTeamPayload(team)});
         }, function(err, committed){
           if(err){ alert('加入房間失敗，請重試。'); return; }
           if(!committed){ alert('這個房間剛剛已被其他玩家加入或已關閉。'); return; }
@@ -9908,7 +9921,7 @@ tutorialInjectDom();
     }
     function startOnlineMatch(){
       if(onlineRole!=='A' || !onlineMeta || onlineMeta.status!=='ready') return;
-      onlineMetaRef.update({status:'setup',setupA:null,setupB:null,setupStartedAt:Date.now()});
+      onlineMetaRef.update({status:'setup',setupStartedAt:Date.now()});
       try { onlineRootRef.onDisconnect().remove(); } catch(e){}
     }
     function onlineTeamPayload(team){
@@ -9927,6 +9940,14 @@ tutorialInjectDom();
     }
     const __onlinePreviousConfirmTeamPick=confirmTeamPick;
     confirmTeamPick=function(){
+      if(pendingMode==='online-pre' && onlinePendingRoomAction){
+        const team=teams.find(function(t){ return t.id===pendingTeamIdA; });
+        if(!team) return;
+        const action=onlinePendingRoomAction; onlinePendingRoomAction=null; pendingMode=null;
+        if(action.action==='create') createOnlineRoomAfterPick(team);
+        else joinOnlineRoomAfterPick(action.roomId, team);
+        return;
+      }
       if(!(onlineInRoom && pendingMode==='online')) return __onlinePreviousConfirmTeamPick.apply(this,arguments);
       const team=teams.find(function(t){ return t.id===pendingTeamIdA; });
       if(!team) return;
