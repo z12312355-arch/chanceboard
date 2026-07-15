@@ -652,15 +652,9 @@
   body.battle-mode #actConfirmBtn.timed-out::before{background:linear-gradient(145deg,#727681,#3c4049);}
   body.battle-mode #actConfirmBtn.turn-locked{filter:grayscale(1) saturate(.12);transform:scale(.96);pointer-events:none;}
   body.battle-mode #actConfirmBtn.turn-locked::before{background:linear-gradient(145deg,#737883,#383d46);}
-  body.battle-mode #actConfirmBtn.turn-locked::after{content:"⛓";position:absolute;inset:-5px;display:grid;place-items:center;color:#d1d5dd;font-size:51px;line-height:1;transform:rotate(45deg) scaleX(1.24);text-shadow:0 2px 2px #111,0 0 6px rgba(0,0,0,.85);z-index:3;}
   body.battle-mode #actConfirmBtn.turn-locked .act-confirm-label{display:none;}
-  body.battle-mode #actConfirmBtn.turn-locked .act-confirm-time{display:block;position:absolute;inset:-5px;z-index:3;font-size:51px;line-height:72px;color:#aeb4bd;transform:rotate(-45deg) scaleX(1.24);text-shadow:0 2px 2px #111,0 0 6px rgba(0,0,0,.85);}
   body.battle-mode #actConfirmBtn.turn-unlocking{animation:turn-unfreeze .62s ease-out both;}
-  body.battle-mode #actConfirmBtn.turn-unlocking::after{content:"⛓";position:absolute;inset:-5px;display:grid;place-items:center;color:#d1d5dd;font-size:51px;line-height:1;transform:rotate(45deg) scaleX(1.24);text-shadow:0 2px 2px #111,0 0 6px rgba(0,0,0,.85);z-index:3;animation:turn-chain-break .62s ease-out both;}
-  body.battle-mode #actConfirmBtn.turn-unlocking .act-confirm-time{display:block;position:absolute;inset:-5px;z-index:3;font-size:51px;line-height:72px;color:#aeb4bd;transform:rotate(-45deg) scaleX(1.24);text-shadow:0 2px 2px #111,0 0 6px rgba(0,0,0,.85);animation:turn-chain-break-alt .62s ease-out both;}
   @keyframes turn-unfreeze{0%{filter:grayscale(1) saturate(.1);transform:scale(.94)}55%{filter:grayscale(.25);transform:scale(1.07)}100%{filter:none;transform:scale(1)}}
-  @keyframes turn-chain-break{0%{opacity:1;transform:rotate(45deg) scaleX(1.24)}100%{opacity:0;transform:translate(-20px,14px) rotate(78deg) scaleX(1.65)}}
-  @keyframes turn-chain-break-alt{0%{opacity:1;transform:rotate(-45deg) scaleX(1.24)}100%{opacity:0;transform:translate(20px,-14px) rotate(-78deg) scaleX(1.65)}}
   .hidden{display:none !important;}
   .panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 16px;margin-bottom:14px;}
   /* 找到真正原因：戰鬥紀錄（#logPanelWrap）跟出手面板（#actPanel）都是 class="panel"，用的是
@@ -6275,9 +6269,9 @@ function syncActionDeadlineUi(){
   if(shouldUnlock){
     setTimeout(function(){ btn.classList.remove('turn-unlocking'); }, 650);
   }
-  // 我方操作時才顯示 OK；鎖住時用兩個交叉的鏈條字元組成 X 型鎖鏈。
+  // 我方操作時才顯示 OK；對方回合與逾時只保留石化按鈕本身。
   btn.querySelector('.act-confirm-label').textContent = localTurn && actionTimedOutForId!==unit.id ? 'OK' : '';
-  label.textContent = (!localTurn || actionTimedOutForId===unit.id || shouldUnlock) ? '⛓' : '';
+  label.textContent = '';
   const paint = function(){
     const remaining = Math.max(0, state.turnDeadlineAt-Date.now());
     // 對手回合也看得到同一個倒數環，只是按鈕保持鎖住；因此雙方都能判斷對方還剩多少時間。
