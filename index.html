@@ -7512,10 +7512,11 @@ function renderBattle(){
       // 以此類推。 */
       const OFFSET_PCT = 16; // 固定的相鄰卡片露出寬度
       const W = 100 - (N-1)*OFFSET_PCT; // 隨N反推，確保(N-1)*OFFSET_PCT+W剛好=100%，不超出也不用裁切
-      // 使用者反應「對面血量高的應該在左邊」：白方棋盤是鏡像的，血量最高（疊最上面）那張要貼齊
-      // 格子右邊（黑方）／左邊（白方）——這是跟 side 綁死的固定規則，不能因為欄位在棋盤邊界就
-      // 反過來（使用者原話：「血量高的要在右邊，對面則反過來」，不分欄位）。
-      const frontAnchorRight = side==='A';
+      // 重疊卡片的展開方向以「目前玩家的視角」決定：自己的隊伍固定錨在右側、
+      // 對手固定錨在左側。B 方棋盤會鏡像顯示，若仍用 side==='A' 判斷，hover 展開
+      // 就會和 A 方相反；這裡改用本機跨網陣營，單機仍維持 A 方為自己。
+      const localPerspectiveSide = window.__onlineLocalSide || 'A';
+      const frontAnchorRight = side===localPerspectiveSide;
       const frontVI = frontAnchorRight ? N-1 : 0;
       const frontLeft = frontVI * OFFSET_PCT; // 平常（沒hover）狀態的位置，永遠固定不變
       if(!frontAnchorRight) cell.classList.add('fan-anchor-left'); // 給下面陰影方向的 CSS 選
