@@ -9721,6 +9721,9 @@ tutorialInjectDom();
     let onlineRootRef = null, onlineGameRef = null, onlineMetaRef = null;
     let onlineListRef = null, onlineRooms = {}, onlineMeta = null;
     let onlineLastBlob = null, onlineApplying = false, onlinePrevController = 'A', onlineSetupShown = false, onlineLastFxId = null;
+    // 跨網自動戰鬥是每位玩家瀏覽器各自的偏好，絕不寫入共用的 game blob。
+    // 這樣 A 開啟代打時，B 的畫面不會被開啟；而且 AI 只會在目前玩家自己的回合出手。
+    let onlineAutoBattleEnabled = false, onlineAutoBattleTimer = null, onlineAutoBattleExecuting = false;
     let onlineOverlay = null, onlineOverlayText = null, onlineScreen = null;
 
     function onlineConfigured(){ return !!ONLINE_CONFIG.databaseURL; }
@@ -9734,7 +9737,42 @@ tutorialInjectDom();
       try { onlineSelectedTeamId=localStorage.getItem(ONLINE_TEAM_KEY)||null; } catch(e){ onlineSelectedTeamId=null; }
       return onlineSelectedTeam();
     }
+    // 共用狀態不保存自動戰鬥開關：它們是每個玩家本機的 UI／代打設定，
+    // 不是可讓對手控制的遊戲規則。真正出招後的結果仍照常同步。
     function onlineNormalize(st){ if(st){ st.autoBattle=false; st.autoBattleB=false; } return st; }
+    function onlineCancelAutoBattle(){
+      if(onlineAutoBattleTimer){ clearTimeout(onlineAutoBattleTimer); onlineAutoBattleTimer=null; }
+    }
+    function onlineRefreshAutoBattleControls(){
+      const ownBtn=document.getElementById('autoBattleToggle');
+      const foeBtn=document.getElementById('autoBattleToggleB');
+      if(!ownBtn || !foeBtn) return;
+      if(!onlineInRoom || !onlineRole) return;
+      // 跨網時只顯示「自己的」一顆按鈕；B 玩家不再看到或操作 A 方的開關。
+      ownBtn.style.display='';
+      foeBtn.style.display='none';
+      ownBtn.textContent=(onlineRole==='A'?'⚫':'⚪')+'自動戰鬥';
+      ownBtn.title='自動代打自己的隊伍（只會在輪到你時出手）';
+      ownBtn.classList.toggle('on', onlineAutoBattleEnabled);
+    }
+    function onlineMaybeAutoBattle(){
+      if(onlineAutoBattleTimer || onlineAutoBattleExecuting || !onlineInRoom || !onlineRole || !onlineAutoBattleEnabled || onlineApplying) return;
+      if(state.phase!=='act') return;
+      const unit=getActingUnit();
+      if(!unit || !unit.alive || unit.side!==onlineRole) return;
+      const scheduledState=state, scheduledUnitId=unit.id;
+      onlineAutoBattleTimer=setTimeout(function(){
+        onlineAutoBattleTimer=null;
+        const current=getActingUnit();
+        if(!onlineInRoom || !onlineRole || !onlineAutoBattleEnabled || onlineApplying || state!==scheduledState) return;
+        if(state.phase!=='act' || !current || current.id!==scheduledUnitId || current.side!==onlineRole) return;
+        // autoDecideCurrentTurn() 會依序挑位置、花牌、招式，過程中會多次 render。
+        // 先暫停同步，最後只送出完整的一步，避免對手看到半完成的 AI 選擇或搶到中間狀態。
+        onlineAutoBattleExecuting=true;
+        try { autoDecideCurrentTurn(); }
+        finally { onlineAutoBattleExecuting=false; onlineAfterRender(); }
+      }, Math.max(80, state.autoBattleDelay||280));
+    }
     function onlineController(st){
       if(!st) return 'A';
       if(st.phase==='act'){
@@ -9799,10 +9837,12 @@ tutorialInjectDom();
         if(log) log.innerHTML=log.innerHTML.replace(/【我方】/g,'@@OPP@@').replace(/【對方】/g,'【我方】').replace(/@@OPP@@/g,'【對方】');
       }
       window.__onlineLocalSide=onlineInRoom?onlineRole:null;
+      onlineRefreshAutoBattleControls();
     }
     function onlineAfterRender(){
       onlineApplyPerspective();
       if(!onlineInRoom || !onlineGameRef){ onlinePrevController=onlineController(state); onlineUpdateLock(); return; }
+      if(onlineAutoBattleExecuting){ onlineUpdateLock(); return; }
       onlineNormalize(state);
       if(state.lastMoveEvent && state.lastMoveEvent.id) onlineLastFxId=state.lastMoveEvent.id;
       const syncState=JSON.parse(JSON.stringify(state));
@@ -9817,6 +9857,7 @@ tutorialInjectDom();
       }
       onlinePrevController=onlineController(state);
       onlineUpdateLock();
+      onlineMaybeAutoBattle();
     }
     function onlineApplyRemote(val){
       if(!val || !val.blob || val.blob===onlineLastBlob) return;
@@ -9842,6 +9883,7 @@ tutorialInjectDom();
       } catch(e){ console.warn('[Online] apply', e); }
       onlineApplying=false;
       onlineUpdateLock();
+      onlineMaybeAutoBattle();
     }
 
     function loadOnlineFirebase(done){
@@ -9878,6 +9920,8 @@ tutorialInjectDom();
       onlineListRef.on('value', function(snap){ onlineRooms=snap.val()||{}; renderOnlineLobby(); });
     }
     function detachOnlineRoom(){
+      onlineCancelAutoBattle();
+      onlineAutoBattleEnabled=false;
       if(onlineGameRef) onlineGameRef.off();
       if(onlineMetaRef) onlineMetaRef.off();
       onlineRootRef=onlineGameRef=onlineMetaRef=null;
@@ -9886,6 +9930,8 @@ tutorialInjectDom();
     }
     function attachOnlineRoom(id, role){
       stopListing();
+      onlineCancelAutoBattle();
+      onlineAutoBattleEnabled=false;
       onlineRoomId=id; onlineRole=role; onlineInRoom=true;
       // Online matches are always human-vs-human; this must be set on the
       // joining browser before its first remote game state is rendered.
@@ -10150,6 +10196,25 @@ tutorialInjectDom();
       // so returning players normally only need one confirmation click.
       openOnlinePreRoomTeamPick('lobby');
     }
+
+    // 原本兩顆按鈕分別直接綁定 A／B 方。跨網時改為同一顆「我方」按鈕：
+    // A、B 都只能啟用本機自己的自動代打；非跨網模式則完整保留原本行為。
+    const onlineNativeAutoBattleA=document.getElementById('autoBattleToggle').onclick;
+    const onlineNativeAutoBattleB=document.getElementById('autoBattleToggleB').onclick;
+    function onlineToggleOwnAutoBattle(button){
+      if(!onlineInRoom || !onlineRole) return false;
+      onlineAutoBattleEnabled=!onlineAutoBattleEnabled;
+      if(!onlineAutoBattleEnabled) onlineCancelAutoBattle();
+      onlineRefreshAutoBattleControls();
+      onlineMaybeAutoBattle();
+      return true;
+    }
+    document.getElementById('autoBattleToggle').onclick=function(){
+      if(!onlineToggleOwnAutoBattle(this)) return onlineNativeAutoBattleA.call(this);
+    };
+    document.getElementById('autoBattleToggleB').onclick=function(){
+      if(!onlineToggleOwnAutoBattle(this)) return onlineNativeAutoBattleB.call(this);
+    };
     function buildOnlineLobby(){
       if(!document.getElementById('screen-online')){
         TOP_SCREEN_IDS.push('screen-online');
