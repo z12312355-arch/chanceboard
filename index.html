@@ -8526,8 +8526,33 @@ function renderAdminManagedPlayerEditor(){
     +'<label style="font-size:12px">新手陣營 <select id="managed-faction"><option value="black" '+(state.tutorialFaction==='black'?'selected':'')+'>小黑</option><option value="white" '+(state.tutorialFaction==='white'?'selected':'')+'>小白</option></select></label> '
     +adminManagerField('大廳立繪角色 ID（清空＝預設）','managed-hero','text',state.lobbyHeroId||'')
     +adminManagerJson('擁有角色 ID（陣列）','managed-owned',state.ownedCharIds)+adminManagerJson('角色星級（物件）','managed-stars',state.charStars)+adminManagerJson('持有卡牌（物件）','managed-cards',state.ownedCardCounts)+adminManagerJson('隊伍（陣列；每副牌合計必須 10 張）','managed-teams',state.teams)+adminManagerJson('帳號設定（物件）','managed-settings',state.settings)
-    +'<button type="button" class="btn primary small" id="admin-save-player">儲存此帳號</button>';
+    +'<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px"><button type="button" class="btn primary small" id="admin-save-player">儲存此帳號</button><button type="button" class="btn small" id="admin-grant-full-inventory">開通全角色五星＋滿卡牌</button><button type="button" class="btn small" id="admin-clear-inventory" style="border-color:var(--bad);color:#ffb0b0">清空全角色／全卡牌</button></div>';
   document.getElementById('admin-save-player').onclick=saveAdminManagedPlayer;
+  document.getElementById('admin-grant-full-inventory').onclick=function(){applyAdminInventoryPreset('full');};
+  document.getElementById('admin-clear-inventory').onclick=function(){applyAdminInventoryPreset('clear');};
+}
+async function applyAdminInventoryPreset(kind){
+  if(!adminManagedPlayer) return;
+  const isFull=kind==='full';
+  const prompt=isFull
+    ? '確定要為「'+(adminManagedPlayer.email||adminManagedPlayer.uid)+'」開通全部角色五星，並把每張卡牌設為 10 張嗎？'
+    : '確定要清空「'+(adminManagedPlayer.email||adminManagedPlayer.uid)+'」的所有角色、星級、卡牌與隊伍嗎？此操作無法復原。';
+  if(!confirm(prompt)) return;
+  const current=adminManagedPlayer.state;
+  const ids=isFull ? DB.characters.map(function(character){return String(character.id);}) : [];
+  const stars={},cards={};
+  if(isFull){
+    ids.forEach(function(id){stars[id]=5;});
+    FLOWER_CARD_IDS.forEach(function(id){cards[id]=10;});
+  }
+  const state=Object.assign({},current,{ownedCharIds:ids,charStars:stars,ownedCardCounts:cards,teams:isFull?(current.teams||[]):[],lobbyHeroId:isFull?current.lobbyHeroId:null,tutorialDone:isFull?true:current.tutorialDone});
+  try{
+    const result=await window.__adminAccountApi('admin-player-update',{uid:adminManagedPlayer.uid,state:state});
+    adminManagedPlayer=result.player;
+    renderAdminManagedPlayerEditor();
+    adminManagerMessage(isFull?'✅ 已開通全角色五星與所有滿卡牌。':'✅ 已清空角色、卡牌、星級與隊伍。');
+    await refreshAdminManagedPlayers();
+  }catch(e){adminManagerMessage('❌ 快捷操作失敗：'+e.message,true);}
 }
 async function saveAdminManagedPlayer(){
   if(!adminManagedPlayer)return;
