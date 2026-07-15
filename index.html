@@ -3825,10 +3825,24 @@ function buildLogHtml(){
   }).join('');
 }
 function localizeOnlineLogHtml(html){
-  if(window.__onlineLocalSide!=='B') return html;
-  return String(html||'')
-    .replace(/(<span class="aside">)【[^】]*】(<\/span>)/g, '$1【對方】$2')
-    .replace(/(<span class="bside">)【[^】]*】(<\/span>)/g, '$1【我方】$2');
+  const localSide=window.__onlineLocalSide;
+  if(!localSide) return html;
+  let out=String(html||'');
+  if(localSide==='B'){
+    out=out
+      .replace(/(<span class="aside">)【[^】]*】(<\/span>)/g, '$1【對方】$2')
+      .replace(/(<span class="bside">)【[^】]*】(<\/span>)/g, '$1【我方】$2');
+  }
+  return out.replace(/<span class="timeout-side" data-side="([AB])">【[AB]方】<\/span>/g, function(_, side){
+    const mine=side===localSide;
+    return '<span class="'+(mine?'aside':'bside')+'">【'+(mine?'我方':'對方')+'】</span>';
+  });
+}
+// 一般戰鬥紀錄以前是直接把「我方／對方」寫進共用字串；逾時紀錄需要由任一方都可能寫入，
+// 所以改存實際 A/B 身分，等各自 render 時才翻譯成我方或對方，避免 B 逾時被 A 看成我方。
+function timeoutLogTag(side){
+  if(!window.__onlineLocalSide) return sideTag({side:side});
+  return '<span class="timeout-side" data-side="'+side+'">【'+side+'方】</span>';
 }
 // 使用者要求「戰鬥介面裡，黑方的描述換成我方，白方的描述換成對方」：跟這個檔案其他地方已經有的
 // 慣例（見「對方手牌數」那個資訊卡、renderBattle() 出招插畫的左右配置等）一樣，預設黑方(A)是
@@ -6301,7 +6315,7 @@ function scheduleActionDeadline(){
     actionTimedOutForId = unitId;
     // 逾時一律待機，不會把玩家先前點過但尚未確認的招式／花牌自動打出去。
     state.actPending = null; state.actMovePicked = null; state.actMoveTarget = null; actDiscardPending = [];
-    addLog('info', sideTag(unit)+' '+unitName(unit)+' 操作逾時，待機。');
+    addLog('info', timeoutLogTag(unit.side)+' '+unitName(unit)+' 操作逾時，待機。');
     render();
     setTimeout(function(){
       if(state.phase==='act' && state.actingUnitId===unitId){ confirmAct(); }
