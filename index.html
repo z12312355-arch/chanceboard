@@ -9881,7 +9881,8 @@ tutorialInjectDom();
     function leaveOnlineRoom(){
       const root=onlineRootRef, role=onlineRole, status=onlineMeta && onlineMeta.status;
       if(!root){ goToLobby(); return; }
-      if(role==='A' && status!=='playing') root.remove();
+      if(status==='playing') root.remove();
+      else if(role==='A') root.remove();
       else if(role==='B' && status==='ready') root.child('meta').update({status:'waiting',guestJoinedAt:null});
       try { root.onDisconnect().cancel(); root.child('meta').onDisconnect().cancel(); } catch(e){}
       detachOnlineRoom();
