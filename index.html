@@ -2139,8 +2139,8 @@
           <!-- 使用者要求文字精簡成「⚫自動戰鬥」：拿掉機器人圖示跟「：OO方交給電腦」這段說明
                （按鈕本身的金色高亮.on 狀態已經足以表示「目前是不是交給電腦」，不需要文字重複說一次），
                棋子顏色圖示保留，用來區分黑方/白方兩顆按鈕。 -->
-          <button type="button" id="autoBattleToggle" class="btn small toggle" title="自動戰鬥：我方交給電腦">⚫自動戰鬥</button>
-          <button type="button" id="autoBattleToggleB" class="btn small toggle" title="自動戰鬥：對方交給電腦">⚪自動戰鬥</button>
+          <button type="button" id="autoBattleToggle" class="btn small toggle" title="自動戰鬥：我方交給電腦">黑方自動戰鬥</button>
+          <button type="button" id="autoBattleToggleB" class="btn small toggle" title="自動戰鬥：對方交給電腦">白方自動戰鬥</button>
           <!-- 使用者要求「下拉選單改成按鈕切換」：原本 <select> 三個選項（慢速/正常/快速），改成
                一顆按鈕，點一下循環切換到下一個速度，文字顯示 1X/2X/3X（見 AUTO_BATTLE_SPEEDS／
                syncAutoBattleSpeedBtn() 的說明）。 -->
@@ -10196,7 +10196,7 @@ tutorialInjectDom();
       // 跨網時只顯示「自己的」一顆按鈕；B 玩家不再看到或操作 A 方的開關。
       ownBtn.style.display='';
       foeBtn.style.display='none';
-      ownBtn.textContent=(onlineRole==='A'?'⚫':'⚪')+'自動戰鬥';
+      ownBtn.textContent='自動戰鬥';
       ownBtn.title='自動代打自己的隊伍（只會在輪到你時出手）';
       ownBtn.classList.toggle('on', onlineAutoBattleEnabled);
     }
