@@ -9745,6 +9745,10 @@ tutorialInjectDom();
         '#board.online-perspective-b .cell.side-A,.online-perspective-b .obchip.side-A,.online-perspective-b .hs-side.side-A{border-color:var(--b)!important;box-shadow:inset 0 3px 10px -6px var(--b)}'+
         '#board.online-perspective-b .cell.side-B,.online-perspective-b .obchip.side-B,.online-perspective-b .hs-side.side-B{border-color:var(--a)!important;box-shadow:inset 0 3px 10px -6px var(--a)}'+
         '.online-perspective-b #log .aside{color:var(--b)!important}.online-perspective-b #log .bside{color:var(--a)!important}': '';
+      if(onlineInRoom && onlineRole==='B'){
+        const log=document.getElementById('log');
+        if(log) log.innerHTML=log.innerHTML.replace(/【我方】/g,'@@OPP@@').replace(/【對方】/g,'【我方】').replace(/@@OPP@@/g,'【對方】');
+      }
       window.__onlineLocalSide=onlineInRoom?onlineRole:null;
     }
     function onlineAfterRender(){
