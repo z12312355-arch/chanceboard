@@ -7574,7 +7574,9 @@ function renderBattle(){
   document.getElementById('roundlabel').textContent = '第 '+Math.min(state.round,ROUND_CAP)+' 回合 ／ 遊戲內 '+Math.round(state.clock)+'s ／ '+(ROUND_SECONDS*ROUND_CAP)+'s'+(state.phase==='end'?'（結束）':'');
   // 開關已經從 checkbox 改成按鈕（見上面 HTML 的說明），這裡用 classList.toggle('on', ...) 同步
   // 視覺上的「啟用中」狀態，取代原本讀/寫 checkbox.checked。
-  document.getElementById('autoBattleToggle').classList.toggle('on', state.autoBattle);
+  const autoBattleAButton=document.getElementById('autoBattleToggle');
+  autoBattleAButton.textContent=currentMatchSize===1?'自動戰鬥':'黑方自動戰鬥';
+  autoBattleAButton.classList.toggle('on', state.autoBattle);
   // The White auto-battle toggle only makes sense in two-player mode — outside it White
   // is already fully AI-controlled by default, so there's nothing to "hand over".
   document.getElementById('autoBattleToggleB').style.display = twoPlayerMode ? '' : 'none';
@@ -8099,7 +8101,12 @@ function renderEnd(){
     '<div class="footer-actions"><button class="btn primary" id="restartBtn2">再玩一局</button>'+
       '<button class="btn" id="viewLogBtn2">📋 查看戰鬥紀錄</button>'+
       '<button class="btn" id="lobbyBtn2">🏠 返回大廳</button></div>';
-  document.getElementById('restartBtn2').onclick = resetGame;
+  const restartButton=document.getElementById('restartBtn2');
+  if(window.__tutorialBattleReturnRequired){
+    restartButton.disabled=true;
+    restartButton.title='請依照教學返回大廳';
+  }
+  restartButton.onclick = resetGame;
   document.getElementById('viewLogBtn2').onclick = openBattleLogModal;
   document.getElementById('lobbyBtn2').onclick = backToLobbyFromBattle;
   // 內容剛換掉，量一次現在需不需要縮小才塞得下（見 fitEndScreenToViewport() 的說明）。
@@ -9277,6 +9284,10 @@ const TUTORIAL_LINES = {
     black:'哈哈哈！輸了？沒關係，反正要重新開始的是你，不是他們……開玩笑的，再試一次吧。',
     white:'沒關係，這只是開始。慢慢來，我會一直陪著你。',
   },
+  returnLobby: {
+    black:'{name}，第一場戰鬥結束了。現在點擊【返回大廳】，我再教你如何召喚新的棋子。',
+    white:'{name}，第一場戰鬥結束了。請點擊【返回大廳】，接著我會帶你進行召喚。',
+  },
   ending: {
     black:'很好，{name}。你已經掌握了棋盤最基本的規則。接下來，是屬於你的故事、你的願望、你的選擇……以及，你將犧牲多少棋子，才能抵達終點。祝你好運。',
     white:'到這裡，你已經學會了棋盤的基本操作。真正的旅程，現在才開始。願你與棋子們攜手前行，也願你的願望，終有實現的一天。',
@@ -9751,6 +9762,7 @@ function tutorialBattleStep(){
   if(tutorialReplayMode){ tutorialGoldGachaStep(); return; }
   tutorialSay([TUTORIAL_LINES.battleIntro[tutorialFaction]], function(){
     window.__tutorialFixedOpponentIds = [TUTORIAL_OPPONENT_IDS[0]];
+    window.__tutorialBattleReturnRequired = true;
     currentMatchSize=1; twoPlayerMode=false; pendingMode='single1v1';
     state.selectedIds=[ownedCharIds[0]]; state.selectedIdsB=[];
     state.customDeck=expandDeckDraft({'001':3,'002':3,'003':2,'004':2});
@@ -9770,10 +9782,22 @@ function tutorialWatchForBattleEnd(){
       document.getElementById('tutorialOverlay').classList.add('active');
       tutorialSay(
         [won ? TUTORIAL_LINES.afterBattleWin[tutorialFaction] : TUTORIAL_LINES.afterBattleLose[tutorialFaction]],
-        tutorialGoldGachaStep
+        tutorialReturnLobbyStep
       );
     }
   }, 500);
+}
+
+function tutorialReturnLobbyStep(){
+  const restartButton=document.getElementById('restartBtn2');
+  if(restartButton){ restartButton.disabled=true;restartButton.title='請依照教學返回大廳'; }
+  tutorialSay([TUTORIAL_LINES.returnLobby[tutorialFaction]],function(){
+    tutorialWaitForClick('lobbyBtn2',function(){
+      window.__tutorialBattleReturnRequired=false;
+      // 讓「返回大廳」原本的 onclick 先完成畫面切換，再接續召喚教學。
+      setTimeout(tutorialGoldGachaStep,0);
+    });
+  });
 }
 
 function tutorialSayEnding(){
@@ -9784,6 +9808,7 @@ function tutorialFinish(){
   markTutorialDone();
   tutorialReplayMode = false;
   window.__tutorialFixedOpponentIds = null;
+  window.__tutorialBattleReturnRequired = false;
   const overlay = document.getElementById('tutorialOverlay');
   overlay.classList.remove('active');
   overlay.classList.remove('cutscene');
@@ -9814,6 +9839,7 @@ function tutorialSkip(){
   if(tutorialCrawlTimer){ clearTimeout(tutorialCrawlTimer); tutorialCrawlTimer = null; }
   tutorialClearHighlight();
   window.__tutorialFixedOpponentIds = null;
+  window.__tutorialBattleReturnRequired = false;
   if(ownedCharIds.length===0){
     ownedCharIds.push(TUTORIAL_STARTER_IDS[0]);
   }
