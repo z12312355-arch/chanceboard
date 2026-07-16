@@ -58,9 +58,33 @@ function normalizeGlobalConfig(input) {
   const introSource = source.introStory && typeof source.introStory === 'object' ? source.introStory : {};
   const storyLines = key => Array.isArray(introSource[key]) && introSource[key].length >= 2 && introSource[key].length <= 20
     ? introSource[key].map(line => String(line).slice(0, 300)) : introFallback[key];
+  const tutorialSource = source.tutorialStory && typeof source.tutorialStory === 'object' ? source.tutorialStory : null;
+  const tutorialSideKeys = ['pickIntro','afterPick','goldIntro','goldOffer','afterGold','diamondIntro','diamondOffer','afterDiamond','teamIntro','teamPick3','teamDeck','afterTeam','battleIntro','battlePickTeam','afterBattleWin','afterBattleLose','returnLobby','ending'];
+  let tutorialStory = null;
+  if (tutorialSource) {
+    tutorialStory = {};
+    if (Array.isArray(tutorialSource.prologue) && tutorialSource.prologue.length >= 1 && tutorialSource.prologue.length <= 50) {
+      tutorialStory.prologue = tutorialSource.prologue.map(line => String(line).slice(0, 500));
+    }
+    if (tutorialSource.greeting && typeof tutorialSource.greeting === 'object') {
+      tutorialStory.greeting = {};
+      ['black','white'].forEach(side => {
+        const lines = tutorialSource.greeting[side];
+        if (Array.isArray(lines) && lines.length >= 2 && lines.length <= 20) tutorialStory.greeting[side] = lines.map(line => String(line).slice(0, 500));
+      });
+    }
+    tutorialSideKeys.forEach(key => {
+      const pair = tutorialSource[key];
+      if (!pair || typeof pair !== 'object') return;
+      tutorialStory[key] = {};
+      ['black','white'].forEach(side => { if (typeof pair[side] === 'string') tutorialStory[key][side] = pair[side].slice(0, 2000); });
+    });
+    if (typeof tutorialSource.endingNote === 'string') tutorialStory.endingNote = tutorialSource.endingNote.slice(0, 1000);
+  }
   return {
     characters: list('characters', 100), moves: list('moves', 500), cards: list('cards', 200),
     introStory: { black: storyLines('black'), white: storyLines('white') },
+    tutorialStory,
     settings: {
       dailyGold: intInRange(settings.dailyGold, fallback.settings.dailyGold),
       dailyDiamond: intInRange(settings.dailyDiamond, fallback.settings.dailyDiamond),

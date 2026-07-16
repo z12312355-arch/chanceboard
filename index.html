@@ -2439,6 +2439,7 @@ let globalIntroStory = {
   black:['哈哈，歡迎加入黑方，我是小黑。','對了，你叫什麼？','……原來如此。','從今天開始，我就叫你『{name}』了。','可別太早死啊。'],
   white:['歡迎加入白方，我是小白。','在開始旅程之前。','請告訴我你的名字。','{name}。','我記住了。','希望有一天，大家都能記住這個名字。']
 };
+const TUTORIAL_SIDE_TEXT_KEYS = ['pickIntro','afterPick','goldIntro','goldOffer','afterGold','diamondIntro','diamondOffer','afterDiamond','teamIntro','teamPick3','teamDeck','afterTeam','battleIntro','battlePickTeam','afterBattleWin','afterBattleLose','returnLobby','ending'];
 function applyGlobalGameConfig(config){
   if(!config || typeof config!=='object') return;
   ['characters','moves','cards'].forEach(function(key){
@@ -2453,11 +2454,32 @@ function applyGlobalGameConfig(config){
   if(config.introStory && typeof config.introStory==='object'){
     ['black','white'].forEach(function(side){ if(Array.isArray(config.introStory[side])) globalIntroStory[side]=config.introStory[side].map(String); });
   }
+  // 完整新手劇情設定。舊版 D1 只有 introStory（問名字片段），所以 tutorialStory 缺少時
+  // 保留 HTML 內建全文；存在時則逐欄覆寫，讓舊資料與之後新增欄位都能向前相容。
+  if(config.tutorialStory && typeof config.tutorialStory==='object'){
+    const story=config.tutorialStory;
+    if(Array.isArray(story.prologue) && story.prologue.length) TUTORIAL_LINES.prologue=story.prologue.map(String);
+    if(story.greeting && typeof story.greeting==='object'){
+      ['black','white'].forEach(function(side){
+        if(Array.isArray(story.greeting[side]) && story.greeting[side].length){
+          const lines=story.greeting[side].map(String);
+          TUTORIAL_LINES.greeting[side]=lines;
+          globalIntroStory[side]=lines;
+        }
+      });
+    }
+    TUTORIAL_SIDE_TEXT_KEYS.forEach(function(key){
+      if(!story[key] || typeof story[key]!=='object') return;
+      if(!TUTORIAL_LINES[key] || typeof TUTORIAL_LINES[key]!=='object') TUTORIAL_LINES[key]={};
+      ['black','white'].forEach(function(side){ if(typeof story[key][side]==='string') TUTORIAL_LINES[key][side]=story[key][side]; });
+    });
+    if(typeof story.endingNote==='string') TUTORIAL_LINES.endingNote=story.endingNote;
+  }
   if(typeof updateGachaCostDisplay==='function') updateGachaCostDisplay();
   if(typeof renderShopGrid==='function' && document.getElementById('shopCardGrid')) renderShopGrid();
 }
 function globalGameConfigPayload(){
-  return {characters:DB.characters,moves:DB.moves,cards:DB.cards,settings:globalEconomySettings,introStory:globalIntroStory};
+  return {characters:DB.characters,moves:DB.moves,cards:DB.cards,settings:globalEconomySettings,introStory:globalIntroStory,tutorialStory:JSON.parse(JSON.stringify(TUTORIAL_LINES))};
 }
 const SUIT_CARD_IDS = DB.cards.filter(c=>c.isSuitCard).map(c=>c.id); // ['001'..'004']
 const FLOWER_CARD_IDS = DB.cards.filter(c=>!c.isSuitCard).map(c=>c.id);
@@ -8718,6 +8740,26 @@ function adminManagerField(label,id,type,value){
 function adminManagerJson(label,id,value){
   return '<label style="display:block;margin:7px 0 3px;font-size:12px;color:var(--muted)">'+label+'<textarea id="'+id+'" rows="4" style="display:block;width:100%;margin-top:3px;resize:vertical">'+JSON.stringify(value==null?{}:value,null,2).replace(/</g,'&lt;')+'</textarea></label>';
 }
+const ADMIN_TUTORIAL_STORY_FIELDS = [
+  ['pickIntro','選擇第一枚棋子前'],['afterPick','選完初始棋子後'],
+  ['battleIntro','第一場 1v1 戰鬥前'],['afterBattleWin','教學戰鬥勝利'],['afterBattleLose','教學戰鬥失敗'],['returnLobby','引導返回大廳'],
+  ['goldIntro','金幣召喚說明'],['goldOffer','贈送金幣召喚'],['afterGold','金幣召喚完成'],
+  ['diamondIntro','鑽石召喚說明'],['diamondOffer','贈送鑽石召喚'],['afterDiamond','鑽石召喚完成'],
+  ['teamIntro','隊伍教學開始'],['teamPick3','選擇三位棋子'],['teamDeck','編輯十張卡組'],['afterTeam','隊伍完成'],
+  ['ending','教學結尾']
+];
+function adminStoryTextarea(label,id,value,rows){
+  return '<label style="display:block;font-size:12px;color:var(--muted)">'+label+'<textarea id="'+id+'" rows="'+(rows||2)+'" style="display:block;width:100%;margin:4px 0 9px;resize:vertical">'+escHtml(value||'')+'</textarea></label>';
+}
+function adminTutorialSideFieldsHtml(){
+  return ADMIN_TUTORIAL_STORY_FIELDS.map(function(field){
+    const key=field[0],label=field[1],pair=TUTORIAL_LINES[key]||{};
+    return '<div style="padding:9px;border:1px solid var(--line);border-radius:8px;margin:8px 0"><b style="font-size:13px">'+label+'</b><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:10px;margin-top:7px">'
+      +adminStoryTextarea('小黑','admin-story-'+key+'-black',pair.black,3)
+      +adminStoryTextarea('小白','admin-story-'+key+'-white',pair.white,3)
+      +'</div></div>';
+  }).join('');
+}
 function renderAdminAccountManager(){
   const form=document.getElementById('admin-form');
   if(!form) return;
@@ -8739,11 +8781,16 @@ function renderAdminAccountManager(){
     +adminManagerField('鑽石單抽','global-diamond-one','number',globalEconomySettings.diamondGachaOneCost)
     +adminManagerField('鑽石十抽','global-diamond-ten','number',globalEconomySettings.diamondGachaTenCost)
     +'</div><button type="button" class="btn primary small" id="admin-save-economy">儲存全域抽卡／每日設定</button><div id="admin-economy-msg" class="admin-msg" style="display:block;margin:7px 0"></div>'
-    +'<hr style="border:0;border-top:1px solid var(--line);margin:14px 0"><h3 style="margin:0 0 8px">📜 初始劇情</h3>'
-    +'<p style="font-size:12px;color:var(--muted)">每行一句；用 <code>{name}</code> 代表玩家名字。詢問名字後的台詞請放在第 3 行起。</p>'
-    +'<label style="display:block;font-size:12px">小黑<textarea id="admin-intro-black" rows="7" style="display:block;width:100%;margin:4px 0 9px;resize:vertical">'+escHtml(globalIntroStory.black.join('\n'))+'</textarea></label>'
-    +'<label style="display:block;font-size:12px">小白<textarea id="admin-intro-white" rows="8" style="display:block;width:100%;margin:4px 0 9px;resize:vertical">'+escHtml(globalIntroStory.white.join('\n'))+'</textarea></label>'
-    +'<button type="button" class="btn primary small" id="admin-save-intro">儲存初始劇情</button><div id="admin-intro-msg" class="admin-msg" style="display:block;margin:7px 0"></div>'
+    +'<hr style="border:0;border-top:1px solid var(--line);margin:14px 0"><h3 style="margin:0 0 8px">📜 完整新手劇情文本</h3>'
+    +'<p style="font-size:12px;color:var(--muted)">可編輯目前新手流程會顯示的全部台詞。序章與問名台詞每行一句；其他欄位是一個教學步驟。用 <code>{name}</code> 代表玩家名字。</p>'
+    +adminStoryTextarea('共同序章（每行一句）','admin-story-prologue',TUTORIAL_LINES.prologue.join('\n'),9)
+    +'<div style="padding:9px;border:1px solid var(--line);border-radius:8px;margin:8px 0"><b style="font-size:13px">陣營問名劇情（每行一句）</b><p style="font-size:11px;color:var(--muted);margin:5px 0 8px">小黑前 2 行、小白前 3 行會在輸入名字前顯示，其餘行在輸入後顯示。</p><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:10px">'
+      +adminStoryTextarea('小黑','admin-story-greeting-black',TUTORIAL_LINES.greeting.black.join('\n'),7)
+      +adminStoryTextarea('小白','admin-story-greeting-white',TUTORIAL_LINES.greeting.white.join('\n'),8)
+    +'</div></div>'
+    +adminTutorialSideFieldsHtml()
+    +adminStoryTextarea('共同結尾提示','admin-story-endingNote',TUTORIAL_LINES.endingNote,3)
+    +'<button type="button" class="btn primary small" id="admin-save-story">儲存完整新手劇情</button><div id="admin-story-msg" class="admin-msg" style="display:block;margin:7px 0"></div>'
     +'<hr style="border:0;border-top:1px solid var(--line);margin:14px 0"><h3 style="margin:0 0 8px">👤 玩家帳號資料</h3>'
     +'<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><select id="admin-player-select" style="min-width:260px;max-width:100%;flex:1"><option value="">載入玩家清單後選擇帳號</option></select><button type="button" class="btn small" id="admin-refresh-players">重新整理玩家</button></div>'
     +'<div id="admin-manager-msg" class="admin-msg" style="display:block;margin:7px 0"></div><div id="admin-player-editor" style="margin-top:8px;color:var(--muted);font-size:12px">請先選擇玩家。</div>';
@@ -8757,13 +8804,30 @@ function renderAdminAccountManager(){
     try{await saveGlobalAdminConfig();msg.textContent='✅ 全域抽卡與每日獎勵設定已儲存。';msg.className='admin-msg';}catch(e){msg.textContent='❌ 儲存失敗：'+e.message+(String(e.message).includes('game_config')?'（請先在 D1 Console 建立 game_config 資料表）':'');msg.className='admin-msg err';}
   };
   document.getElementById('admin-refresh-players').onclick=refreshAdminManagedPlayers;
-  document.getElementById('admin-save-intro').onclick=async function(){
+  document.getElementById('admin-save-story').onclick=async function(){
     const lines=id=>document.getElementById(id).value.split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
-    const next={black:lines('admin-intro-black'),white:lines('admin-intro-white')};
-    const msg=document.getElementById('admin-intro-msg');
-    if(next.black.length<2||next.white.length<2){ msg.textContent='❌ 黑白雙方都至少需要兩句台詞。';msg.className='admin-msg err';return; }
-    globalIntroStory=next; msg.textContent='⏳ 儲存中…';msg.className='admin-msg';
-    try{ await saveGlobalAdminConfig();msg.textContent='✅ 初始劇情已儲存。'; }catch(e){msg.textContent='❌ 儲存失敗：'+e.message;msg.className='admin-msg err';}
+    const prologue=lines('admin-story-prologue');
+    const greeting={black:lines('admin-story-greeting-black'),white:lines('admin-story-greeting-white')};
+    const endingNote=document.getElementById('admin-story-endingNote').value.trim();
+    const msg=document.getElementById('admin-story-msg');
+    if(!prologue.length){msg.textContent='❌ 共同序章至少需要一句。';msg.className='admin-msg err';return;}
+    if(greeting.black.length<3||greeting.white.length<4){msg.textContent='❌ 問名劇情必須包含輸入名字前與輸入名字後的台詞（小黑至少 3 行、小白至少 4 行）。';msg.className='admin-msg err';return;}
+    let missing='';
+    const nextPairs={};
+    ADMIN_TUTORIAL_STORY_FIELDS.forEach(function(field){
+      const key=field[0];nextPairs[key]={};
+      ['black','white'].forEach(function(side){
+        const value=document.getElementById('admin-story-'+key+'-'+side).value.trim();
+        nextPairs[key][side]=value;if(!value && !missing) missing=field[1]+'／'+(side==='black'?'小黑':'小白');
+      });
+    });
+    if(missing||!endingNote){msg.textContent='❌ 文本不能留白：'+(missing||'共同結尾提示');msg.className='admin-msg err';return;}
+    TUTORIAL_LINES.prologue=prologue;
+    ['black','white'].forEach(function(side){TUTORIAL_LINES.greeting[side]=greeting[side];globalIntroStory[side]=greeting[side];});
+    ADMIN_TUTORIAL_STORY_FIELDS.forEach(function(field){TUTORIAL_LINES[field[0]]=nextPairs[field[0]];});
+    TUTORIAL_LINES.endingNote=endingNote;
+    msg.textContent='⏳ 儲存中…';msg.className='admin-msg';
+    try{ await saveGlobalAdminConfig();msg.textContent='✅ 完整新手劇情已全域儲存。';msg.className='admin-msg'; }catch(e){msg.textContent='❌ 儲存失敗：'+e.message;msg.className='admin-msg err';}
   };
   document.getElementById('admin-player-select').onchange=function(){if(this.value) loadAdminManagedPlayer(this.value);};
   if(adminManagedPlayers.length) populateAdminPlayerSelect();
