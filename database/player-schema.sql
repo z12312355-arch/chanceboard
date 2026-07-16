@@ -10,6 +10,7 @@ CREATE TABLE IF NOT EXISTS players (
   owned_cards TEXT NOT NULL DEFAULT '{}',
   teams TEXT NOT NULL DEFAULT '[]',
   tutorial_done INTEGER NOT NULL DEFAULT 0,
+  tutorial_step TEXT NOT NULL DEFAULT 'intro',
   tutorial_faction TEXT NOT NULL DEFAULT 'black',
   lobby_hero_id TEXT,
   settings TEXT NOT NULL DEFAULT '{}',

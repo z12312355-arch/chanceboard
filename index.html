@@ -9249,6 +9249,7 @@ refreshCurrencyDisplays();
    全程串接「真的」遊戲功能（真的抽卡／真的組隊／真的戰鬥），不是假動畫播放。
    完成後在 localStorage 記一筆（TUTORIAL_DONE_KEY），之後登入會直接進入大廳。 */
 const TUTORIAL_DONE_KEY = 'chanceboard_tutorial_done_v1';
+const TUTORIAL_STEP_KEY = 'chanceboard_tutorial_step_v1';
 const TUTORIAL_FACTION_KEY = 'chanceboard_tutorial_faction_v1';
 const PLAYER_NAME_KEY = 'chanceboard_player_name_v1';
 let playerName = '';
@@ -9260,6 +9261,7 @@ function savePlayerNameValue(value){
   if(!name || name.length>16) return Promise.reject(new Error('名字須為 1～16 個字。'));
   playerName=name; window.__playerName=name;
   try{ localStorage.setItem(PLAYER_NAME_KEY,name); }catch(e){}
+  setTutorialStepLocal('starter');
   return Promise.resolve(name);
 }
 function playerText(text){ return String(text==null?'':text).replace(/\{name\}/g,currentPlayerName()); }
@@ -9272,8 +9274,33 @@ const TUTORIAL_OPPONENT_IDS = ['008','018','020'];
 function isTutorialDone(){
   try{ return localStorage.getItem(TUTORIAL_DONE_KEY)==='1'; }catch(e){ return false; }
 }
+const TUTORIAL_STEPS = ['intro','starter','battle','gold_summon','diamond_summon','team','ending','completed'];
+let tutorialStep = loadTutorialStep();
+function loadTutorialStep(){
+  try{
+    const saved=localStorage.getItem(TUTORIAL_STEP_KEY);
+    if(TUTORIAL_STEPS.indexOf(saved)>=0) return saved;
+    return localStorage.getItem(TUTORIAL_DONE_KEY)==='1' ? 'completed' : 'intro';
+  }catch(e){ return 'intro'; }
+}
+function setTutorialStepLocal(step){
+  tutorialStep=TUTORIAL_STEPS.indexOf(step)>=0?step:'intro';
+  try{ localStorage.setItem(TUTORIAL_STEP_KEY,tutorialStep); }catch(e){}
+  return tutorialStep;
+}
+function saveTutorialProgress(step){
+  setTutorialStepLocal(step);
+  return Promise.resolve(tutorialStep);
+}
+function tutorialCheckpoint(step,cb){
+  saveTutorialProgress(step).then(cb).catch(function(e){
+    alert('教學進度尚未同步成功：'+e.message+'\n請確認網路後按「確定」重試。');
+    setTimeout(function(){ tutorialCheckpoint(step,cb); },0);
+  });
+}
 function markTutorialDone(){
   try{ localStorage.setItem(TUTORIAL_DONE_KEY, '1'); }catch(e){}
+  setTutorialStepLocal('completed');
 }
 function loadTutorialFaction(){
   try{ return localStorage.getItem(TUTORIAL_FACTION_KEY) || 'black'; }catch(e){ return 'black'; }
@@ -9577,7 +9604,27 @@ function tutorialLaunch(replay){
   tutorialClearHighlight();
   tutorialReplayMode = !!replay;
   tutorialSetGachaLock(false, false);
-  tutorialSayPrologue();
+  if(tutorialReplayMode || tutorialStep==='intro') return tutorialSayPrologue();
+  const overlay=document.getElementById('tutorialOverlay');
+  overlay.classList.add('active');
+  overlay.classList.remove('no-dim');
+  overlay.classList.add('cutscene');
+  tutorialSetSceneArt(tutorialFaction);
+  if(tutorialStep==='starter') return tutorialSayPickIntro();
+  overlay.classList.remove('cutscene');
+  overlay.classList.add('no-dim');
+  document.getElementById('tutorialSceneArtWrap').classList.remove('show');
+  goToLobby();
+  if(tutorialStep==='battle') return tutorialSayAfterPick();
+  if(tutorialStep==='gold_summon') return tutorialGoldGachaStep();
+  if(tutorialStep==='diamond_summon'){
+    goToGacha();
+    setGachaCurrency('gold');
+    return tutorialDiamondGachaStep();
+  }
+  if(tutorialStep==='team') return tutorialTeamStep();
+  if(tutorialStep==='ending') return tutorialSayAfterTeam();
+  tutorialFinish();
 }
 
 function tutorialSayPrologue(){
@@ -9752,11 +9799,12 @@ function tutorialShowStarterPicker(){
 
 function tutorialPickStarter(id){
   if(!isCharOwned(id)){ ownedCharIds.push(id); saveOwnedChars(); }
-  document.getElementById('tutorialCenterCard').style.display = 'none';
+  const card=document.getElementById('tutorialCenterCard');
+  card.style.display = 'none';
   // 立繪／cutscene維持顯示，讓惡魔在講「選完角色後」這句台詞時仍然留在畫面上——
   // 真正該淡出立繪、退出cutscene全螢幕模式的時機是tutorialFinish()（教學真的結束、
   // 準備進大廳的那一刻），那裡已經會處理，這裡不用提前收掉。
-  tutorialSayAfterPick();
+  tutorialCheckpoint('battle',tutorialSayAfterPick);
 }
 
 function tutorialSayAfterPick(){
@@ -9789,7 +9837,7 @@ function tutorialGoldGachaStep(){
           const pool = gachaPoolFor('gold');
           const result = gachaPullOne(pool);
           gachaShowResult([result]);
-          tutorialSayAfterGold();
+          tutorialCheckpoint('diamond_summon',tutorialSayAfterGold);
         }, true);
       });
     });
@@ -9813,7 +9861,7 @@ function tutorialDiamondGachaStep(){
           const pool = gachaPoolFor('diamond');
           const result = gachaPullOne(pool);
           gachaShowResult([result]);
-          tutorialSayAfterDiamond();
+          tutorialCheckpoint('team',tutorialSayAfterDiamond);
         }, true);
       });
     });
@@ -9858,7 +9906,9 @@ function tutorialTeamStep(){
 }
 
 function tutorialSayAfterTeam(){
-  tutorialSay([TUTORIAL_LINES.afterTeam[tutorialFaction]], tutorialSayEnding);
+  setTimeout(function(){
+    tutorialCheckpoint('ending',function(){ tutorialSay([TUTORIAL_LINES.afterTeam[tutorialFaction]], tutorialSayEnding); });
+  },0);
 }
 
 function tutorialBattleStep(){
@@ -9882,11 +9932,13 @@ function tutorialWatchForBattleEnd(){
       clearInterval(iv);
       window.__tutorialFixedOpponentIds = null;
       const won = state.winner === 'A';
-      document.getElementById('tutorialOverlay').classList.add('active');
-      tutorialSay(
-        [won ? TUTORIAL_LINES.afterBattleWin[tutorialFaction] : TUTORIAL_LINES.afterBattleLose[tutorialFaction]],
-        tutorialReturnLobbyStep
-      );
+      tutorialCheckpoint('gold_summon',function(){
+        document.getElementById('tutorialOverlay').classList.add('active');
+        tutorialSay(
+          [won ? TUTORIAL_LINES.afterBattleWin[tutorialFaction] : TUTORIAL_LINES.afterBattleLose[tutorialFaction]],
+          tutorialReturnLobbyStep
+        );
+      });
     }
   }, 500);
 }
@@ -9944,7 +9996,7 @@ tutorialInjectDom();
   if(!loginBtn) return;
   const originalOnclick = loginBtn.onclick;
   loginBtn.onclick = function(){
-    if(!isTutorialDone() && ownedCharIds.length===0){
+    if(!isTutorialDone() && tutorialStep!=='completed'){
       tutorialLaunch(false);
       return;
     }
@@ -10998,6 +11050,7 @@ document.getElementById('admin1v1BattleBtn').onclick=function(){ closeAdminPanel
     ownedCardCounts=p.ownedCardCounts&&typeof p.ownedCardCounts==='object'?p.ownedCardCounts:{};
     teams=Array.isArray(p.teams)?p.teams:[];
     tutorialFaction=p.tutorialFaction==='white'?'white':'black';
+    setTutorialStepLocal(typeof p.tutorialStep==='string'?p.tutorialStep:(p.tutorialDone?'completed':'intro'));
     if(p.settings&&typeof p.settings==='object'){
       if(Number.isInteger(p.settings.speedIdx)) autoBattleSpeedIdx=p.settings.speedIdx;
       if(typeof p.settings.sound==='boolean') soundEnabled=p.settings.sound;
@@ -11098,9 +11151,10 @@ document.getElementById('admin1v1BattleBtn').onclick=function(){ closeAdminPanel
     // same debounce timer as preferences, so a later setting update could cancel
     // the team request and the team vanished after the next login.
     const snapshot=JSON.parse(JSON.stringify(teams));
-    accountApi('teams',{teams:snapshot}).catch(function(e){
+    return accountApi('teams',{teams:snapshot}).then(function(d){ applyAccountState(d.state); return d; }).catch(function(e){
       console.warn('[Account] teams',e);
       alert('隊伍尚未同步成功：'+e.message+'\n請確認網路後再儲存一次。');
+      throw e;
     });
   };
   const guestGacha=doGachaPull;
@@ -11130,6 +11184,11 @@ document.getElementById('admin1v1BattleBtn').onclick=function(){ closeAdminPanel
       const d=await accountApi('tutorial-starter',{id:id}); applyAccountState(d.state);
       document.getElementById('tutorialCenterCard').style.display='none'; tutorialSayAfterPick();
     }catch(e){ alert(e.message); }
+  };
+  const guestSaveTutorialProgress=saveTutorialProgress;
+  saveTutorialProgress=function(step){
+    if(!accountReady) return guestSaveTutorialProgress(step);
+    return accountApi('tutorial-progress',{step:step}).then(function(d){ applyAccountState(d.state); return tutorialStep; });
   };
   async function accountTutorialSummon(currency){
     const d=await accountApi('tutorial-gacha',{currency:currency}); applyAccountState(d.state);
@@ -11165,6 +11224,7 @@ document.getElementById('admin1v1BattleBtn').onclick=function(){ closeAdminPanel
   markTutorialDone=function(){
     if(!accountReady) return guestMarkTutorialDone();
     try{ localStorage.setItem(TUTORIAL_DONE_KEY,'1'); }catch(e){}
+    setTutorialStepLocal('completed');
     accountApi('tutorial-complete',{}).then(function(d){ applyAccountState(d.state); }).catch(function(e){ console.warn('[Account] tutorial completion',e); });
   };
   const guestSaveSettings=saveSettings, guestSaveLobbyHeroChoice=saveLobbyHeroChoice, guestSaveTutorialFaction=saveTutorialFaction;

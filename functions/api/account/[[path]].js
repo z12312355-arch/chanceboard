@@ -7,6 +7,7 @@ const GOLD_START = 500, DIAMOND_START = 30;
 const FLOWER_CARD_IDS = Array.from({ length: 22 }, (_, i) => String(i + 5).padStart(3, '0'));
 const ALL_CHARACTER_IDS = Array.from({ length: 21 }, (_, i) => String(i + 1).padStart(3, '0'));
 const DIAMOND_EXCLUSIVE_IDS = new Set(['016', '014', '003', '021', '018', '020']);
+const TUTORIAL_STEPS = ['intro', 'starter', 'battle', 'gold_summon', 'diamond_summon', 'team', 'ending', 'completed'];
 
 function json(data, status = 200) {
   return new Response(JSON.stringify(data), { status, headers: { 'content-type': 'application/json; charset=utf-8' } });
@@ -136,7 +137,7 @@ function profileFromRow(row) {
     gold: row.gold, diamond: row.diamond,
     ownedCharIds: parseJson(row.owned_chars, []), charStars: parseJson(row.char_stars, {}),
     ownedCardCounts: parseJson(row.owned_cards, {}), teams: parseJson(row.teams, []),
-    tutorialDone: !!row.tutorial_done, tutorialFaction: row.tutorial_faction || 'black',
+    tutorialDone: !!row.tutorial_done, tutorialStep: tutorialStepFromRow(row), tutorialFaction: row.tutorial_faction || 'black',
     lobbyHeroId: row.lobby_hero_id || null, settings: parseJson(row.settings, {}),
     dailyBonusDate: row.daily_bonus_date || ''
   };
@@ -193,6 +194,16 @@ function safePlayerName(value) {
   if (name.length < 1 || name.length > 16 || /[\u0000-\u001f<>]/.test(name)) throw apiError('名字須為 1～16 個字，且不可包含特殊控制字元。');
   return name;
 }
+function safeTutorialStep(value, fallback = 'intro') {
+  return TUTORIAL_STEPS.includes(value) ? value : fallback;
+}
+function tutorialStepFromRow(row) {
+  if (row.tutorial_done) return 'completed';
+  return safeTutorialStep(row.tutorial_step, 'intro');
+}
+function tutorialStepAtLeast(current, expected) {
+  return TUTORIAL_STEPS.indexOf(current) >= TUTORIAL_STEPS.indexOf(expected);
+}
 async function friendList(db, uid) {
   const result = await db.prepare(`SELECT p.uid,p.player_name
     FROM friendships f JOIN players p ON p.uid=CASE WHEN f.user_a=?1 THEN f.user_b ELSE f.user_a END
@@ -225,11 +236,11 @@ export async function onRequest(context) {
     if (action === 'admin-players') {
       if (!admin) return json({ error: 'Admin permission required.' }, 403);
       if (request.method !== 'GET') return json({ error: 'Unknown API endpoint.' }, 404);
-      const rows = await db.prepare('SELECT uid,email,gold,diamond,owned_chars,teams,tutorial_done,updated_at FROM players ORDER BY updated_at DESC LIMIT 100').all();
+      const rows = await db.prepare('SELECT uid,email,gold,diamond,owned_chars,teams,tutorial_done,tutorial_step,updated_at FROM players ORDER BY updated_at DESC LIMIT 100').all();
       return json({ players: (rows.results || []).map(p => ({
         uid: p.uid, email: p.email, gold: p.gold, diamond: p.diamond,
         characterCount: parseJson(p.owned_chars, []).length, teamCount: parseJson(p.teams, []).length,
-        tutorialDone: !!p.tutorial_done, updatedAt: p.updated_at
+        tutorialDone: !!p.tutorial_done, tutorialStep: tutorialStepFromRow(p), updatedAt: p.updated_at
       })) });
     }
     if (action === 'admin-player') {
@@ -254,8 +265,10 @@ export async function onRequest(context) {
       const faction = input.tutorialFaction === 'white' || input.tutorialFaction === 'black' ? input.tutorialFaction : (target.tutorial_faction || 'black');
       const hero = input.lobbyHeroId === null ? null : (typeof input.lobbyHeroId === 'string' && owned.includes(input.lobbyHeroId) ? input.lobbyHeroId : target.lobby_hero_id || null);
       const dailyDate = typeof input.dailyBonusDate === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(input.dailyBonusDate) ? input.dailyBonusDate : '';
-      await db.prepare('UPDATE players SET gold=?2,diamond=?3,owned_chars=?4,char_stars=?5,owned_cards=?6,teams=?7,tutorial_done=?8,tutorial_faction=?9,lobby_hero_id=?10,settings=?11,daily_bonus_date=?12,updated_at=unixepoch() WHERE uid=?1')
-        .bind(uid, intInRange(input.gold, target.gold), intInRange(input.diamond, target.diamond), JSON.stringify(owned), JSON.stringify(stars), JSON.stringify(cards), JSON.stringify(teams), input.tutorialDone ? 1 : 0, faction, hero, JSON.stringify(settings), dailyDate).run();
+      const tutorialDone = !!input.tutorialDone;
+      const tutorialStep = tutorialDone ? 'completed' : (target.tutorial_done ? 'intro' : safeTutorialStep(input.tutorialStep, tutorialStepFromRow(target)));
+      await db.prepare('UPDATE players SET gold=?2,diamond=?3,owned_chars=?4,char_stars=?5,owned_cards=?6,teams=?7,tutorial_done=?8,tutorial_step=?9,tutorial_faction=?10,lobby_hero_id=?11,settings=?12,daily_bonus_date=?13,updated_at=unixepoch() WHERE uid=?1')
+        .bind(uid, intInRange(input.gold, target.gold), intInRange(input.diamond, target.diamond), JSON.stringify(owned), JSON.stringify(stars), JSON.stringify(cards), JSON.stringify(teams), tutorialDone ? 1 : 0, tutorialStep, faction, hero, JSON.stringify(settings), dailyDate).run();
       const updated = await db.prepare('SELECT * FROM players WHERE uid=?1').bind(uid).first();
       return json({ player: { uid: updated.uid, email: updated.email, state: profileFromRow(updated) } });
     }
@@ -268,36 +281,49 @@ export async function onRequest(context) {
     if (action === 'tutorial-starter') {
       const id = String(body.id || '');
       const owned = parseJson(row.owned_chars, []);
-      if (row.tutorial_done || owned.length !== 0 || !['001', '004', '006'].includes(id)) throw apiError('The starter selection is no longer available.');
+      const step = tutorialStepFromRow(row);
+      if (step === 'battle' && owned.includes(id)) return json({ state: profileFromRow(row) });
+      if (row.tutorial_done || step !== 'starter' || owned.length !== 0 || !['001', '004', '006'].includes(id)) throw apiError('The starter selection is no longer available.');
       owned.push(id);
-      await db.prepare('UPDATE players SET owned_chars=?2,updated_at=unixepoch() WHERE uid=?1').bind(user.uid, JSON.stringify(owned)).run();
+      await db.prepare("UPDATE players SET owned_chars=?2,tutorial_step='battle',updated_at=unixepoch() WHERE uid=?1").bind(user.uid, JSON.stringify(owned)).run();
     } else if (action === 'tutorial-gacha') {
       const currency = body.currency === 'diamond' ? 'diamond' : 'gold';
       const owned = parseJson(row.owned_chars, []), stars = parseJson(row.char_stars, {});
-      if (row.tutorial_done || owned.length < 1) throw apiError('This tutorial reward is no longer available.');
-      // 舊版允許玩家在兩次教學召喚之間繼續一般召喚；角色數先達到 3 後，下一次
-      // 教學召喚會被拒絕，帳號便永遠卡在教學。這裡把已達標帳號視為獎勵已完成，
-      // 回傳現有角色讓前端能繼續隊伍教學（不重複發送角色，也不再增加星級）。
-      if (owned.length >= 3) {
+      const expected = currency === 'gold' ? 'gold_summon' : 'diamond_summon';
+      const nextStep = currency === 'gold' ? 'diamond_summon' : 'team';
+      const step = tutorialStepFromRow(row);
+      if (tutorialStepAtLeast(step, nextStep) && owned.length) {
         const id = owned[owned.length - 1];
         return json({ state: profileFromRow(row), results: [{ id, isNew: false, starLevel: Number(stars[id] || 0) }] });
       }
+      if (row.tutorial_done || step !== expected || owned.length < 1) throw apiError('This tutorial reward is no longer available.');
       const id = configuredGachaPick(config, currency, owned);
       owned.push(id);
-      await db.prepare('UPDATE players SET owned_chars=?2,char_stars=?3,updated_at=unixepoch() WHERE uid=?1').bind(user.uid, JSON.stringify(owned), JSON.stringify(stars)).run();
+      await db.prepare('UPDATE players SET owned_chars=?2,char_stars=?3,tutorial_step=?4,updated_at=unixepoch() WHERE uid=?1').bind(user.uid, JSON.stringify(owned), JSON.stringify(stars), nextStep).run();
       row = await db.prepare('SELECT * FROM players WHERE uid=?1').bind(user.uid).first();
       return json({ state: profileFromRow(row), results: [{ id, isNew: true, starLevel: 0 }] });
+    } else if (action === 'tutorial-progress') {
+      if (!TUTORIAL_STEPS.includes(body.step)) throw apiError('Invalid tutorial step.');
+      const requested = body.step;
+      const current = tutorialStepFromRow(row);
+      if (requested === current || tutorialStepAtLeast(current, requested)) return json({ state: profileFromRow(row) });
+      const allowed = (current === 'battle' && requested === 'gold_summon') || (current === 'team' && requested === 'ending');
+      if (!allowed) throw apiError('Tutorial progress is out of sequence.');
+      if (requested === 'ending' && parseJson(row.teams, []).length < 1) throw apiError('Save a team before continuing the tutorial.');
+      await db.prepare('UPDATE players SET tutorial_step=?2,updated_at=unixepoch() WHERE uid=?1').bind(user.uid, requested).run();
     } else if (action === 'tutorial-complete') {
       const owned = parseJson(row.owned_chars, []);
       if (owned.length < 3) throw apiError('Finish the starter and two tutorial summons first.');
-      await db.prepare('UPDATE players SET tutorial_done=1,updated_at=unixepoch() WHERE uid=?1').bind(user.uid).run();
+      await db.prepare("UPDATE players SET tutorial_done=1,tutorial_step='completed',updated_at=unixepoch() WHERE uid=?1").bind(user.uid).run();
     } else if (action === 'teams') {
       const teams = safeTeams(body.teams, parseJson(row.owned_chars, []));
-      await db.prepare('UPDATE players SET teams=?2,updated_at=unixepoch() WHERE uid=?1').bind(user.uid, JSON.stringify(teams)).run();
+      const nextStep = tutorialStepFromRow(row) === 'team' && teams.length ? 'ending' : tutorialStepFromRow(row);
+      await db.prepare('UPDATE players SET teams=?2,tutorial_step=?3,updated_at=unixepoch() WHERE uid=?1').bind(user.uid, JSON.stringify(teams), nextStep).run();
     } else if (action === 'profile-name') {
       const playerName = safePlayerName(body.playerName);
       try {
-        await db.prepare('UPDATE players SET player_name=?2,updated_at=unixepoch() WHERE uid=?1').bind(user.uid, playerName).run();
+        const nextStep = tutorialStepFromRow(row) === 'intro' ? 'starter' : tutorialStepFromRow(row);
+        await db.prepare('UPDATE players SET player_name=?2,tutorial_step=?3,updated_at=unixepoch() WHERE uid=?1').bind(user.uid, playerName, nextStep).run();
       } catch (error) {
         if (/UNIQUE|constraint/i.test(String(error && error.message))) throw apiError('這個名字已被其他玩家使用。', 409);
         throw error;
