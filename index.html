@@ -9409,7 +9409,7 @@ function tutorialInjectStyle(){
     +"@keyframes tutorialBlink{0%,100%{opacity:.3;}50%{opacity:1;}}"
     +".tutorial-highlight{position:relative!important;z-index:999998!important;box-shadow:0 0 0 4px #ffd35a,0 0 24px 6px rgba(255,211,90,.8)!important;animation:tutorialPulse 1s infinite;border-radius:10px;}"
     +"body.tutorial-action-lock button{pointer-events:none!important;opacity:.3!important;filter:grayscale(.75);}"
-    +"body.tutorial-action-lock button.tutorial-highlight,body.tutorial-action-lock #tutorialSkipBtn,body.tutorial-action-lock .tutorial-allowed,body.tutorial-action-lock .tutorial-allowed button{pointer-events:auto!important;opacity:1!important;filter:none!important;}"
+    +"body.tutorial-action-lock button.tutorial-highlight,body.tutorial-action-lock .tutorial-allowed,body.tutorial-action-lock .tutorial-allowed button{pointer-events:auto!important;opacity:1!important;filter:none!important;}"
     +"@keyframes tutorialPulse{0%,100%{box-shadow:0 0 0 4px #ffd35a,0 0 18px 4px rgba(255,211,90,.7);}50%{box-shadow:0 0 0 6px #ffd35a,0 0 30px 10px rgba(255,211,90,.95);}}"
     +"#tutorialStarterGrid{display:flex;gap:14px;justify-content:center;flex-wrap:wrap;margin-top:16px;}"
     +".tutorial-starter-card{width:130px;cursor:pointer;border:2px solid #333850;border-radius:12px;padding:8px;background:#1c1f2b;transition:transform .15s,border-color .15s;}"
@@ -9436,9 +9436,6 @@ function tutorialInjectStyle(){
     +".tutorial-crawl-line.show{opacity:1;}"
     +"#tutorialCrawlHint{position:fixed;bottom:36px;left:50%;transform:translateX(-50%);color:#9aa0b4;font-size:13px;animation:tutorialBlink 1.2s infinite;z-index:3;pointer-events:none;}"
     +"#tutorialCrawlHint.hidden{display:none;}"
-    +"#tutorialSkipBtn{position:fixed;top:16px;right:16px;z-index:1000000;padding:8px 16px;border-radius:999px;border:1px solid #555a70;background:rgba(20,22,30,.7);color:#e8e8ef;font-size:13px;cursor:pointer;letter-spacing:1px;pointer-events:auto;}"
-    +"#tutorialSkipBtn:hover{background:rgba(40,42,55,.9);}"
-    +"#tutorialSkipBtn.hidden{display:none;}"
     +"#tutorialClickCatcher{position:fixed;inset:0;z-index:999997;pointer-events:none;}";
   const styleEl = document.createElement('style');
   styleEl.id = 'tutorialStyle';
@@ -9464,8 +9461,7 @@ function tutorialInjectDom(){
       '<div id="tutorialSpeaker"><span id="tutorialSpeakerAvatar"></span><span id="tutorialSpeakerName"></span></div>'+
       '<div id="tutorialText"></div>'+
       '<div id="tutorialNext">▼ 點擊繼續</div>'+
-    '</div>'+
-    '<button type="button" id="tutorialSkipBtn" class="hidden">SKIP ▶</button>';
+    '</div>';
   document.body.appendChild(wrap);
 }
 
@@ -9550,8 +9546,7 @@ function tutorialClearHighlight(){
 // 這裡再攔截鍵盤觸發的 click 或動態產生的控制項，確保玩家不會誤跳到別的畫面而中斷流程。
 document.addEventListener('click',function(e){
   if(!tutorialHighlightEl) return;
-  const skip=document.getElementById('tutorialSkipBtn');
-  const allowed=tutorialHighlightEl.contains(e.target)||(skip&&skip.contains(e.target))||tutorialAllowedEls.some(function(el){return el.contains(e.target);});
+  const allowed=tutorialHighlightEl.contains(e.target)||tutorialAllowedEls.some(function(el){return el.contains(e.target);});
   if(!allowed){e.preventDefault();e.stopImmediatePropagation();}
 },true);
 // 等玩家真的點擊某個按鈕才推進教學流程。用捕獲階段多加一個一次性監聽，不覆蓋/取代按鈕
@@ -9583,9 +9578,6 @@ function tutorialLaunch(replay){
   tutorialClearHighlight();
   tutorialReplayMode = !!replay;
   tutorialSetGachaLock(false, false);
-  const skipBtn = document.getElementById('tutorialSkipBtn');
-  skipBtn.classList.remove('hidden');
-  skipBtn.onclick = tutorialSkip;
   tutorialSayPrologue();
 }
 
@@ -9934,36 +9926,11 @@ function tutorialFinish(){
   document.getElementById('tutorialCrawlWrap').classList.add('hidden');
   document.getElementById('tutorialCrawlHint').classList.add('hidden');
   document.getElementById('tutorialDim').style.background = 'transparent';
-  document.getElementById('tutorialSkipBtn').classList.add('hidden');
   const catcher = document.getElementById('tutorialClickCatcher');
   catcher.style.pointerEvents = 'none';
   catcher.onclick = null;
   goToLobby();
   claimDailyBonusIfNeeded();
-}
-
-// ---- SKIP：教學過程中隨時可以跳過。缺什麼（起始棋子／兩次免費召喚／隊伍）就默默幫玩家
-// 補齊，讓玩家不會因為跳過而卡在「沒有角色/沒有隊伍」玩不了的狀態；戰鬥不會被跳過流程
-// 強迫打，直接送回大廳，之後可以自己從大廳開一場。----
-function tutorialSkip(){
-  if(!confirm('確定要跳過新手教學嗎？系統會自動幫你準備好起始棋子、召喚跟隊伍。')) return;
-  if(tutorialCrawlTimer){ clearTimeout(tutorialCrawlTimer); tutorialCrawlTimer = null; }
-  tutorialClearHighlight();
-  tutorialSetGachaLock(false, false);
-  window.__tutorialFixedOpponentIds = null;
-  window.__tutorialBattleReturnRequired = false;
-  if(ownedCharIds.length===0){
-    ownedCharIds.push(TUTORIAL_STARTER_IDS[0]);
-  }
-  tutorialEnsureAtLeast3Owned(function(){
-    if(teams.length===0){
-      state.selectedIds = ownedCharIds.slice(0,3);
-      editingTeamId = null;
-      randomFillDeckDraft();
-      confirmDeckBuild();
-    }
-    tutorialFinish();
-  });
 }
 
 /* ---------- 掛載：DOM注入／大廳按鈕／登入流程攔截 ---------- */
