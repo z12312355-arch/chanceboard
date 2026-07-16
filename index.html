@@ -7124,11 +7124,15 @@ function confirmTeamPick(){
 }
 
 function resetGame(){
+  // 決鬥結束後的「再玩一局」必須先完整離開 Firebase 房間，否則再次進入決鬥時
+  // onlineInRoom 仍會把 A／B 方帶回上一場。離房完成後改回決鬥大廳，重新配對新房間。
+  const leftOnlineRoom = typeof window.__leaveOnlineBattleRoom==='function' && window.__leaveOnlineBattleRoom(true);
   const modeToResume = pendingMode;
   state = newState();
   stopBgm(0.4); // cut the BGM short if the player abandons a match mid-battle via "重新選人"
   document.body.classList.remove('battle-mode');
   document.body.classList.remove('game-over');
+  if(leftOnlineRoom) return;
   // 「再玩一局」直接回到同一種模式（單人/雙人）的挑隊伍畫面，不用每次都繞回大廳重新點一次；
   // modeToResume 是 null 代表這場對戰不是從大廳的單人/雙人對戰按鈕進來的（理論上不會發生，防呆）。
   if(modeToResume) goToTeamPick(modeToResume); else goToLobby();
@@ -7137,10 +7141,13 @@ function resetGame(){
 // 拿掉battle-mode/game-over這兩個body class、停BGM），差別只在於「一定回大廳」，不像
 // resetGame()那樣還會判斷要不要直接跳回同模式的挑隊伍畫面。
 function backToLobbyFromBattle(){
+  // A／B 任一方從決鬥結果返回時，都先解除舊房間與監聽，再回一般大廳。
+  const leftOnlineRoom = typeof window.__leaveOnlineBattleRoom==='function' && window.__leaveOnlineBattleRoom(false);
   state = newState();
   stopBgm(0.4);
   document.body.classList.remove('battle-mode');
   document.body.classList.remove('game-over');
+  if(leftOnlineRoom) return;
   goToLobby();
 }
 
@@ -10513,6 +10520,7 @@ document.getElementById('admin1v1BattleBtn').onclick=function(){ closeAdminPanel
       if(onlineMetaRef) onlineMetaRef.off();
       onlineRootRef=onlineGameRef=onlineMetaRef=null;
       onlineRoomId=onlineRole=null; onlineInRoom=false; onlineMeta=null; onlineLastBlob=null; onlineLastFxId=null; onlineSetupShown=false; onlinePendingRoomAction=null; window.__onlineLocalSide=null; twoPlayerMode=false;
+      pendingMode=null; pendingTeamIdA=null; pendingTeamIdB=null;
       onlineUpdateLock();
     }
     function attachOnlineRoom(id, role){
@@ -10629,7 +10637,7 @@ document.getElementById('admin1v1BattleBtn').onclick=function(){ closeAdminPanel
     }
     function leaveOnlineRoom(){
       const root=onlineRootRef, role=onlineRole, status=onlineMeta && onlineMeta.status;
-      if(!root){ goToLobby(); return; }
+      if(!root){ detachOnlineRoom(); goToLobby(); return; }
       if(status==='playing') root.remove();
       else if(role==='A') root.remove();
       else if(role==='B' && status==='ready') root.child('meta').update({status:'waiting',guestJoinedAt:null,nameB:null,setupB:null});
@@ -10637,6 +10645,14 @@ document.getElementById('admin1v1BattleBtn').onclick=function(){ closeAdminPanel
       detachOnlineRoom();
       goToLobby();
     }
+    // 戰鬥結果畫面位於決鬥模組外層，透過這個小型橋接讓兩顆結束按鈕也能走同一套
+    // 離房流程。回傳 false 代表不是決鬥，不影響單人／雙人等既有模式。
+    window.__leaveOnlineBattleRoom=function(reopenDuel){
+      if(!onlineInRoom) return false;
+      leaveOnlineRoom();
+      if(reopenDuel) setTimeout(openOnlineLobby, 0);
+      return true;
+    };
     function startOnlineMatch(){
       if(onlineRole!=='A' || !onlineMeta || onlineMeta.status!=='ready') return;
       onlineMetaRef.update({status:'setup',setupStartedAt:Date.now()});
