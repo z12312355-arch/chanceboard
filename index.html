@@ -9408,6 +9408,8 @@ function tutorialInjectStyle(){
     +"#tutorialNext{text-align:right;font-size:12px;color:#9aa0b4;margin-top:6px;animation:tutorialBlink 1.2s infinite;}"
     +"@keyframes tutorialBlink{0%,100%{opacity:.3;}50%{opacity:1;}}"
     +".tutorial-highlight{position:relative!important;z-index:999998!important;box-shadow:0 0 0 4px #ffd35a,0 0 24px 6px rgba(255,211,90,.8)!important;animation:tutorialPulse 1s infinite;border-radius:10px;}"
+    +"body.tutorial-action-lock button:not(.tutorial-highlight):not(#tutorialSkipBtn){pointer-events:none!important;opacity:.3!important;filter:grayscale(.75);}"
+    +"body.tutorial-action-lock .tutorial-highlight,body.tutorial-action-lock #tutorialSkipBtn,body.tutorial-action-lock .tutorial-allowed,body.tutorial-action-lock .tutorial-allowed button{pointer-events:auto!important;opacity:1!important;filter:none!important;}"
     +"@keyframes tutorialPulse{0%,100%{box-shadow:0 0 0 4px #ffd35a,0 0 18px 4px rgba(255,211,90,.7);}50%{box-shadow:0 0 0 6px #ffd35a,0 0 30px 10px rgba(255,211,90,.95);}}"
     +"#tutorialStarterGrid{display:flex;gap:14px;justify-content:center;flex-wrap:wrap;margin-top:16px;}"
     +".tutorial-starter-card{width:130px;cursor:pointer;border:2px solid #333850;border-radius:12px;padding:8px;background:#1c1f2b;transition:transform .15s,border-color .15s;}"
@@ -9527,22 +9529,37 @@ function tutorialSay(lines, onDone, opts){
 }
 
 let tutorialHighlightEl = null;
-function tutorialHighlight(elOrId){
+let tutorialAllowedEls = [];
+function tutorialHighlight(elOrId, allowedIds){
   tutorialClearHighlight();
   const el = typeof elOrId==='string' ? document.getElementById(elOrId) : elOrId;
   if(!el) return;
   el.classList.add('tutorial-highlight');
   tutorialHighlightEl = el;
+  tutorialAllowedEls=(allowedIds||[]).map(function(id){return document.getElementById(id);}).filter(Boolean);
+  tutorialAllowedEls.forEach(function(allowed){allowed.classList.add('tutorial-allowed');});
+  document.body.classList.add('tutorial-action-lock');
 }
 function tutorialClearHighlight(){
   if(tutorialHighlightEl){ tutorialHighlightEl.classList.remove('tutorial-highlight'); tutorialHighlightEl = null; }
+  tutorialAllowedEls.forEach(function(allowed){allowed.classList.remove('tutorial-allowed');});
+  tutorialAllowedEls=[];
+  document.body.classList.remove('tutorial-action-lock');
 }
+// 捕獲階段擋住所有非教學目標的點擊。CSS 的 pointer-events 是視覺與滑鼠第一層保護，
+// 這裡再攔截鍵盤觸發的 click 或動態產生的控制項，確保玩家不會誤跳到別的畫面而中斷流程。
+document.addEventListener('click',function(e){
+  if(!tutorialHighlightEl) return;
+  const skip=document.getElementById('tutorialSkipBtn');
+  const allowed=tutorialHighlightEl.contains(e.target)||(skip&&skip.contains(e.target))||tutorialAllowedEls.some(function(el){return el.contains(e.target);});
+  if(!allowed){e.preventDefault();e.stopImmediatePropagation();}
+},true);
 // 等玩家真的點擊某個按鈕才推進教學流程。用捕獲階段多加一個一次性監聽，不覆蓋/取代按鈕
 // 原本的onclick，原有功能完全不受影響，純粹多監聽一次藉此知道「玩家點了」。
-function tutorialWaitForClick(elId, cb, consumeClick){
+function tutorialWaitForClick(elId, cb, consumeClick, allowedIds){
   const el = document.getElementById(elId);
   if(!el){ cb(); return; }
-  tutorialHighlight(el);
+  tutorialHighlight(el,allowedIds);
   function handler(e){
     // consumeClick=true：教學自己已經完整處理了這次點擊該做的事（例如金幣/鑽石免費召喚，
     // 見 tutorialGoldGachaStep()/tutorialDiamondGachaStep()），這次點擊就不能再讓按鈕原本
@@ -9563,6 +9580,7 @@ function tutorialWaitForClick(elId, cb, consumeClick){
 
 /* ---------- 教學流程本體 ---------- */
 function tutorialLaunch(replay){
+  tutorialClearHighlight();
   tutorialReplayMode = !!replay;
   tutorialSetGachaLock(false, false);
   const skipBtn = document.getElementById('tutorialSkipBtn');
@@ -9836,9 +9854,9 @@ function tutorialTeamStep(){
         tutorialSay([TUTORIAL_LINES.teamPick3[tutorialFaction]], function(){
           tutorialWaitForClick('confirmBtn', function(){
             tutorialSay([TUTORIAL_LINES.teamDeck[tutorialFaction]], function(){
-              tutorialWaitForClick('deckConfirmBtn', tutorialSayAfterTeam);
+              tutorialWaitForClick('deckConfirmBtn', tutorialSayAfterTeam, false, ['deck-picker','deckRandomBtn']);
             });
-          });
+          }, false, ['roster-grid','teamNameInput']);
         });
       });
     });
@@ -9896,6 +9914,7 @@ function tutorialSayEnding(){
 }
 
 function tutorialFinish(){
+  tutorialClearHighlight();
   tutorialSetGachaLock(false, false);
   markTutorialDone();
   tutorialReplayMode = false;
