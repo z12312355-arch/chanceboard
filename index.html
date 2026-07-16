@@ -3536,6 +3536,10 @@ function expandDeckDraft(draft){
 }
 
 function confirmDeckBuild(){
+  if(!Array.isArray(state.selectedIds) || state.selectedIds.length<1 || state.selectedIds.length>3){
+    alert('隊伍必須選擇 1～3 名角色。');
+    return;
+  }
   if(deckDraftTotal()!==10) return;
   const nameInput = document.getElementById('teamNameInput');
   const existingIdx = editingTeamId ? teams.findIndex(t=>t.id===editingTeamId) : -1;

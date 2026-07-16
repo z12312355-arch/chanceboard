@@ -150,14 +150,18 @@ function safeCards(value) {
 function safeTeams(value, owned) {
   if (!Array.isArray(value) || value.length > 10) throw apiError('You can save at most 10 teams.');
   return value.map(team => {
-    if (!team || typeof team.name !== 'string' || !Array.isArray(team.characterIds) || team.characterIds.length !== 3) throw apiError('Invalid team data.');
-    if (team.name.length > 30 || team.characterIds.some(id => !owned.includes(id))) throw apiError('A team includes a character you do not own.');
+    if (!team || typeof team.name !== 'string' || !Array.isArray(team.characterIds) || team.characterIds.length < 1 || team.characterIds.length > 3) {
+      throw apiError('A team must contain 1 to 3 characters.');
+    }
+    const characterIds = team.characterIds.map(String);
+    if (new Set(characterIds).size !== characterIds.length) throw apiError('A team cannot contain duplicate characters.');
+    if (team.name.length > 30 || characterIds.some(id => !owned.includes(id))) throw apiError('A team includes a character you do not own.');
     const deck = team.deck && typeof team.deck === 'object' ? team.deck : {};
     // The deck editor deliberately keeps every card ID with a zero count. Zero is
     // therefore valid; only negative, non-integer, or over-limit counts are invalid.
     const total = Object.values(deck).reduce((sum, n) => sum + (Number.isInteger(n) && n >= 0 && n <= 10 ? n : 999), 0);
     if (total !== 10) throw apiError('Each deck must contain exactly 10 cards.');
-    return { id: String(team.id || crypto.randomUUID()), name: team.name, characterIds: team.characterIds, deck };
+    return { id: String(team.id || crypto.randomUUID()), name: team.name, characterIds, deck };
   });
 }
 function safePlayerName(value) {
