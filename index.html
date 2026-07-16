@@ -10930,7 +10930,7 @@ document.getElementById('admin1v1BattleBtn').onclick=function(){ closeAdminPanel
         const selectedTeam=loadOnlineSelectedTeam();
         body=onlineTeamPickerHtml(selectedTeam)+
           '<div class="online-room-name-row"><label for="onlineRoomName">房間名稱</label><input id="onlineRoomName" maxlength="24" placeholder="例如：新手交流房" value="'+escHtml(onlineDraftRoomName)+'"></div>'+
-          '<div class="online-toolbar"><button class="btn primary" id="onlineCreate">＋ 建立房間</button><button class="btn" id="onlineRefresh">↻ 重新整理</button></div>'+
+          '<div class="online-toolbar"><button class="btn primary" id="onlineCreate">＋ 建立房間</button></div>'+
           '<div class="online-hint online-lobby-guide">選擇等待中的房間即可加入；建立房間後等待對手加入。</div>'+
           '<div id="onlineRoomList" class="online-room-list">'+roomCardsHtml()+'</div>';
       }
@@ -10938,7 +10938,6 @@ document.getElementById('admin1v1BattleBtn').onclick=function(){ closeAdminPanel
       document.getElementById('onlineBack').onclick=function(){ onlineInRoom?leaveOnlineRoom():goToLobby(); };
       const create=document.getElementById('onlineCreate'); if(create) create.onclick=createOnlineRoom;
       const roomNameInput=document.getElementById('onlineRoomName'); if(roomNameInput) roomNameInput.oninput=function(){ onlineDraftRoomName=this.value.slice(0,24); };
-      const refresh=document.getElementById('onlineRefresh'); if(refresh){ refresh.onclick=function(){ stopListing(); startListing(); renderOnlineLobby(); }; }
       const changeTeam=document.getElementById('onlineChangeTeam'); if(changeTeam) changeTeam.onclick=function(){ onlineTeamPickerExpanded=!onlineTeamPickerExpanded; renderOnlineLobby(); };
       document.querySelectorAll('[data-online-team]').forEach(function(card){
         card.onclick=function(){
