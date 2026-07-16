@@ -8784,7 +8784,7 @@ function renderAdminAccountManager(){
     +'<hr style="border:0;border-top:1px solid var(--line);margin:14px 0"><h3 style="margin:0 0 8px">📜 完整新手劇情文本</h3>'
     +'<p style="font-size:12px;color:var(--muted)">可編輯目前新手流程會顯示的全部台詞。序章與問名台詞每行一句；其他欄位是一個教學步驟。用 <code>{name}</code> 代表玩家名字。</p>'
     +adminStoryTextarea('共同序章（每行一句）','admin-story-prologue',TUTORIAL_LINES.prologue.join('\n'),9)
-    +'<div style="padding:9px;border:1px solid var(--line);border-radius:8px;margin:8px 0"><b style="font-size:13px">陣營問名劇情（每行一句）</b><p style="font-size:11px;color:var(--muted);margin:5px 0 8px">小黑前 2 行、小白前 3 行會在輸入名字前顯示，其餘行在輸入後顯示。</p><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:10px">'
+    +'<div style="padding:9px;border:1px solid var(--line);border-radius:8px;margin:8px 0"><b style="font-size:13px">陣營問名劇情（每行一句）</b><p style="font-size:11px;color:var(--muted);margin:5px 0 8px">小黑前 2 行、小白前 2 行會在輸入名字前顯示，其餘行在輸入後顯示。</p><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:10px">'
       +adminStoryTextarea('小黑','admin-story-greeting-black',TUTORIAL_LINES.greeting.black.join('\n'),7)
       +adminStoryTextarea('小白','admin-story-greeting-white',TUTORIAL_LINES.greeting.white.join('\n'),8)
     +'</div></div>'
@@ -8811,7 +8811,7 @@ function renderAdminAccountManager(){
     const endingNote=document.getElementById('admin-story-endingNote').value.trim();
     const msg=document.getElementById('admin-story-msg');
     if(!prologue.length){msg.textContent='❌ 共同序章至少需要一句。';msg.className='admin-msg err';return;}
-    if(greeting.black.length<3||greeting.white.length<4){msg.textContent='❌ 問名劇情必須包含輸入名字前與輸入名字後的台詞（小黑至少 3 行、小白至少 4 行）。';msg.className='admin-msg err';return;}
+    if(greeting.black.length<3||greeting.white.length<3){msg.textContent='❌ 問名劇情必須包含輸入名字前與輸入名字後的台詞（黑白雙方都至少 3 行）。';msg.className='admin-msg err';return;}
     let missing='';
     const nextPairs={};
     ADMIN_TUTORIAL_STORY_FIELDS.forEach(function(field){
@@ -9710,7 +9710,7 @@ function tutorialChooseFaction(faction){
 
 function tutorialSayGreeting(){
   const lines=(globalIntroStory[tutorialFaction]||TUTORIAL_LINES.greeting[tutorialFaction]||[]).slice();
-  const split=tutorialFaction==='black'?2:3;
+  const split=2;
   if(tutorialReplayMode && playerName){ tutorialSay(lines, tutorialSayPickIntro); return; }
   tutorialSay(lines.slice(0,split),function(){ tutorialAskPlayerName(lines.slice(split)); });
 }
