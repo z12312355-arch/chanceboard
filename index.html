@@ -1858,7 +1858,7 @@
         <span class="gacha-balance-chip">💎 <b id="lobbyDiamondAmt">0</b></span>
       </div>
       <div id="lobbyBtnGrid">
-        <button type="button" class="lobby-btn lobby-btn-primary" id="lobbySoloBtn">
+        <button type="button" class="lobby-btn lobby-btn-primary hidden" id="lobbySoloBtn">
           <span class="lobby-btn-icon">⚔️</span>
           <span class="lobby-btn-label">單人對戰</span>
           <span class="lobby-btn-desc">挑一支隊伍，跟電腦對戰</span>
@@ -1889,20 +1889,30 @@
             <span class="lobby-btn-label">商店</span>
             <span class="lobby-btn-desc">用金幣購買招式卡，解鎖組卡組</span>
           </button>
-          <button type="button" class="lobby-btn" id="lobbyTwoBtn">
+          <button type="button" class="lobby-btn hidden" id="lobbyTwoBtn">
             <span class="lobby-btn-icon">🤝</span>
             <span class="lobby-btn-label">雙人對戰</span>
             <span class="lobby-btn-desc">本機雙人，黑白方各挑一隊</span>
           </button>
           <button type="button" class="lobby-btn" id="lobbyOnlineBtn">
             <span class="lobby-btn-icon">🌐</span>
-            <span class="lobby-btn-label">跨網對戰</span>
+            <span class="lobby-btn-label">決鬥</span>
             <span class="lobby-btn-desc">瀏覽房間、建立房間，與其他玩家即時對戰</span>
           </button>
           <button type="button" class="lobby-btn" id="lobbyTeamsBtn">
             <span class="lobby-btn-icon">🛡️</span>
             <span class="lobby-btn-label">隊伍</span>
             <span class="lobby-btn-desc">組角色＋卡組，可存多支隊伍</span>
+          </button>
+          <button type="button" class="lobby-btn" id="lobbyStoryBtn">
+            <span class="lobby-btn-icon">📜</span>
+            <span class="lobby-btn-label">故事</span>
+            <span class="lobby-btn-desc">故事模式（即將開放）</span>
+          </button>
+          <button type="button" class="lobby-btn" id="lobbyFriendsBtn">
+            <span class="lobby-btn-icon">👥</span>
+            <span class="lobby-btn-label">好友</span>
+            <span class="lobby-btn-desc">新增與管理好友（最多 50 人）</span>
           </button>
           <button type="button" class="lobby-btn" id="lobbyRulesBtn">
             <span class="lobby-btn-icon">📖</span>
@@ -1924,12 +1934,27 @@
   <div id="lobbySettingsBackdrop" class="hidden">
     <div class="battlelog-panel" style="max-width:320px;">
       <div class="bl-head"><div class="bl-title">⚙️ 設定</div><button class="btn small" id="lobbySettingsCloseBtn">✕</button></div>
+      <label class="lobbysettings-row" style="display:block">
+        玩家名字
+        <input type="text" id="playerNameInput" maxlength="16" placeholder="輸入 1～16 個字" style="width:100%;margin-top:6px;padding:8px;border-radius:6px;border:1px solid var(--line);background:var(--panel2);color:var(--text)">
+        <button type="button" class="btn small primary" id="playerNameSaveBtn" style="margin-top:7px;width:100%">儲存名字</button>
+        <span id="playerNameMessage" style="display:block;margin-top:5px;font-size:11px;color:var(--muted)"></span>
+      </label>
       <label id="lobbySoundToggleWrap" class="lobbysettings-row">
         <input type="checkbox" id="lobbySoundToggle" checked> 🔊 音效
       </label>
       <label id="lobbyMusicToggleWrap" class="lobbysettings-row">
         <input type="checkbox" id="lobbyMusicToggle" checked> 🎵 音樂
       </label>
+    </div>
+  </div>
+
+  <div id="friendsBackdrop" class="hidden" style="position:fixed;inset:0;z-index:100000;background:rgba(0,0,0,.7);display:flex;align-items:center;justify-content:center;padding:16px">
+    <div class="battlelog-panel" style="max-width:480px;width:100%;max-height:80vh;overflow:auto">
+      <div class="bl-head"><div class="bl-title">👥 好友 <span id="friendsCount">0 / 50</span></div><button class="btn small" id="friendsCloseBtn">✕</button></div>
+      <div style="display:flex;gap:7px;margin:10px 0"><input id="friendNameInput" maxlength="16" placeholder="輸入玩家名字" style="flex:1;min-width:0;padding:8px;border-radius:6px;border:1px solid var(--line);background:var(--panel2);color:var(--text)"><button type="button" class="btn primary" id="friendAddBtn">新增</button></div>
+      <div id="friendsMessage" style="font-size:12px;color:var(--muted);margin-bottom:8px"></div>
+      <div id="friendsList"></div>
     </div>
   </div>
 
@@ -2314,6 +2339,9 @@
              整副牌組都能塞這張卡的上限），一次買滿不用一張張買。基本花色牌（SUIT_CARD_IDS）
              本來就永遠視同已買滿（見cardOwnedCount()），不用另外處理。 -->
         <button class="btn small" id="adminMaxAllFlowerCardsBtn">🌼 花牌全滿</button>
+        <button class="btn small" id="adminSoloBattleBtn">⚔️ 單人對戰</button>
+        <button class="btn small" id="adminTwoBattleBtn">🤝 雙人對戰</button>
+        <button class="btn small" id="admin1v1BattleBtn">🗡️ 1v1 對戰</button>
         <button class="btn small" id="adminCloseBtn">✕ 關閉</button>
       </div>
     </div>
@@ -2407,6 +2435,10 @@ const STATUS_BY_NAME = {}; DB.statuses.forEach(s=>STATUS_BY_NAME[s.name]=s);
 const DECKW_BY_CARDID = {}; DB.deckWeights.forEach(w=>DECKW_BY_CARDID[w.cardId]=w);
 
 let globalEconomySettings = {dailyGold:200,dailyDiamond:5,goldGachaOneCost:100,goldGachaTenCost:1000,diamondGachaOneCost:10,diamondGachaTenCost:100};
+let globalIntroStory = {
+  black:['哈哈，歡迎加入黑方，我是小黑。','對了，你叫什麼？','……原來如此。','從今天開始，我就叫你『{name}』了。','可別太早死啊。'],
+  white:['歡迎加入白方，我是小白。','在開始旅程之前。','請告訴我你的名字。','{name}。','我記住了。','希望有一天，大家都能記住這個名字。']
+};
 function applyGlobalGameConfig(config){
   if(!config || typeof config!=='object') return;
   ['characters','moves','cards'].forEach(function(key){
@@ -2418,11 +2450,14 @@ function applyGlobalGameConfig(config){
     });
   });
   if(config.settings && typeof config.settings==='object') globalEconomySettings=Object.assign({},globalEconomySettings,config.settings);
+  if(config.introStory && typeof config.introStory==='object'){
+    ['black','white'].forEach(function(side){ if(Array.isArray(config.introStory[side])) globalIntroStory[side]=config.introStory[side].map(String); });
+  }
   if(typeof updateGachaCostDisplay==='function') updateGachaCostDisplay();
   if(typeof renderShopGrid==='function' && document.getElementById('shopCardGrid')) renderShopGrid();
 }
 function globalGameConfigPayload(){
-  return {characters:DB.characters,moves:DB.moves,cards:DB.cards,settings:globalEconomySettings};
+  return {characters:DB.characters,moves:DB.moves,cards:DB.cards,settings:globalEconomySettings,introStory:globalIntroStory};
 }
 const SUIT_CARD_IDS = DB.cards.filter(c=>c.isSuitCard).map(c=>c.id); // ['001'..'004']
 const FLOWER_CARD_IDS = DB.cards.filter(c=>!c.isSuitCard).map(c=>c.id);
@@ -3637,10 +3672,9 @@ function startGame(){
   let chosenB;
   if(twoPlayerMode && state.selectedIdsB.length===currentMatchSize){
     chosenB = state.selectedIdsB.map(id=>CHAR_BY_ID[id]);
-  } else if(window.__tutorialFixedOpponentIds && window.__tutorialFixedOpponentIds.length===3){
-    // 新手教學專用：固定一組數值最低的角色當對手，取代隨機殘餘角色池，見 TUTORIAL_OPPONENT_IDS。
-    // 教學本來就是3v3，不受currentMatchSize影響。
-    chosenB = window.__tutorialFixedOpponentIds.map(id=>CHAR_BY_ID[id]);
+  } else if(window.__tutorialFixedOpponentIds && window.__tutorialFixedOpponentIds.length>=currentMatchSize){
+    // 新手教學專用：依目前教學場次人數取固定弱化對手；目前流程使用 1v1。
+    chosenB = window.__tutorialFixedOpponentIds.slice(0,currentMatchSize).map(id=>CHAR_BY_ID[id]);
   } else {
     const allIds = DB.characters.map(c=>c.id);
     const usedIds = new Set(state.selectedIds);
@@ -6597,6 +6631,8 @@ function renderTeamList(){
   const grid = document.getElementById('teamlist-grid');
   grid.innerHTML = '';
   document.getElementById('teamlist-empty-hint').classList.toggle('hidden', teams.length>0);
+  const newBtn=document.getElementById('teamNewBtn');
+  if(newBtn){ newBtn.disabled=teams.length>=10; newBtn.textContent=teams.length>=10?'已達 10 隊上限':'＋ 新增隊伍'; }
   teams.forEach(team=>{
     const card = document.createElement('div');
     card.className = 'teamcard';
@@ -6946,6 +6982,7 @@ window.addEventListener('resize', function(){
 });
 
 function goToTeamEditorNew(){
+  if(teams.length>=10){ alert('最多只能建立 10 支隊伍。'); return; }
   editingTeamId = null;
   state.selectedIds = [];
   // 使用者反應「先組好一隊，在組下一隊時，會帶出上一次組隊的角色」：根因是confirmDeckBuild()
@@ -8127,6 +8164,9 @@ document.getElementById('lobbySoloBtn').onclick = ()=> goToTeamPick('single');
 document.getElementById('lobbyTwoBtn').onclick = ()=> goToTeamPick('two');
 document.getElementById('lobbyTeamsBtn').onclick = goToTeamList;
 document.getElementById('lobbyAdminBtn').onclick = openAdminPanel;
+document.getElementById('lobbyStoryBtn').onclick = function(){};
+let openFriendsPanel=function(){ alert('請先登入帳號，才能使用好友功能。'); };
+document.getElementById('lobbyFriendsBtn').onclick = function(){ openFriendsPanel(); };
 // 大廳立繪選擇：見 openLobbyHeroPicker()／pickLobbyHero() 的說明。
 document.getElementById('lobbyHeroPickBtn').onclick = openLobbyHeroPicker;
 document.getElementById('lobbyHeroPickCloseBtn').onclick = closeLobbyHeroPicker;
@@ -8162,15 +8202,26 @@ document.getElementById('teampickConfirmBtn').onclick = confirmTeamPick;
   const closeBtn = document.getElementById('lobbySettingsCloseBtn');
   const soundBox = document.getElementById('lobbySoundToggle');
   const musicBox = document.getElementById('lobbyMusicToggle');
+  const nameInput = document.getElementById('playerNameInput');
+  const nameSave = document.getElementById('playerNameSaveBtn');
+  const nameMessage = document.getElementById('playerNameMessage');
   function openLobbySettings(){
     soundBox.checked = soundEnabled;
     musicBox.checked = musicEnabled;
+    nameInput.value=playerName;
+    nameMessage.textContent='';
     backdrop.classList.remove('hidden');
   }
   function closeLobbySettings(){ backdrop.classList.add('hidden'); }
   btn.onclick = openLobbySettings;
   closeBtn.onclick = closeLobbySettings;
   backdrop.onclick = function(e){ if(e.target===this) closeLobbySettings(); };
+  nameSave.onclick=async function(){
+    nameSave.disabled=true; nameMessage.textContent='儲存中…';
+    try{ await savePlayerNameValue(nameInput.value);nameMessage.textContent='名字已儲存。'; }
+    catch(e){nameMessage.textContent=e.message;}
+    nameSave.disabled=false;
+  };
   soundBox.onchange = function(){
     soundEnabled = this.checked;
     if(soundEnabled) getAudioCtx();
@@ -8667,6 +8718,11 @@ function renderAdminAccountManager(){
     +adminManagerField('鑽石單抽','global-diamond-one','number',globalEconomySettings.diamondGachaOneCost)
     +adminManagerField('鑽石十抽','global-diamond-ten','number',globalEconomySettings.diamondGachaTenCost)
     +'</div><button type="button" class="btn primary small" id="admin-save-economy">儲存全域抽卡／每日設定</button><div id="admin-economy-msg" class="admin-msg" style="display:block;margin:7px 0"></div>'
+    +'<hr style="border:0;border-top:1px solid var(--line);margin:14px 0"><h3 style="margin:0 0 8px">📜 初始劇情</h3>'
+    +'<p style="font-size:12px;color:var(--muted)">每行一句；用 <code>{name}</code> 代表玩家名字。詢問名字後的台詞請放在第 3 行起。</p>'
+    +'<label style="display:block;font-size:12px">小黑<textarea id="admin-intro-black" rows="7" style="display:block;width:100%;margin:4px 0 9px;resize:vertical">'+escHtml(globalIntroStory.black.join('\n'))+'</textarea></label>'
+    +'<label style="display:block;font-size:12px">小白<textarea id="admin-intro-white" rows="8" style="display:block;width:100%;margin:4px 0 9px;resize:vertical">'+escHtml(globalIntroStory.white.join('\n'))+'</textarea></label>'
+    +'<button type="button" class="btn primary small" id="admin-save-intro">儲存初始劇情</button><div id="admin-intro-msg" class="admin-msg" style="display:block;margin:7px 0"></div>'
     +'<hr style="border:0;border-top:1px solid var(--line);margin:14px 0"><h3 style="margin:0 0 8px">👤 玩家帳號資料</h3>'
     +'<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><select id="admin-player-select" style="min-width:260px;max-width:100%;flex:1"><option value="">載入玩家清單後選擇帳號</option></select><button type="button" class="btn small" id="admin-refresh-players">重新整理玩家</button></div>'
     +'<div id="admin-manager-msg" class="admin-msg" style="display:block;margin:7px 0"></div><div id="admin-player-editor" style="margin-top:8px;color:var(--muted);font-size:12px">請先選擇玩家。</div>';
@@ -8680,6 +8736,14 @@ function renderAdminAccountManager(){
     try{await saveGlobalAdminConfig();msg.textContent='✅ 全域抽卡與每日獎勵設定已儲存。';msg.className='admin-msg';}catch(e){msg.textContent='❌ 儲存失敗：'+e.message+(String(e.message).includes('game_config')?'（請先在 D1 Console 建立 game_config 資料表）':'');msg.className='admin-msg err';}
   };
   document.getElementById('admin-refresh-players').onclick=refreshAdminManagedPlayers;
+  document.getElementById('admin-save-intro').onclick=async function(){
+    const lines=id=>document.getElementById(id).value.split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
+    const next={black:lines('admin-intro-black'),white:lines('admin-intro-white')};
+    const msg=document.getElementById('admin-intro-msg');
+    if(next.black.length<2||next.white.length<2){ msg.textContent='❌ 黑白雙方都至少需要兩句台詞。';msg.className='admin-msg err';return; }
+    globalIntroStory=next; msg.textContent='⏳ 儲存中…';msg.className='admin-msg';
+    try{ await saveGlobalAdminConfig();msg.textContent='✅ 初始劇情已儲存。'; }catch(e){msg.textContent='❌ 儲存失敗：'+e.message;msg.className='admin-msg err';}
+  };
   document.getElementById('admin-player-select').onchange=function(){if(this.value) loadAdminManagedPlayer(this.value);};
   if(adminManagedPlayers.length) populateAdminPlayerSelect();
 }
@@ -9102,6 +9166,19 @@ refreshCurrencyDisplays();
    【新手教學】按鈕，任何時候都能重新觀看（重播模式只重播台詞，不會逼玩家重做真實操作）。 */
 const TUTORIAL_DONE_KEY = 'chanceboard_tutorial_done_v1';
 const TUTORIAL_FACTION_KEY = 'chanceboard_tutorial_faction_v1';
+const PLAYER_NAME_KEY = 'chanceboard_player_name_v1';
+let playerName = '';
+try{ playerName=localStorage.getItem(PLAYER_NAME_KEY)||''; }catch(e){}
+window.__playerName=playerName;
+function currentPlayerName(){ return playerName || '玩家'; }
+function savePlayerNameValue(value){
+  const name=String(value||'').trim();
+  if(!name || name.length>16) return Promise.reject(new Error('名字須為 1～16 個字。'));
+  playerName=name; window.__playerName=name;
+  try{ localStorage.setItem(PLAYER_NAME_KEY,name); }catch(e){}
+  return Promise.resolve(name);
+}
+function playerText(text){ return String(text==null?'':text).replace(/\{name\}/g,currentPlayerName()); }
 // 3 位候選棋子：外觀與定位互補（槍/劍/法各一），見角色資料庫 id 001/004/006。
 const TUTORIAL_STARTER_IDS = ['001','004','006'];
 // 教學戰對手：全21位角色裡數值最低的3位（008/018/020），另外在 startGame() 裡再打6折，
@@ -9134,23 +9211,7 @@ const TUTORIAL_LINES = {
     '來自無數世界、無數時空的人們，都為了自己的願望聚集於此。',
     '歡迎來到──棋盤。',
   ],
-  greeting: {
-    black: [
-      '哈哈哈哈！歡迎加入黑方！',
-      '我是惡魔．小黑。',
-      '別露出那副緊張的表情。第一次來到棋盤的人，幾乎都會搞不清楚狀況。',
-      '放心吧。對你而言，這只是一場遊戲。輸了，大不了重新開始。',
-      '但是……那些與你締結契約的棋子，可沒有第二次人生。',
-      '他們每一次受傷、每一次敗北，都是真正存在的。',
-      '所以……可別讓他們失望啊。呵呵。',
-    ],
-    white: [
-      '你好。我是惡魔．小白。歡迎來到棋盤。',
-      '不用害怕。每位玩家第一次來時，都會和你一樣不知所措。',
-      '對你而言，這是一場遊戲。但對那些願意與你締結契約的棋子而言……這是他們唯一一次改變命運的機會。',
-      '所以，希望你能珍惜每一次選擇。因為，他們相信著你。',
-    ],
-  },
+  greeting: globalIntroStory,
   pickIntro: { black:'現在。請選擇你的第一枚棋子。', white:'首先。請選擇第一位願意與你同行的棋子。' },
   afterPick: {
     black:'很好。從現在開始，他就是你的第一枚棋子。棋子並非工具。他們相信你，才願意將生命交到你的手上。可別隨便把人送去送死。……雖然很多玩家都這麼做就是了。哈哈哈！',
@@ -9197,8 +9258,8 @@ const TUTORIAL_LINES = {
     white:'很好。一支隊伍，已經初具雛形。',
   },
   battleIntro: {
-    black:'真正的戰場開始了。勝利的方法很簡單：擊敗敵方所有棋子。戰鬥中，棋子會依照速度依序行動，選擇技能、攻擊敵人、施放能力。只要活到最後，就是贏家。點擊【單人對戰】開始吧。',
-    white:'接下來，讓我們進入第一場戰鬥。棋子會依照速度依序行動，善用技能、屬性與站位，就能逐漸取得優勢。請放心，我會陪你完成第一場戰鬥。點擊【單人對戰】開始吧。',
+    black:'{name}，真正的戰場開始了。這次是 1v1：用你剛選擇的棋子擊敗對手。棋子會依照速度行動，選擇技能、攻擊敵人、施放能力。只要活到最後，就是贏家。',
+    white:'{name}，接下來是第一場 1v1 戰鬥。你剛選擇的棋子已經在隊伍中，善用技能與屬性取得勝利吧。請放心，我會陪你完成第一場戰鬥。',
   },
   battlePickTeam: {
     black:'選這支剛組好的隊伍，然後按「確認」開戰。',
@@ -9213,7 +9274,7 @@ const TUTORIAL_LINES = {
     white:'沒關係，這只是開始。慢慢來，我會一直陪著你。',
   },
   ending: {
-    black:'很好。你已經掌握了棋盤最基本的規則。接下來，是屬於你的故事、你的願望、你的選擇……以及，你將犧牲多少棋子，才能抵達終點。祝你好運，玩家。',
+    black:'很好，{name}。你已經掌握了棋盤最基本的規則。接下來，是屬於你的故事、你的願望、你的選擇……以及，你將犧牲多少棋子，才能抵達終點。祝你好運。',
     white:'到這裡，你已經學會了棋盤的基本操作。真正的旅程，現在才開始。願你與棋子們攜手前行，也願你的願望，終有實現的一天。',
   },
   endingNote: '如果日後忘記操作，可以隨時點擊大廳中的【新手教學】重新觀看。',
@@ -9309,6 +9370,7 @@ function tutorialInjectDom(){
 
 let tutorialTypeTimer = null;
 function tutorialShowLine(text, onDone, opts){
+  text=playerText(text);
   opts = opts || {};
   const overlay = document.getElementById('tutorialOverlay');
   const box = document.getElementById('tutorialBox');
@@ -9321,7 +9383,7 @@ function tutorialShowLine(text, onDone, opts){
   speakerEl.classList.toggle('tf-black', !isNarrator && tutorialFaction==='black');
   speakerEl.classList.toggle('tf-white', !isNarrator && tutorialFaction!=='black');
   speakerEl.classList.toggle('tf-narrator', isNarrator);
-  nameEl.textContent = isNarrator ? '───' : (tutorialFaction==='black' ? '惡魔．小黑' : '惡魔．小白');
+  nameEl.textContent = isNarrator ? '───' : (tutorialFaction==='black' ? '小黑' : '小白');
   if(tutorialTypeTimer){ clearInterval(tutorialTypeTimer); tutorialTypeTimer = null; }
   textEl.textContent = '';
   let i = 0;
@@ -9432,7 +9494,7 @@ function tutorialSetSceneArt(faction){
   const wrap = document.getElementById('tutorialSceneArtWrap');
   const nameEl = document.getElementById('tutorialSceneName');
   art.src = faction==='black' ? 'images/demon_01_full.png' : 'images/demon_02_full.png';
-  nameEl.textContent = faction==='black' ? '惡魔．小黑' : '惡魔．小白';
+  nameEl.textContent = faction==='black' ? '小黑' : '小白';
   wrap.classList.toggle('tf-black', faction==='black');
   wrap.classList.toggle('tf-white', faction!=='black');
   wrap.classList.add('show');
@@ -9529,7 +9591,25 @@ function tutorialChooseFaction(faction){
 }
 
 function tutorialSayGreeting(){
-  tutorialSay(TUTORIAL_LINES.greeting[tutorialFaction], tutorialSayPickIntro);
+  const lines=(globalIntroStory[tutorialFaction]||TUTORIAL_LINES.greeting[tutorialFaction]||[]).slice();
+  const split=tutorialFaction==='black'?2:3;
+  if(tutorialReplayMode && playerName){ tutorialSay(lines, tutorialSayPickIntro); return; }
+  tutorialSay(lines.slice(0,split),function(){ tutorialAskPlayerName(lines.slice(split)); });
+}
+
+function tutorialAskPlayerName(remainingLines){
+  const card=document.getElementById('tutorialCenterCard');
+  card.innerHTML='<h3>你的名字</h3><input id="tutorialPlayerNameInput" maxlength="16" autocomplete="nickname" placeholder="輸入名字" style="width:100%;padding:10px;border-radius:7px;border:1px solid #59627e;background:#10131e;color:#fff"><button type="button" class="btn primary" id="tutorialPlayerNameConfirm" style="width:100%;margin-top:10px">確定</button><div id="tutorialPlayerNameError" style="color:#ff9c9c;font-size:12px;margin-top:7px"></div>';
+  card.style.display='block';
+  document.getElementById('tutorialBox').classList.add('hidden');
+  const input=document.getElementById('tutorialPlayerNameInput'); input.value=playerName; input.focus();
+  const submit=async function(){
+    const btn=document.getElementById('tutorialPlayerNameConfirm');btn.disabled=true;
+    try{ await savePlayerNameValue(input.value);card.style.display='none';tutorialSay(remainingLines,tutorialSayPickIntro); }
+    catch(e){document.getElementById('tutorialPlayerNameError').textContent=e.message;btn.disabled=false;}
+  };
+  document.getElementById('tutorialPlayerNameConfirm').onclick=submit;
+  input.onkeydown=function(e){if(e.key==='Enter') submit();};
 }
 
 function tutorialSayPickIntro(){
@@ -9578,7 +9658,7 @@ function tutorialSayAfterPick(){
     overlay.classList.add('no-dim');
     document.getElementById('tutorialSceneArtWrap').classList.remove('show');
     goToLobby();
-    tutorialGoldGachaStep();
+    tutorialBattleStep();
   });
 }
 
@@ -9660,23 +9740,20 @@ function tutorialTeamStep(){
 }
 
 function tutorialSayAfterTeam(){
-  tutorialSay([TUTORIAL_LINES.afterTeam[tutorialFaction]], tutorialBattleStep);
+  tutorialSay([TUTORIAL_LINES.afterTeam[tutorialFaction]], tutorialSayEnding);
 }
 
 function tutorialBattleStep(){
-  if(tutorialReplayMode){ tutorialSayEnding(); return; }
+  if(tutorialReplayMode){ tutorialGoldGachaStep(); return; }
   tutorialSay([TUTORIAL_LINES.battleIntro[tutorialFaction]], function(){
-    goToLobby();
-    window.__tutorialFixedOpponentIds = TUTORIAL_OPPONENT_IDS.slice();
-    tutorialWaitForClick('lobbySoloBtn', function(){
-      tutorialSay([TUTORIAL_LINES.battlePickTeam[tutorialFaction]], function(){
-        tutorialWaitForClick('teampickConfirmBtn', function(){
-          tutorialClearHighlight();
-          document.getElementById('tutorialOverlay').classList.remove('active');
-          tutorialWatchForBattleEnd();
-        });
-      });
-    });
+    window.__tutorialFixedOpponentIds = [TUTORIAL_OPPONENT_IDS[0]];
+    currentMatchSize=1; twoPlayerMode=false; pendingMode='single1v1';
+    state.selectedIds=[ownedCharIds[0]]; state.selectedIdsB=[];
+    state.customDeck=expandDeckDraft({'001':3,'002':3,'003':2,'004':2});
+    state.customDeckOrder=shuffle(state.customDeck.map(function(_,i){return i;}));
+    document.getElementById('tutorialOverlay').classList.remove('active');
+    startGame();
+    tutorialWatchForBattleEnd();
   });
 }
 
@@ -9689,7 +9766,7 @@ function tutorialWatchForBattleEnd(){
       document.getElementById('tutorialOverlay').classList.add('active');
       tutorialSay(
         [won ? TUTORIAL_LINES.afterBattleWin[tutorialFaction] : TUTORIAL_LINES.afterBattleLose[tutorialFaction]],
-        tutorialSayEnding
+        tutorialGoldGachaStep
       );
     }
   }, 500);
@@ -9790,7 +9867,7 @@ tutorialInjectDom();
   const anchorBtn = document.getElementById('lobbyTwoBtn');
   if(anchorBtn && !document.getElementById('lobby1v1Btn')){
     anchorBtn.insertAdjacentHTML('afterend',
-      '<button type="button" class="lobby-btn" id="lobby1v1Btn">'+
+      '<button type="button" class="lobby-btn hidden" id="lobby1v1Btn">'+
         '<span class="lobby-btn-icon">🗡️</span>'+
         '<span class="lobby-btn-label">1v1對戰</span>'+
         '<span class="lobby-btn-desc">沿用隊伍第1位角色與牌組，跟電腦單挑</span>'+
@@ -9799,6 +9876,10 @@ tutorialInjectDom();
     document.getElementById('lobby1v1Btn').onclick = function(){ goToTeamPick('single1v1'); };
   }
 })();
+
+document.getElementById('adminSoloBattleBtn').onclick=function(){ closeAdminPanel();goToTeamPick('single'); };
+document.getElementById('adminTwoBattleBtn').onclick=function(){ closeAdminPanel();goToTeamPick('two'); };
+document.getElementById('admin1v1BattleBtn').onclick=function(){ closeAdminPanel();goToTeamPick('single1v1'); };
 
 
 /* ============================================================ */
@@ -10432,7 +10513,7 @@ tutorialInjectDom();
     }
 
     function openOnlinePreRoomTeamPick(action, roomId){
-      if(!teams.length){ alert('請先在大廳建立至少一支隊伍，才能進行跨網對戰。'); return; }
+      if(!teams.length){ alert('請先在大廳建立至少一支隊伍，才能進行決鬥。'); return; }
       onlinePendingRoomAction={action:action, roomId:roomId||null};
       // Do not reuse screen-teampick here. That screen is also used by local play,
       // and its "開始遊戲" handler can be rebound by the normal game flow. A
@@ -10483,7 +10564,7 @@ tutorialInjectDom();
         const id=onlineGenId(), root=onlineDb.ref('rooms/'+id);
         root.transaction(function(current){
           if(current) return; // 極低機率撞號時不覆蓋既有房
-          return {meta:{status:'waiting',createdAt:Date.now(),setupA:onlineTeamPayload(team)}};
+          return {meta:{status:'waiting',createdAt:Date.now(),nameA:window.__playerName||'未命名玩家',setupA:onlineTeamPayload(team)}};
         }, function(err, committed){
           if(err || !committed){ alert('建立房間失敗，請再試一次。'); return; }
           attachOnlineRoom(id,'A');
@@ -10502,13 +10583,13 @@ tutorialInjectDom();
         const root=onlineDb.ref('rooms/'+id), metaRef=root.child('meta');
         metaRef.transaction(function(meta){
           if(!meta || meta.status!=='waiting') return;
-          return Object.assign({},meta,{status:'ready',guestJoinedAt:Date.now(),setupB:onlineTeamPayload(team)});
+          return Object.assign({},meta,{status:'ready',guestJoinedAt:Date.now(),nameB:window.__playerName||'未命名玩家',setupB:onlineTeamPayload(team)});
         }, function(err, committed){
           if(err){ alert('加入房間失敗，請重試。'); return; }
           if(!committed){ alert('這個房間剛剛已被其他玩家加入或已關閉。'); return; }
           attachOnlineRoom(id,'B');
           // 開戰前如果加入者斷線，房間回到可加入狀態。
-          onlineMetaRef.onDisconnect().update({status:'waiting',guestJoinedAt:null});
+          onlineMetaRef.onDisconnect().update({status:'waiting',guestJoinedAt:null,nameB:null,setupB:null});
         });
       });
     }
@@ -10517,7 +10598,7 @@ tutorialInjectDom();
       if(!root){ goToLobby(); return; }
       if(status==='playing') root.remove();
       else if(role==='A') root.remove();
-      else if(role==='B' && status==='ready') root.child('meta').update({status:'waiting',guestJoinedAt:null});
+      else if(role==='B' && status==='ready') root.child('meta').update({status:'waiting',guestJoinedAt:null,nameB:null,setupB:null});
       try { root.onDisconnect().cancel(); root.child('meta').onDisconnect().cancel(); } catch(e){}
       detachOnlineRoom();
       goToLobby();
@@ -10532,13 +10613,13 @@ tutorialInjectDom();
     }
     function openOnlineTeamSetup(){
       if(!onlineInRoom || !onlineRole || !onlineMeta || onlineMeta.status!=='setup') return;
-      if(!teams.length){ alert('請先在大廳建立至少一支隊伍，才能進行跨網對戰。'); goToLobby(); return; }
+      if(!teams.length){ alert('請先在大廳建立至少一支隊伍，才能進行決鬥。'); goToLobby(); return; }
       onlineSetupShown=true;
       pendingMode='online'; pendingTeamIdA=null; pendingTeamIdB=null;
       showTopScreen('screen-teampick');
       document.getElementById('pieceChoice').value='random';
       renderTeamPick();
-      document.getElementById('teampick-heading').textContent='跨網對戰：選擇你的隊伍';
+      document.getElementById('teampick-heading').textContent='決鬥：選擇你的隊伍';
       const note=document.getElementById('teampick-noteams-hint'); if(note) note.textContent='選好後送出；對手也會在自己的裝置選擇隊伍。';
     }
     const __onlinePreviousConfirmTeamPick=confirmTeamPick;
@@ -10575,6 +10656,10 @@ tutorialInjectDom();
     document.getElementById('teampickConfirmBtn').onclick=confirmTeamPick;
     function onlineHandleSetup(){
       if(!onlineInRoom || !onlineMeta) return;
+      if(onlineMeta.status==='ready' && onlineRole==='A'){
+        startOnlineMatch();
+        return;
+      }
       if(onlineMeta.status==='setup'){
         const ownField=onlineRole==='A'?'setupA':'setupB';
         if(!onlineMeta[ownField] && !onlineSetupShown) openOnlineTeamSetup();
@@ -10655,7 +10740,7 @@ tutorialInjectDom();
         .sort(function(a,b){ return (b.meta.createdAt||0)-(a.meta.createdAt||0); });
       if(!rows.length) return '<div class="online-empty">目前沒有等待中的房間。建立一間，等待第一位對手吧！</div>';
       return rows.map(function(r){
-        return '<div class="online-room-card"><div><b>房間 '+r.id+'</b><small>等待一位玩家加入</small></div><button class="btn primary online-join" data-room="'+r.id+'">加入</button></div>';
+        return '<div class="online-room-card"><div><b>'+escHtml(r.meta.nameA||'未命名玩家')+'</b><small>正在等待決鬥對手</small></div><button class="btn primary online-join" data-room="'+r.id+'">加入</button></div>';
       }).join('');
     }
     function renderOnlineLobby(){
@@ -10674,14 +10759,10 @@ tutorialInjectDom();
           const ready=status==='ready';
           body='<div class="online-wait-icon">'+(ready?'🤝':'⌛')+'</div>'+
             '<h2>'+ (ready?'對手已加入！':'房間已建立') +'</h2>'+
-            '<p>'+ (ready?'可以開始設定對戰。':'正在等待其他玩家加入這個房間…') +'</p>'+
-            '<div class="online-code">'+onlineRoomId+'</div>'+
-            '<button class="btn" id="onlineCopy">複製邀請連結</button>'+
-            (ready?'<button class="btn primary" id="onlineStart">開始對戰設定</button>':'')+
+            '<p>'+ (ready?'對手：'+escHtml(onlineMeta.nameB||'未命名玩家')+'，正在自動開始…':'玩家：'+escHtml(onlineMeta.nameA||window.__playerName||'未命名玩家')+'，正在等待其他玩家加入…') +'</p>'+
             '<button class="btn online-cancel" id="onlineCancel">取消並返回大廳</button>';
         } else {
-          body='<div class="online-wait-icon">🤝</div><h2>已加入房間</h2><p>等待房主開始對戰設定…</p>'+
-            '<div class="online-code">'+onlineRoomId+'</div><button class="btn online-cancel" id="onlineCancel">離開房間</button>';
+          body='<div class="online-wait-icon">🤝</div><h2>已加入決鬥</h2><p>對手：'+escHtml((onlineMeta&&onlineMeta.nameA)||'未命名玩家')+'，正在自動開始…</p><button class="btn online-cancel" id="onlineCancel">離開房間</button>';
         }
       } else {
         const selectedTeam=loadOnlineSelectedTeam();
@@ -10690,7 +10771,7 @@ tutorialInjectDom();
           '<div class="online-hint online-lobby-guide">選擇等待中的房間即可加入；建立房間後等待對手加入。</div>'+
           '<div id="onlineRoomList" class="online-room-list">'+roomCardsHtml()+'</div>';
       }
-      onlineScreen.innerHTML='<div class="online-head"><div><div class="online-title">🌐 跨網對戰</div><div class="online-sub">即時房間大廳</div></div><button class="btn small" id="onlineBack">✕</button></div><div class="online-body">'+body+'</div>';
+      onlineScreen.innerHTML='<div class="online-head"><div><div class="online-title">⚔️ 決鬥</div><div class="online-sub">即時對戰大廳</div></div><button class="btn small" id="onlineBack">✕</button></div><div class="online-body">'+body+'</div>';
       document.getElementById('onlineBack').onclick=function(){ onlineInRoom?leaveOnlineRoom():goToLobby(); };
       const create=document.getElementById('onlineCreate'); if(create) create.onclick=createOnlineRoom;
       const refresh=document.getElementById('onlineRefresh'); if(refresh){ refresh.onclick=function(){ stopListing(); startListing(); renderOnlineLobby(); }; }
@@ -10703,15 +10784,13 @@ tutorialInjectDom();
         };
       });
       document.querySelectorAll('.online-join').forEach(function(btn){ btn.onclick=function(){ joinOnlineRoom(btn.dataset.room); }; });
-      const copy=document.getElementById('onlineCopy'); if(copy) copy.onclick=copyOnlineLink;
-      const start=document.getElementById('onlineStart'); if(start) start.onclick=startOnlineMatch;
       const choose=document.getElementById('onlineChooseTeam'); if(choose) choose.onclick=openOnlineTeamSetup;
       const cancel=document.getElementById('onlineCancel'); if(cancel) cancel.onclick=leaveOnlineRoom;
     }
     function openOnlineLobby(){
       if(!onlineConfigured()){ alert('Firebase 尚未設定。'); return; }
       if(onlineInRoom){ showTopScreen('screen-online'); renderOnlineLobby(); return; }
-      if(!teams.length){ alert('請先在大廳建立至少一支隊伍，才能進行跨網對戰。'); return; }
+      if(!teams.length){ alert('請先在大廳建立至少一支隊伍，才能進行決鬥。'); return; }
       // 每次從大廳點進跨網對戰，預設回到第一支隊伍；可在同頁立即更換。
       saveOnlineSelectedTeam(teams[0]); onlineTeamPickerExpanded=false;
       showTopScreen('screen-online');
@@ -10756,9 +10835,7 @@ tutorialInjectDom();
       onlineOverlay=document.createElement('div'); onlineOverlay.style.cssText='position:fixed;inset:0;z-index:99998;display:none;align-items:center;justify-content:center;background:rgba(6,7,11,.45);backdrop-filter:blur(1px);color:#fff;font-size:20px;font-weight:700;text-align:center;padding:24px;text-shadow:0 2px 6px #000;';
       onlineOverlayText=document.createElement('div'); onlineOverlay.appendChild(onlineOverlayText); document.body.appendChild(onlineOverlay);
       const lobbyBtn=document.getElementById('lobbyOnlineBtn'); if(lobbyBtn) lobbyBtn.onclick=openOnlineLobby;
-      // 邀請連結仍可直接進房，作為房間清單以外的便利入口。
-      const match=/[?&]room=([A-Za-z0-9]+)/.exec(location.search);
-      if(match){ ensureOnlineFirebase(function(){ joinOnlineRoom(match[1].toUpperCase()); }); }
+      // 決鬥統一從房間清單加入，不再公開房號或邀請連結入口。
     }
     if(document.body) buildOnlineLobby(); else document.addEventListener('DOMContentLoaded',buildOnlineLobby);
   } catch(e){ console.warn('[Online] 房間大廳初始化失敗（不影響單機）',e); }
@@ -10799,6 +10876,10 @@ tutorialInjectDom();
   window.__adminAccountApi=accountApi;
   function applyAccountState(p){
     if(!p) return;
+    if(typeof p.playerName==='string'){
+      playerName=p.playerName; window.__playerName=playerName;
+      try{ if(playerName)localStorage.setItem(PLAYER_NAME_KEY,playerName);else localStorage.removeItem(PLAYER_NAME_KEY); }catch(e){}
+    }
     goldAmount=Number(p.gold)||0; diamondAmount=Number(p.diamond)||0;
     ownedCharIds=Array.isArray(p.ownedCharIds)?p.ownedCharIds:[];
     charStars=p.charStars&&typeof p.charStars==='object'?p.charStars:{};
@@ -10969,6 +11050,34 @@ tutorialInjectDom();
     accountApi('tutorial-complete',{}).then(function(d){ applyAccountState(d.state); }).catch(function(e){ console.warn('[Account] tutorial completion',e); });
   };
   const guestSaveSettings=saveSettings, guestSaveLobbyHeroChoice=saveLobbyHeroChoice;
+  const guestSavePlayerNameValue=savePlayerNameValue;
+  savePlayerNameValue=async function(value){
+    if(!accountReady) return guestSavePlayerNameValue(value);
+    const name=String(value||'').trim();
+    if(!name || name.length>16) throw new Error('名字須為 1～16 個字。');
+    const d=await accountApi('profile-name',{playerName:name});applyAccountState(d.state);return playerName;
+  };
+  function renderFriends(friends){
+    const list=document.getElementById('friendsList'),count=document.getElementById('friendsCount');
+    count.textContent=friends.length+' / 50';
+    list.innerHTML=friends.length?friends.map(function(friend){return '<div class="online-room-card" style="margin-bottom:7px"><b>'+escapeHtml(friend.playerName)+'</b><button type="button" class="btn small friend-remove" data-uid="'+escapeHtml(friend.uid)+'">刪除</button></div>';}).join(''):'<div class="online-empty">目前還沒有好友。</div>';
+    list.querySelectorAll('.friend-remove').forEach(function(btn){btn.onclick=async function(){
+      try{const d=await accountApi('friend-remove',{uid:btn.dataset.uid});renderFriends(d.friends);}catch(e){document.getElementById('friendsMessage').textContent=e.message;}
+    };});
+  }
+  openFriendsPanel=async function(){
+    if(!accountReady){alert('請先登入帳號，才能使用好友功能。');return;}
+    const backdrop=document.getElementById('friendsBackdrop'),message=document.getElementById('friendsMessage');
+    backdrop.classList.remove('hidden');message.textContent='載入中…';
+    try{const d=await accountApi('friends');renderFriends(d.friends);message.textContent='';}catch(e){message.textContent=e.message;}
+  };
+  document.getElementById('friendsCloseBtn').onclick=function(){document.getElementById('friendsBackdrop').classList.add('hidden');};
+  document.getElementById('friendsBackdrop').onclick=function(e){if(e.target===this)this.classList.add('hidden');};
+  document.getElementById('friendAddBtn').onclick=async function(){
+    const input=document.getElementById('friendNameInput'),message=document.getElementById('friendsMessage'),btn=this;
+    btn.disabled=true;message.textContent='新增中…';
+    try{const d=await accountApi('friend-add',{playerName:input.value});renderFriends(d.friends);input.value='';message.textContent='好友已新增。';}catch(e){message.textContent=e.message;}btn.disabled=false;
+  };
   function queuePreferences(){
     if(!accountReady) return;
     clearTimeout(preferenceSyncTimer); preferenceSyncTimer=setTimeout(async function(){

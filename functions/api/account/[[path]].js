@@ -38,6 +38,10 @@ function isAdminUser(env, user) {
 function defaultGlobalConfig() {
   return {
     characters: null, moves: null, cards: null,
+    introStory: {
+      black: ['哈哈，歡迎加入黑方，我是小黑。', '對了，你叫什麼？', '……原來如此。', '從今天開始，我就叫你『{name}』了。', '可別太早死啊。'],
+      white: ['歡迎加入白方，我是小白。', '在開始旅程之前。', '請告訴我你的名字。', '{name}。', '我記住了。', '希望有一天，大家都能記住這個名字。']
+    },
     settings: {
       dailyGold: 200, dailyDiamond: 5,
       goldGachaOneCost: 100, goldGachaTenCost: 1000,
@@ -50,8 +54,13 @@ function normalizeGlobalConfig(input) {
   const source = input && typeof input === 'object' ? input : {};
   const list = (key, max) => Array.isArray(source[key]) && source[key].length <= max ? source[key] : null;
   const settings = source.settings && typeof source.settings === 'object' ? source.settings : {};
+  const introFallback = fallback.introStory;
+  const introSource = source.introStory && typeof source.introStory === 'object' ? source.introStory : {};
+  const storyLines = key => Array.isArray(introSource[key]) && introSource[key].length >= 2 && introSource[key].length <= 20
+    ? introSource[key].map(line => String(line).slice(0, 300)) : introFallback[key];
   return {
     characters: list('characters', 100), moves: list('moves', 500), cards: list('cards', 200),
+    introStory: { black: storyLines('black'), white: storyLines('white') },
     settings: {
       dailyGold: intInRange(settings.dailyGold, fallback.settings.dailyGold),
       dailyDiamond: intInRange(settings.dailyDiamond, fallback.settings.dailyDiamond),
@@ -99,6 +108,7 @@ function configuredCardPrice(config, cardId) {
 }
 function profileFromRow(row) {
   return {
+    playerName: row.player_name || '',
     gold: row.gold, diamond: row.diamond,
     ownedCharIds: parseJson(row.owned_chars, []), charStars: parseJson(row.char_stars, {}),
     ownedCardCounts: parseJson(row.owned_cards, {}), teams: parseJson(row.teams, []),
@@ -111,8 +121,8 @@ async function ensureProfile(db, user) {
   // A new account begins with no inventory. Tutorial grants are handled below,
   // one time only, rather than trusting the browser to add characters.
   await db.prepare(`INSERT OR IGNORE INTO players
-    (uid,email,gold,diamond,owned_chars,char_stars,owned_cards,teams,tutorial_done,tutorial_faction,lobby_hero_id,settings,daily_bonus_date,created_at,updated_at)
-    VALUES (?1,?2,?3,?4,'[]','{}','{}','[]',0,'black',NULL,'{}','',unixepoch(),unixepoch())`)
+    (uid,email,player_name,gold,diamond,owned_chars,char_stars,owned_cards,teams,tutorial_done,tutorial_faction,lobby_hero_id,settings,daily_bonus_date,created_at,updated_at)
+    VALUES (?1,?2,'',?3,?4,'[]','{}','{}','[]',0,'black',NULL,'{}','',unixepoch(),unixepoch())`)
     .bind(user.uid, user.email, GOLD_START, DIAMOND_START).run();
   return db.prepare('SELECT * FROM players WHERE uid=?1').bind(user.uid).first();
 }
@@ -138,7 +148,7 @@ function safeCards(value) {
   return out;
 }
 function safeTeams(value, owned) {
-  if (!Array.isArray(value) || value.length > 50) throw apiError('Invalid team data.');
+  if (!Array.isArray(value) || value.length > 10) throw apiError('You can save at most 10 teams.');
   return value.map(team => {
     if (!team || typeof team.name !== 'string' || !Array.isArray(team.characterIds) || team.characterIds.length !== 3) throw apiError('Invalid team data.');
     if (team.name.length > 30 || team.characterIds.some(id => !owned.includes(id))) throw apiError('A team includes a character you do not own.');
@@ -149,6 +159,17 @@ function safeTeams(value, owned) {
     if (total !== 10) throw apiError('Each deck must contain exactly 10 cards.');
     return { id: String(team.id || crypto.randomUUID()), name: team.name, characterIds: team.characterIds, deck };
   });
+}
+function safePlayerName(value) {
+  const name = String(value || '').trim();
+  if (name.length < 1 || name.length > 16 || /[\u0000-\u001f<>]/.test(name)) throw apiError('名字須為 1～16 個字，且不可包含特殊控制字元。');
+  return name;
+}
+async function friendList(db, uid) {
+  const result = await db.prepare(`SELECT p.uid,p.player_name
+    FROM friendships f JOIN players p ON p.uid=CASE WHEN f.user_a=?1 THEN f.user_b ELSE f.user_a END
+    WHERE f.user_a=?1 OR f.user_b=?1 ORDER BY p.player_name COLLATE NOCASE`).bind(uid).all();
+  return (result.results || []).map(row => ({ uid: row.uid, playerName: row.player_name || '未命名玩家' }));
 }
 function randomPick(items) { return items[crypto.getRandomValues(new Uint32Array(1))[0] % items.length]; }
 
@@ -212,6 +233,7 @@ export async function onRequest(context) {
     }
     const config = await getGlobalConfig(db);
     if (request.method === 'GET' && action === 'state') return json({ state: profileFromRow(row), config });
+    if (request.method === 'GET' && action === 'friends') return json({ friends: await friendList(db, user.uid) });
     if (request.method !== 'POST') return json({ error: 'Unknown API endpoint.' }, 404);
     if (action === 'bootstrap') return json({ state: profileFromRow(row), config });
 
@@ -237,6 +259,30 @@ export async function onRequest(context) {
     } else if (action === 'teams') {
       const teams = safeTeams(body.teams, parseJson(row.owned_chars, []));
       await db.prepare('UPDATE players SET teams=?2,updated_at=unixepoch() WHERE uid=?1').bind(user.uid, JSON.stringify(teams)).run();
+    } else if (action === 'profile-name') {
+      const playerName = safePlayerName(body.playerName);
+      try {
+        await db.prepare('UPDATE players SET player_name=?2,updated_at=unixepoch() WHERE uid=?1').bind(user.uid, playerName).run();
+      } catch (error) {
+        if (/UNIQUE|constraint/i.test(String(error && error.message))) throw apiError('這個名字已被其他玩家使用。', 409);
+        throw error;
+      }
+    } else if (action === 'friend-add') {
+      const targetName = safePlayerName(body.playerName);
+      const target = await db.prepare('SELECT uid FROM players WHERE player_name=?1 COLLATE NOCASE').bind(targetName).first();
+      if (!target) throw apiError('找不到這位玩家。', 404);
+      if (target.uid === user.uid) throw apiError('不能把自己加為好友。');
+      const ownCount = await db.prepare('SELECT COUNT(*) AS n FROM friendships WHERE user_a=?1 OR user_b=?1').bind(user.uid).first();
+      const targetCount = await db.prepare('SELECT COUNT(*) AS n FROM friendships WHERE user_a=?1 OR user_b=?1').bind(target.uid).first();
+      if ((ownCount && ownCount.n >= 50) || (targetCount && targetCount.n >= 50)) throw apiError('好友人數已達 50 人上限。');
+      const a = user.uid < target.uid ? user.uid : target.uid, b = user.uid < target.uid ? target.uid : user.uid;
+      await db.prepare('INSERT OR IGNORE INTO friendships (user_a,user_b,created_at) VALUES (?1,?2,unixepoch())').bind(a, b).run();
+      return json({ friends: await friendList(db, user.uid) });
+    } else if (action === 'friend-remove') {
+      const targetUid = String(body.uid || '');
+      const a = user.uid < targetUid ? user.uid : targetUid, b = user.uid < targetUid ? targetUid : user.uid;
+      await db.prepare('DELETE FROM friendships WHERE user_a=?1 AND user_b=?2').bind(a, b).run();
+      return json({ friends: await friendList(db, user.uid) });
     } else if (action === 'preferences') {
       const settings = body.settings && typeof body.settings === 'object' ? body.settings : {};
       const faction = body.tutorialFaction === 'white' ? 'white' : 'black';
