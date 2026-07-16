@@ -9692,9 +9692,12 @@ function tutorialShowFactionChoice(){
   document.getElementById('tutorialPickWhite').onclick = function(){ tutorialChooseFaction('white'); };
 }
 
-function tutorialChooseFaction(faction){
+async function tutorialChooseFaction(faction){
+  const factionButtons=[document.getElementById('tutorialPickBlack'),document.getElementById('tutorialPickWhite')].filter(Boolean);
+  factionButtons.forEach(function(button){button.disabled=true;});
   tutorialFaction = faction;
-  saveTutorialFaction(faction);
+  try{ await saveTutorialFaction(faction); }
+  catch(e){ factionButtons.forEach(function(button){button.disabled=false;});alert('陣營尚未同步成功：'+e.message+'\n請確認網路後再選一次。'); return; }
   document.getElementById('tutorialCenterCard').style.display = 'none';
   tutorialSetSceneArt(faction);
   tutorialSayGreeting();
@@ -11179,7 +11182,16 @@ document.getElementById('admin1v1BattleBtn').onclick=function(){ closeAdminPanel
     try{ localStorage.setItem(TUTORIAL_DONE_KEY,'1'); }catch(e){}
     accountApi('tutorial-complete',{}).then(function(d){ applyAccountState(d.state); }).catch(function(e){ console.warn('[Account] tutorial completion',e); });
   };
-  const guestSaveSettings=saveSettings, guestSaveLobbyHeroChoice=saveLobbyHeroChoice;
+  const guestSaveSettings=saveSettings, guestSaveLobbyHeroChoice=saveLobbyHeroChoice, guestSaveTutorialFaction=saveTutorialFaction;
+  // 教學陣營原本只寫 localStorage，登入帳號後重新載入便會被 D1 的舊值蓋回去。
+  // 改成選擇當下立即同步，tutorialChooseFaction() 會等待成功後才繼續後面的問名劇情。
+  saveTutorialFaction=function(faction){
+    guestSaveTutorialFaction(faction);
+    if(!accountReady) return Promise.resolve();
+    tutorialFaction=faction==='white'?'white':'black';
+    return accountApi('preferences',{settings:{speedIdx:autoBattleSpeedIdx,sound:soundEnabled,music:musicEnabled},tutorialFaction:tutorialFaction,lobbyHeroId:loadLobbyHeroChoice()})
+      .then(function(d){applyAccountState(d.state);});
+  };
   const guestSavePlayerNameValue=savePlayerNameValue;
   savePlayerNameValue=async function(value){
     if(!accountReady) return guestSavePlayerNameValue(value);
