@@ -9247,8 +9247,7 @@ refreshCurrencyDisplays();
 /* 使用者要求把序章劇本做成遊戲內互動教學：黑白雙陣營、各自的惡魔講述者（小黑/小白），
    一路引導玩家完成「選陣營→選第一枚棋子→金幣召喚→鑽石召喚→隊伍編成→第一場戰鬥」，
    全程串接「真的」遊戲功能（真的抽卡／真的組隊／真的戰鬥），不是假動畫播放。
-   完成後在 localStorage 記一筆（TUTORIAL_DONE_KEY），之後開門直接進大廳；大廳新增一顆
-   【新手教學】按鈕，任何時候都能重新觀看（重播模式只重播台詞，不會逼玩家重做真實操作）。 */
+   完成後在 localStorage 記一筆（TUTORIAL_DONE_KEY），之後登入會直接進入大廳。 */
 const TUTORIAL_DONE_KEY = 'chanceboard_tutorial_done_v1';
 const TUTORIAL_FACTION_KEY = 'chanceboard_tutorial_faction_v1';
 const PLAYER_NAME_KEY = 'chanceboard_player_name_v1';
@@ -9376,7 +9375,7 @@ const TUTORIAL_LINES = {
     black:'很好，{name}。你已經掌握了棋盤最基本的規則。接下來，是屬於你的故事、你的願望、你的選擇……以及，你將犧牲多少棋子，才能抵達終點。祝你好運。',
     white:'到這裡，你已經學會了棋盤的基本操作。真正的旅程，現在才開始。願你與棋子們攜手前行，也願你的願望，終有實現的一天。',
   },
-  endingNote: '如果日後忘記操作，可以隨時點擊大廳中的【新手教學】重新觀看。',
+  endingNote: '如果日後忘記操作，可以查看大廳中的【遊戲規則說明】。',
 };
 
 /* ---------- 對話框引擎（VN風格底部文字框＋打字機效果）---------- */
@@ -9939,20 +9938,6 @@ function tutorialFinish(){
 /* ---------- 掛載：DOM注入／大廳按鈕／登入流程攔截 ---------- */
 tutorialInjectStyle();
 tutorialInjectDom();
-
-(function addTutorialLobbyButton(){
-  const anchorBtn = document.getElementById('lobbySettingsBtn');
-  if(anchorBtn && !document.getElementById('lobbyTutorialBtn')){
-    anchorBtn.insertAdjacentHTML('beforebegin',
-      '<button type="button" class="lobby-btn" id="lobbyTutorialBtn">'+
-        '<span class="lobby-btn-icon">📜</span>'+
-        '<span class="lobby-btn-label">新手教學</span>'+
-        '<span class="lobby-btn-desc">重新觀看序章劇情與操作教學</span>'+
-      '</button>'
-    );
-    document.getElementById('lobbyTutorialBtn').onclick = function(){ tutorialLaunch(true); };
-  }
-})();
 
 (function tutorialBootHook(){
   const loginBtn = document.getElementById('loginEnterBtn');
