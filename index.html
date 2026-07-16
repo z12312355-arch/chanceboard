@@ -3557,7 +3557,7 @@ function expandDeckDraft(draft){
   return deck;
 }
 
-function confirmDeckBuild(){
+async function confirmDeckBuild(){
   if(!Array.isArray(state.selectedIds) || state.selectedIds.length<1 || state.selectedIds.length>3){
     alert('隊伍必須選擇 1～3 名角色。');
     return;
@@ -3574,7 +3574,13 @@ function confirmDeckBuild(){
     deck: Object.assign({}, state.deckDraft),
   };
   if(existingIdx>=0) teams[existingIdx] = teamObj; else teams.push(teamObj);
-  saveTeams();
+  try{
+    await saveTeams();
+  } catch(e){
+    // Account saveTeams() already shows the network error; keep the editor open so
+    // the player can retry instead of advancing the tutorial against stale D1 data.
+    return;
+  }
   editingTeamId = null;
   document.getElementById('screen-deckbuild').classList.add('hidden');
   goToTeamList();
