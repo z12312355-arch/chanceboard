@@ -2304,7 +2304,7 @@
         <button class="btn small" id="adminLinkDbBtn">🔗 連結資料庫檔案</button>
         <button class="btn small hidden" id="adminUnlinkDbBtn">🔓 取消連結</button>
         <button class="btn small" id="adminExportHtmlBtn">💾 下載完整遊戲檔案</button>
-        <button class="btn small" id="adminExportJsonBtn">📄 下載資料庫檔案 (chanceboard_db.js)</button>
+        <button class="btn small" id="adminExportJsonBtn">📄 匯出當前最新 chanceboard_db.js</button>
         <button class="btn small" id="adminResetAllBtn">↩️ 全部還原</button>
         <!-- 使用者要求「後臺加入功能，可以把得到的角色清空」：清空的是ownedCharIds／
              charStars（召喚系統那組，見goToGacha()附近的說明），跟上面「全部還原」
@@ -10192,6 +10192,7 @@ document.getElementById('admin1v1BattleBtn').onclick=function(){ closeAdminPanel
     // 這樣 A 開啟代打時，B 的畫面不會被開啟；而且 AI 只會在目前玩家自己的回合出手。
     let onlineAutoBattleEnabled = false, onlineAutoBattleTimer = null, onlineAutoBattleExecuting = false;
     let onlineTeamPickerExpanded = false;
+    let onlineDraftRoomName = '';
     let onlineOverlay = null, onlineOverlayText = null, onlineScreen = null;
     // 跨網戰鬥的立繪必須在切入棋盤前準備完畢；避免首局在戰鬥中才一張張跳出來。
     let onlineAssetLoading = false, onlineBattleAssetKey = '', onlineBattleAssetPromise = null;
@@ -10512,9 +10513,9 @@ document.getElementById('admin1v1BattleBtn').onclick=function(){ closeAdminPanel
       renderOnlineLobby();
     }
 
-    function openOnlinePreRoomTeamPick(action, roomId){
+    function openOnlinePreRoomTeamPick(action, roomId, roomName){
       if(!teams.length){ alert('請先在大廳建立至少一支隊伍，才能進行決鬥。'); return; }
-      onlinePendingRoomAction={action:action, roomId:roomId||null};
+      onlinePendingRoomAction={action:action, roomId:roomId||null, roomName:String(roomName||'').trim()};
       // Do not reuse screen-teampick here. That screen is also used by local play,
       // and its "開始遊戲" handler can be rebound by the normal game flow. A
       // dedicated online picker keeps room creation/joining completely separate.
@@ -10546,7 +10547,7 @@ document.getElementById('admin1v1BattleBtn').onclick=function(){ closeAdminPanel
         if(!selectedTeam || !onlinePendingRoomAction) return;
         const selectedAction=onlinePendingRoomAction;
         saveOnlineSelectedTeam(selectedTeam); onlinePendingRoomAction=null;
-        if(selectedAction.action==='create') createOnlineRoomAfterPick(selectedTeam);
+        if(selectedAction.action==='create') createOnlineRoomAfterPick(selectedTeam, selectedAction.roomName);
         else if(selectedAction.action==='join') joinOnlineRoomAfterPick(selectedAction.roomId, selectedTeam);
         else {
           showTopScreen('screen-online');
@@ -10555,16 +10556,19 @@ document.getElementById('admin1v1BattleBtn').onclick=function(){ closeAdminPanel
       };
     }
     function createOnlineRoom(){
+      const nameInput=document.getElementById('onlineRoomName');
+      onlineDraftRoomName=String(nameInput ? nameInput.value : onlineDraftRoomName).trim().slice(0,24);
       const team=onlineSelectedTeam()||loadOnlineSelectedTeam();
-      if(!team){ openOnlinePreRoomTeamPick('create'); return; }
-      createOnlineRoomAfterPick(team);
+      if(!team){ openOnlinePreRoomTeamPick('create', null, onlineDraftRoomName); return; }
+      createOnlineRoomAfterPick(team, onlineDraftRoomName);
     }
-    function createOnlineRoomAfterPick(team){
+    function createOnlineRoomAfterPick(team, roomName){
       ensureOnlineFirebase(function(){
         const id=onlineGenId(), root=onlineDb.ref('rooms/'+id);
+        const safeRoomName=String(roomName||'').trim().slice(0,24) || ((window.__playerName||'未命名玩家')+'的房間');
         root.transaction(function(current){
           if(current) return; // 極低機率撞號時不覆蓋既有房
-          return {meta:{status:'waiting',createdAt:Date.now(),nameA:window.__playerName||'未命名玩家',setupA:onlineTeamPayload(team)}};
+          return {meta:{status:'waiting',createdAt:Date.now(),roomName:safeRoomName,nameA:window.__playerName||'未命名玩家',setupA:onlineTeamPayload(team)}};
         }, function(err, committed){
           if(err || !committed){ alert('建立房間失敗，請再試一次。'); return; }
           attachOnlineRoom(id,'A');
@@ -10628,7 +10632,7 @@ document.getElementById('admin1v1BattleBtn').onclick=function(){ closeAdminPanel
       const team=teams.find(function(t){ return t.id===pendingTeamIdA; });
       if(!team) return true;
       const action=onlinePendingRoomAction; onlinePendingRoomAction=null; pendingMode=null;
-      if(action.action==='create') createOnlineRoomAfterPick(team);
+      if(action.action==='create') createOnlineRoomAfterPick(team, action.roomName);
       else joinOnlineRoomAfterPick(action.roomId, team);
       return true;
     };
@@ -10637,7 +10641,7 @@ document.getElementById('admin1v1BattleBtn').onclick=function(){ closeAdminPanel
         const team=teams.find(function(t){ return t.id===pendingTeamIdA; });
         if(!team) return;
         const action=onlinePendingRoomAction; onlinePendingRoomAction=null; pendingMode=null;
-        if(action.action==='create') createOnlineRoomAfterPick(team);
+        if(action.action==='create') createOnlineRoomAfterPick(team, action.roomName);
         else joinOnlineRoomAfterPick(action.roomId, team);
         return;
       }
@@ -10740,7 +10744,7 @@ document.getElementById('admin1v1BattleBtn').onclick=function(){ closeAdminPanel
         .sort(function(a,b){ return (b.meta.createdAt||0)-(a.meta.createdAt||0); });
       if(!rows.length) return '<div class="online-empty">目前沒有等待中的房間。建立一間，等待第一位對手吧！</div>';
       return rows.map(function(r){
-        return '<div class="online-room-card"><div><b>'+escHtml(r.meta.nameA||'未命名玩家')+'</b><small>正在等待決鬥對手</small></div><button class="btn primary online-join" data-room="'+r.id+'">加入</button></div>';
+        return '<div class="online-room-card"><div><b>'+escHtml(r.meta.roomName||((r.meta.nameA||'未命名玩家')+'的房間'))+'</b><small>房主：'+escHtml(r.meta.nameA||'未命名玩家')+'・正在等待決鬥對手</small></div><button class="btn primary online-join" data-room="'+r.id+'">加入</button></div>';
       }).join('');
     }
     function renderOnlineLobby(){
@@ -10758,7 +10762,7 @@ document.getElementById('admin1v1BattleBtn').onclick=function(){ closeAdminPanel
         } else if(onlineRole==='A'){
           const ready=status==='ready';
           body='<div class="online-wait-icon">'+(ready?'🤝':'⌛')+'</div>'+
-            '<h2>'+ (ready?'對手已加入！':'房間已建立') +'</h2>'+
+            '<h2>'+escHtml((onlineMeta&&onlineMeta.roomName)||'房間已建立')+'</h2>'+
             '<p>'+ (ready?'對手：'+escHtml(onlineMeta.nameB||'未命名玩家')+'，正在自動開始…':'玩家：'+escHtml(onlineMeta.nameA||window.__playerName||'未命名玩家')+'，正在等待其他玩家加入…') +'</p>'+
             '<button class="btn online-cancel" id="onlineCancel">取消並返回大廳</button>';
         } else {
@@ -10767,6 +10771,7 @@ document.getElementById('admin1v1BattleBtn').onclick=function(){ closeAdminPanel
       } else {
         const selectedTeam=loadOnlineSelectedTeam();
         body=onlineTeamPickerHtml(selectedTeam)+
+          '<div class="online-room-name-row"><label for="onlineRoomName">房間名稱</label><input id="onlineRoomName" maxlength="24" placeholder="例如：新手交流房" value="'+escHtml(onlineDraftRoomName)+'"></div>'+
           '<div class="online-toolbar"><button class="btn primary" id="onlineCreate">＋ 建立房間</button><button class="btn" id="onlineRefresh">↻ 重新整理</button></div>'+
           '<div class="online-hint online-lobby-guide">選擇等待中的房間即可加入；建立房間後等待對手加入。</div>'+
           '<div id="onlineRoomList" class="online-room-list">'+roomCardsHtml()+'</div>';
@@ -10774,6 +10779,7 @@ document.getElementById('admin1v1BattleBtn').onclick=function(){ closeAdminPanel
       onlineScreen.innerHTML='<div class="online-head"><div><div class="online-title">⚔️ 決鬥</div><div class="online-sub">即時對戰大廳</div></div><button class="btn small" id="onlineBack">✕</button></div><div class="online-body">'+body+'</div>';
       document.getElementById('onlineBack').onclick=function(){ onlineInRoom?leaveOnlineRoom():goToLobby(); };
       const create=document.getElementById('onlineCreate'); if(create) create.onclick=createOnlineRoom;
+      const roomNameInput=document.getElementById('onlineRoomName'); if(roomNameInput) roomNameInput.oninput=function(){ onlineDraftRoomName=this.value.slice(0,24); };
       const refresh=document.getElementById('onlineRefresh'); if(refresh){ refresh.onclick=function(){ stopListing(); startListing(); renderOnlineLobby(); }; }
       const changeTeam=document.getElementById('onlineChangeTeam'); if(changeTeam) changeTeam.onclick=function(){ onlineTeamPickerExpanded=!onlineTeamPickerExpanded; renderOnlineLobby(); };
       document.querySelectorAll('[data-online-team]').forEach(function(card){
@@ -10827,7 +10833,7 @@ document.getElementById('admin1v1BattleBtn').onclick=function(){ closeAdminPanel
         // repeated character names and used a dark background that competed with the art.
         // On touch devices the lobby becomes a fixed, full-height sheet with one large,
         // momentum-scrollable content area instead of asking the user to drag a tiny page bar.
-        teamCss.textContent += '#screen-online{display:flex;flex-direction:column;max-height:calc(100dvh - 56px)}#screen-online .online-body{flex:1 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;touch-action:pan-y;scrollbar-gutter:stable;padding-bottom:22px}.online-team-summary{gap:14px}.online-team-name{display:block;min-width:0;flex:1 1 auto;font-size:17px;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.online-team-portrait{overflow:visible;background:transparent;border:0;border-radius:0;box-shadow:none}.online-team-avatar{background:transparent}.online-team-portrait img{object-position:50% 50%;filter:drop-shadow(0 3px 3px rgba(0,0,0,.62))}.online-team-portrait-name,.online-team-summary-copy,.online-team-kicker{display:none!important}@media(max-width:600px){#screen-online{position:fixed;inset:0;margin:0;max-width:none;max-height:none;min-height:100dvh;height:100dvh;border-radius:0;border:0;z-index:80}#screen-online .online-head{flex:0 0 auto;padding:14px 16px;padding-top:max(14px,env(safe-area-inset-top))}#screen-online .online-body{padding:14px 16px calc(20px + env(safe-area-inset-bottom));scrollbar-width:auto}.online-team-select{margin:0 0 14px;padding:12px}.online-team-select-top{flex-direction:column;align-items:stretch;gap:10px}.online-team-summary{align-items:center;flex-direction:column;gap:8px}.online-team-name{width:100%;text-align:center;font-size:16px}.online-team-portraits{justify-content:center;width:100%;gap:4px}.online-team-portrait{width:calc((100% - 8px)/3);height:112px}.online-team-avatar .char-avatar-svg{width:82px;height:82px}.online-change-team{width:100%;min-height:44px}.online-team-option-grid{grid-template-columns:1fr;gap:10px}.online-team-option{min-height:132px;padding:12px}.online-team-option .online-team-summary{flex-direction:column;gap:6px}.online-team-option .online-team-portraits{width:100%;justify-content:center}.online-team-option .online-team-portrait{width:76px;height:82px}.online-team-option .online-team-avatar .char-avatar-svg{width:60px;height:60px}.online-room-card .online-join,.online-toolbar .btn{min-height:46px}.online-room-list{padding-bottom:8px}}';
+        teamCss.textContent += '#screen-online{display:flex;flex-direction:column;max-height:calc(100dvh - 56px)}#screen-online .online-body{flex:1 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;touch-action:pan-y;scrollbar-gutter:stable;padding-bottom:22px}.online-team-summary{gap:14px}.online-team-name{display:block;min-width:0;flex:1 1 auto;font-size:17px;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.online-team-portrait{overflow:visible;background:transparent;border:0;border-radius:0;box-shadow:none}.online-team-avatar{background:transparent}.online-team-portrait img{object-position:50% 50%;filter:drop-shadow(0 3px 3px rgba(0,0,0,.62))}.online-team-portrait-name,.online-team-summary-copy,.online-team-kicker{display:none!important}.online-room-name-row{display:grid;grid-template-columns:auto minmax(0,1fr);align-items:center;gap:10px;margin:0 0 10px}.online-room-name-row label{font-size:13px;font-weight:700;color:#f2c14e;white-space:nowrap}.online-room-name-row input{width:100%;min-width:0;padding:10px 12px;border:1px solid rgba(255,255,255,.18);border-radius:8px;background:rgba(4,6,13,.55);color:#fff;font:inherit;outline:none}.online-room-name-row input:focus{border-color:#f2c14e;box-shadow:0 0 0 2px rgba(242,193,78,.14)}@media(max-width:600px){#screen-online{position:fixed;inset:0;margin:0;max-width:none;max-height:none;min-height:100dvh;height:100dvh;border-radius:0;border:0;z-index:80}#screen-online .online-head{flex:0 0 auto;padding:14px 16px;padding-top:max(14px,env(safe-area-inset-top))}#screen-online .online-body{padding:14px 16px calc(20px + env(safe-area-inset-bottom));scrollbar-width:auto}.online-team-select{margin:0 0 14px;padding:12px}.online-team-select-top{flex-direction:column;align-items:stretch;gap:10px}.online-team-summary{align-items:center;flex-direction:column;gap:8px}.online-team-name{width:100%;text-align:center;font-size:16px}.online-team-portraits{justify-content:center;width:100%;gap:4px}.online-team-portrait{width:calc((100% - 8px)/3);height:112px}.online-team-avatar .char-avatar-svg{width:82px;height:82px}.online-change-team{width:100%;min-height:44px}.online-team-option-grid{grid-template-columns:1fr;gap:10px}.online-team-option{min-height:132px;padding:12px}.online-team-option .online-team-summary{flex-direction:column;gap:6px}.online-team-option .online-team-portraits{width:100%;justify-content:center}.online-team-option .online-team-portrait{width:76px;height:82px}.online-team-option .online-team-avatar .char-avatar-svg{width:60px;height:60px}.online-room-name-row{grid-template-columns:1fr;gap:6px}.online-room-name-row input{min-height:46px}.online-room-card .online-join,.online-toolbar .btn{min-height:46px}.online-room-list{padding-bottom:8px}}';
         document.head.appendChild(teamCss);
         onlineScreen=document.createElement('div'); onlineScreen.id='screen-online'; onlineScreen.className='panel hidden';
         document.getElementById('app').appendChild(onlineScreen);
@@ -10907,7 +10913,7 @@ document.getElementById('admin1v1BattleBtn').onclick=function(){ closeAdminPanel
   // 這些舊按鈕只能改目前瀏覽器的記憶體、localStorage 或下載一份檔案，並不會同步到玩家；
   // 全數撤下，改由 D1 的全域設定與帳號管理器處理。
   function removeUnsupportedAdminControls(){
-    ['adminLinkDbBtn','adminUnlinkDbBtn','adminExportHtmlBtn','adminExportJsonBtn','adminResetGachaBtn','adminUnlockAllMaxStarBtn','adminResetCardsBtn','adminMaxAllFlowerCardsBtn','adminAddGoldBtn','adminAddDiamondBtn','adminResetDailyBonusBtn','adminResetTutorialBtn'].forEach(function(id){
+    ['adminLinkDbBtn','adminUnlinkDbBtn','adminExportHtmlBtn','adminResetGachaBtn','adminUnlockAllMaxStarBtn','adminResetCardsBtn','adminMaxAllFlowerCardsBtn','adminAddGoldBtn','adminAddDiamondBtn','adminResetDailyBonusBtn','adminResetTutorialBtn'].forEach(function(id){
       const el=document.getElementById(id); if(el) el.remove();
     });
     renderAdminDbSourceInfo=function(){
