@@ -6700,6 +6700,9 @@ function setGachaCurrency(currency){
 // 不是在gachaPullOne()裡——gachaPullOne()只負責「抽哪一位」，跟「花不花得起」是兩件事，
 // 分開才能讓x10一次扣總價、而不是抽一位扣一次（萬一抽到一半才發現不夠會很奇怪）。
 function doGachaPull(count){
+  // 新手召喚教學會用捕獲階段自行處理指定的免費單抽。教學尚未走完兩抽時，擋住
+  // 按鈕原本的一般召喚流程，避免玩家連點後多送出一筆正式召喚，讓伺服器進度超前而卡關。
+  if(window.__tutorialGachaLocked) return;
   const isGold = gachaActiveCurrency==='gold';
   const cost = isGold
     ? (count===1 ? globalEconomySettings.goldGachaOneCost : globalEconomySettings.goldGachaTenCost)
@@ -9217,6 +9220,16 @@ function saveTutorialFaction(f){
 }
 let tutorialFaction = loadTutorialFaction();
 let tutorialReplayMode = false;
+window.__tutorialGachaLocked = false;
+function tutorialSetGachaLock(active, allowSinglePull){
+  window.__tutorialGachaLocked = !!active;
+  const pull1=document.getElementById('gachaPull1Btn');
+  const pull10=document.getElementById('gachaPull10Btn');
+  const back=document.getElementById('gachaBackBtn');
+  if(pull1) pull1.disabled=!!active && !allowSinglePull;
+  if(pull10) pull10.disabled=!!active;
+  if(back) back.disabled=!!active;
+}
 
 const TUTORIAL_LINES = {
   prologue: [
@@ -9487,6 +9500,7 @@ function tutorialWaitForClick(elId, cb, consumeClick){
 /* ---------- 教學流程本體 ---------- */
 function tutorialLaunch(replay){
   tutorialReplayMode = !!replay;
+  tutorialSetGachaLock(false, false);
   const skipBtn = document.getElementById('tutorialSkipBtn');
   skipBtn.classList.remove('hidden');
   skipBtn.onclick = tutorialSkip;
@@ -9686,12 +9700,15 @@ function tutorialSayAfterPick(){
 
 function tutorialGoldGachaStep(){
   if(tutorialReplayMode){ tutorialSayAfterGold(); return; }
+  tutorialSetGachaLock(true, false);
   tutorialSay([TUTORIAL_LINES.goldIntro[tutorialFaction]], function(){
     tutorialSay([TUTORIAL_LINES.goldOffer[tutorialFaction]], function(){
       // 真的引導玩家點大廳的【召喚】按鈕進畫面，不是程式直接跳過去；goToGacha()本身
       // 預設就會切到金幣分頁（setGachaCurrency('gold')），不用再多點一次分頁鈕。
       tutorialWaitForClick('lobbyGachaBtn', function(){
+        tutorialSetGachaLock(true, true);
         tutorialWaitForClick('gachaPull1Btn', function(){
+          tutorialSetGachaLock(true, false);
           // 教學用免費單抽：不扣金幣，其餘（存檔/顯示結果）都走真正的召喚邏輯。
           const pool = gachaPoolFor('gold');
           const result = gachaPullOne(pool);
@@ -9714,7 +9731,9 @@ function tutorialDiamondGachaStep(){
       // 已經在召喚畫面上了，這裡改成引導玩家自己點【鑽石召喚】分頁鈕切過去，
       // 不是程式直接setGachaCurrency('diamond')幫他切。
       tutorialWaitForClick('gachaTabDiamond', function(){
+        tutorialSetGachaLock(true, true);
         tutorialWaitForClick('gachaPull1Btn', function(){
+          tutorialSetGachaLock(true, false);
           const pool = gachaPoolFor('diamond');
           const result = gachaPullOne(pool);
           gachaShowResult([result]);
@@ -9726,6 +9745,7 @@ function tutorialDiamondGachaStep(){
 }
 
 function tutorialSayAfterDiamond(){
+  tutorialSetGachaLock(false, false);
   tutorialSay([TUTORIAL_LINES.afterDiamond[tutorialFaction]], function(){
     tutorialEnsureAtLeast3Owned(tutorialTeamStep);
   });
@@ -9812,6 +9832,7 @@ function tutorialSayEnding(){
 }
 
 function tutorialFinish(){
+  tutorialSetGachaLock(false, false);
   markTutorialDone();
   tutorialReplayMode = false;
   window.__tutorialFixedOpponentIds = null;
@@ -9845,6 +9866,7 @@ function tutorialSkip(){
   if(!confirm('確定要跳過新手教學嗎？系統會自動幫你準備好起始棋子、召喚跟隊伍。')) return;
   if(tutorialCrawlTimer){ clearTimeout(tutorialCrawlTimer); tutorialCrawlTimer = null; }
   tutorialClearHighlight();
+  tutorialSetGachaLock(false, false);
   window.__tutorialFixedOpponentIds = null;
   window.__tutorialBattleReturnRequired = false;
   if(ownedCharIds.length===0){
@@ -11045,6 +11067,7 @@ document.getElementById('admin1v1BattleBtn').onclick=function(){ closeAdminPanel
   };
   const guestGacha=doGachaPull;
   doGachaPull=async function(count){
+    if(window.__tutorialGachaLocked) return;
     if(!accountReady) return guestGacha(count);
     try{ const d=await accountApi('gacha',{currency:gachaActiveCurrency,count:count}); applyAccountState(d.state); gachaShowResult(d.results.map(function(r){ return {char:CHAR_BY_ID[r.id],isNew:r.isNew,starLevel:r.starLevel}; })); }
     catch(e){ alert(e.message); }
@@ -11074,23 +11097,28 @@ document.getElementById('admin1v1BattleBtn').onclick=function(){ closeAdminPanel
     const d=await accountApi('tutorial-gacha',{currency:currency}); applyAccountState(d.state);
     gachaShowResult(d.results.map(function(r){ return {char:CHAR_BY_ID[r.id],isNew:r.isNew,starLevel:r.starLevel}; }));
   }
+  function waitForAccountTutorialSummon(currency, onDone){
+    tutorialSetGachaLock(true,true);
+    tutorialWaitForClick('gachaPull1Btn',async function(){
+      tutorialSetGachaLock(true,false);
+      try{ await accountTutorialSummon(currency); onDone(); }
+      catch(e){ alert(e.message); waitForAccountTutorialSummon(currency,onDone); }
+    },true);
+  }
   const guestTutorialGoldStep=tutorialGoldGachaStep, guestTutorialDiamondStep=tutorialDiamondGachaStep;
   tutorialGoldGachaStep=function(){
     if(!accountReady) return guestTutorialGoldStep();
     if(tutorialReplayMode) return tutorialSayAfterGold();
+    tutorialSetGachaLock(true,false);
     tutorialSay([TUTORIAL_LINES.goldIntro[tutorialFaction]],function(){ tutorialSay([TUTORIAL_LINES.goldOffer[tutorialFaction]],function(){
-      tutorialWaitForClick('lobbyGachaBtn',function(){ tutorialWaitForClick('gachaPull1Btn',async function(){
-        try{ await accountTutorialSummon('gold'); tutorialSayAfterGold(); }catch(e){ alert(e.message); }
-      },true); });
+      tutorialWaitForClick('lobbyGachaBtn',function(){ waitForAccountTutorialSummon('gold',tutorialSayAfterGold); });
     }); });
   };
   tutorialDiamondGachaStep=function(){
     if(!accountReady) return guestTutorialDiamondStep();
     if(tutorialReplayMode) return tutorialSayAfterDiamond();
     tutorialSay([TUTORIAL_LINES.diamondIntro[tutorialFaction]],function(){ tutorialSay([TUTORIAL_LINES.diamondOffer[tutorialFaction]],function(){
-      tutorialWaitForClick('gachaTabDiamond',function(){ tutorialWaitForClick('gachaPull1Btn',async function(){
-        try{ await accountTutorialSummon('diamond'); tutorialSayAfterDiamond(); }catch(e){ alert(e.message); }
-      },true); });
+      tutorialWaitForClick('gachaTabDiamond',function(){ waitForAccountTutorialSummon('diamond',tutorialSayAfterDiamond); });
     }); });
   };
   const guestTutorialEnsure=tutorialEnsureAtLeast3Owned;

@@ -250,7 +250,14 @@ export async function onRequest(context) {
     } else if (action === 'tutorial-gacha') {
       const currency = body.currency === 'diamond' ? 'diamond' : 'gold';
       const owned = parseJson(row.owned_chars, []), stars = parseJson(row.char_stars, {});
-      if (row.tutorial_done || owned.length < 1 || owned.length >= 3) throw apiError('This tutorial reward is no longer available.');
+      if (row.tutorial_done || owned.length < 1) throw apiError('This tutorial reward is no longer available.');
+      // 舊版允許玩家在兩次教學召喚之間繼續一般召喚；角色數先達到 3 後，下一次
+      // 教學召喚會被拒絕，帳號便永遠卡在教學。這裡把已達標帳號視為獎勵已完成，
+      // 回傳現有角色讓前端能繼續隊伍教學（不重複發送角色，也不再增加星級）。
+      if (owned.length >= 3) {
+        const id = owned[owned.length - 1];
+        return json({ state: profileFromRow(row), results: [{ id, isNew: false, starLevel: Number(stars[id] || 0) }] });
+      }
       const id = configuredGachaPick(config, currency, owned);
       owned.push(id);
       await db.prepare('UPDATE players SET owned_chars=?2,char_stars=?3,updated_at=unixepoch() WHERE uid=?1').bind(user.uid, JSON.stringify(owned), JSON.stringify(stars)).run();
