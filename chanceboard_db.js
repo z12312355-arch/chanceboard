@@ -926,7 +926,7 @@ window.CHANCEBOARD_DB = {
       "critRate": null,
       "cooldown": null,
       "coefficient": 0.6,
-      "description": "攻擊後自己進入魅影模式，下一次攻擊的招式效果*2",
+      "description": "使用後進入魅影模式；下一次成功命中的整次攻擊威力×2，隨後解除魅影模式",
       "expectedValue": 0.44999999999999996,
       "strength": 1.0499999999999998,
       "ownerName": "緋村 一郎(Himura Ichirou)",
