@@ -7873,7 +7873,8 @@ function renderBattle(){
   // 開關已經從 checkbox 改成按鈕（見上面 HTML 的說明），這裡用 classList.toggle('on', ...) 同步
   // 視覺上的「啟用中」狀態，取代原本讀/寫 checkbox.checked。
   const autoBattleAButton=document.getElementById('autoBattleToggle');
-  autoBattleAButton.textContent=currentMatchSize===1?'自動戰鬥':'黑方自動戰鬥';
+  // 單人模式只有玩家這一顆開關，不需要再標示「黑方」；本機雙人仍保留陣營名稱以利區分。
+  autoBattleAButton.textContent=twoPlayerMode?'黑方自動戰鬥':'自動戰鬥';
   autoBattleAButton.classList.toggle('on', state.autoBattle);
   // The White auto-battle toggle only makes sense in two-player mode — outside it White
   // is already fully AI-controlled by default, so there's nothing to "hand over".
