@@ -4017,7 +4017,7 @@ window.CHANCEBOARD_DB = {
       "id": "018",
       "name": "鎖定(Lock-On)",
       "color": "花牌",
-      "description": "角色必中(40秒)，攻擊必定命中",
+      "description": "角色必中(30秒)，攻擊必定命中",
       "isSuitCard": false,
       "effectOps": [
         {
@@ -4026,7 +4026,7 @@ window.CHANCEBOARD_DB = {
           "mode": "value",
           "target": "chosen",
           "chance": 1,
-          "durSec": 40
+          "durSec": 30
         }
       ],
       "effectTrigger": "onPlay",
