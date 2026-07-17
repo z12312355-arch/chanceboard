@@ -486,8 +486,8 @@ window.CHANCEBOARD_DB = {
       "passiveName": "妄想成真(Fantasy Becomes Reality)",
       "story": "沒有人知道黑炎．芙蕾雅真正的名字。\n\n她從轉學第一天開始，便自稱來自異界，肩負封印災厄的使命。\n她總是戴著一只眼罩，背著貼滿神秘符文的書包，嘴裡念著沒人聽得懂的咒語。\n有人說她只是中二病。\n也有人說，她只是太沉浸於自己的幻想。\n然而，總有一些事情令人無法解釋。\n每當天空即將下起大雨，她總會提前望向天空，低聲說：\n「結界要開始崩解了。」\n不久之後，暴雨便傾盆而下。\n校園裡偶爾有人遺失物品。\n她只是閉上眼睛，像是在傾聽什麼。\n片刻後，便能準確說出失物所在的位置。\n就連老師都曾親眼見過。\n某次地震發生前，黑炎．芙蕾雅突然站起身，神情凝重地望向教室外。\n「退後。」\n「不要靠近窗戶。」\n全班還來不及反應。\n數秒後，大地劇烈搖晃，窗邊的花盆應聲墜落。\n沒有人知道，那究竟是巧合，還是預知。\n她依然每天過著與眾不同的生活。\n晨間，她會面向朝陽低聲詠唱。\n午休時，她會在筆記本上記錄無人能理解的文字。\n放學後，她經常獨自站在校舍頂樓，靜靜望著天空。\n彷彿一直等待著什麼。\n有人曾好奇問她：\n「妳真的相信異世界存在嗎？」\n黑炎．芙蕾雅沒有立刻回答。\n她只是望向遠方，平靜地說：\n「不是相信。」\n「而是知道。」\n那份篤定，讓人一時之間分不清究竟是妄想，還是真相。\n有一次，學校舉辦天文觀測活動。\n所有人都拿著望遠鏡尋找流星。\n只有黑炎．芙蕾雅始終望著另一片空無一物的夜空。\n忽然，她露出了淡淡的笑容。\n「終於……開始了。」\n旁邊的同學順著她的方向望去。\n那裡什麼都沒有。\n然而下一秒。\n一顆流星，劃過了她注視的位置。\n究竟是巧合。\n還是她真的早已看見了什麼。\n沒有人知道答案。\n直到來到棋盤，她仍舊每天戴著眼罩。\n仍舊稱自己為黑炎．芙蕾雅。\n",
       "wish": "變成超能力者",
-      "outer": "他是中二",
-      "inner": "變成超能力者",
+      "outer": "她只是個中二病少女",
+      "inner": "她所看見的一切，或許都是真的",
       "hp": 900,
       "atk": 140,
       "def": 60,
@@ -3178,22 +3178,13 @@ window.CHANCEBOARD_DB = {
       "critRate": 0.1,
       "cooldown": null,
       "coefficient": 0.2,
-      "description": "命中不高但他喊得很用力的一擊；爆擊時自己進入強運狀態(1回合)，下次攻擊必定爆擊（他深信這一擊「真的」發動了）",
+      "description": "將黑炎凝聚成刃，斬斷敵人的防線。沒有人看得清那究竟是火焰，還是某種來自異界的力量。",
       "expectedValue": null,
       "strength": 1,
       "ownerName": "黑炎．芙蕾雅(Blackflame Freya)",
       "ownerId": "003",
-      "effectOps": [
-        {
-          "op": "status",
-          "key": "強運",
-          "mode": "value",
-          "target": "self",
-          "chance": 1,
-          "durSec": 10
-        }
-      ],
-      "effectTrigger": "onCrit",
+      "effectOps": [],
+      "effectTrigger": null,
       "effectChance": 1
     },
     {
@@ -3208,7 +3199,7 @@ window.CHANCEBOARD_DB = {
       "critRate": null,
       "cooldown": null,
       "coefficient": 0.3,
-      "description": "命中時25%令對象陷入禁足狀態(1回合)，無法移動（夜雨打濕了地面，滑得站不穩）",
+      "description": "無數黑炎魔彈穿過展開的法陣，封鎖敵人的所有退路。命中時30%令目標陷入禁足狀態10秒，無法移動。",
       "expectedValue": null,
       "strength": 0.9,
       "ownerName": "黑炎．芙蕾雅(Blackflame Freya)",
@@ -3219,7 +3210,7 @@ window.CHANCEBOARD_DB = {
           "key": "禁足",
           "mode": "value",
           "target": "target",
-          "chance": 0.25,
+          "chance": 0.3,
           "durSec": 10
         }
       ],
@@ -3232,13 +3223,13 @@ window.CHANCEBOARD_DB = {
       "slot": "法",
       "condition": 2,
       "rangeType": "法",
-      "scope": "單",
-      "powerRatio": 220,
+      "scope": "群",
+      "powerRatio": 180,
       "hitRate": 0.85,
       "critRate": null,
       "cooldown": 2,
       "coefficient": 0.3,
-      "description": "命中時50%令對象陷入燃燒狀態(2回合)，持續受到灼燒傷害（其實是他藏在袖口裡的手榴彈，不是魔法）",
+      "description": "終焉之環於天空展開，黑炎自法陣傾瀉而下。命中時45%令目標陷入燃燒狀態20秒，每次行動後受到持續傷害。",
       "expectedValue": null,
       "strength": 1,
       "ownerName": "黑炎．芙蕾雅(Blackflame Freya)",
@@ -3249,7 +3240,7 @@ window.CHANCEBOARD_DB = {
           "key": "燃燒",
           "mode": "value",
           "target": "target",
-          "chance": 0.5,
+          "chance": 0.45,
           "durSec": 20
         }
       ],
@@ -3260,15 +3251,15 @@ window.CHANCEBOARD_DB = {
       "id": "014",
       "name": "虛空降臨(Void Awakening)",
       "slot": "願",
-      "condition": 2,
+      "condition": 3,
       "rangeType": "法",
-      "scope": "單",
-      "powerRatio": 400,
+      "scope": "群",
+      "powerRatio": 260,
       "hitRate": 0.85,
       "critRate": null,
       "cooldown": 4,
       "coefficient": 2,
-      "description": "命中時40%令對象陷入麻痺狀態(2回合)，速度/2（他喊出招式名的瞬間，大地彷彿真的裂開了）",
+      "description": "她解開眼罩下的封印，令虛空短暫覆蓋戰場。命中時30%令目標陷入麻痺狀態20秒，行動間隔加倍。",
       "expectedValue": null,
       "strength": 1.1,
       "ownerName": "黑炎．芙蕾雅(Blackflame Freya)",
@@ -3279,7 +3270,7 @@ window.CHANCEBOARD_DB = {
           "key": "麻痺",
           "mode": "value",
           "target": "target",
-          "chance": 0.4,
+          "chance": 0.3,
           "durSec": 20
         }
       ],
@@ -3288,7 +3279,7 @@ window.CHANCEBOARD_DB = {
     },
     {
       "id": "015",
-      "name": "妄想成真(Fantasy Manifest)",
+      "name": "妄想成真(Fantasy Becomes Reality)",
       "slot": "被",
       "condition": null,
       "rangeType": null,
@@ -3297,22 +3288,25 @@ window.CHANCEBOARD_DB = {
       "hitRate": null,
       "critRate": null,
       "cooldown": null,
-      "coefficient": 0.4,
-      "description": "命中時20%機率額外引爆藏在袖口的道具，對目標造成其最大HP 12%的傷害",
+      "coefficient": 0.5,
+      "description": "每當她口中的預言成真，黑炎便變得更加真實。每次出招成功使敵人陷入負面狀態時，自身ATK提升5%（20秒），最多疊加3層；一次出招最多觸發一次。",
       "expectedValue": null,
-      "strength": 0.4,
+      "strength": 0.5,
       "ownerName": "黑炎．芙蕾雅(Blackflame Freya)",
       "ownerId": "003",
       "effectOps": [
         {
-          "op": "damagePct",
-          "target": "target",
-          "of": "max",
-          "percent": 0.12,
-          "chance": 0.2
+          "op": "statusStackCapped",
+          "key": "ATK+",
+          "mode": "pct",
+          "target": "self",
+          "value": 0.05,
+          "durSec": 20,
+          "maxStacks": 3,
+          "stackTag": "fantasyBecomesReality"
         }
       ],
-      "effectTrigger": "onHit",
+      "effectTrigger": "onDebuffApplied",
       "effectChance": 1
     },
     {
