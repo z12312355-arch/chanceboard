@@ -3633,6 +3633,7 @@ async function confirmDeckBuild(){
   if(deckDraftTotal()!==10) return;
   const nameInput = document.getElementById('teamNameInput');
   const existingIdx = editingTeamId ? teams.findIndex(t=>t.id===editingTeamId) : -1;
+  const previousTeam = existingIdx>=0 ? teams[existingIdx] : null;
   const fallbackName = '隊伍 '+(teams.length+1);
   const name = (nameInput && nameInput.value.trim()) ? nameInput.value.trim() : (existingIdx>=0 ? teams[existingIdx].name : fallbackName);
   const teamObj = {
@@ -3642,11 +3643,18 @@ async function confirmDeckBuild(){
     deck: Object.assign({}, state.deckDraft),
   };
   if(existingIdx>=0) teams[existingIdx] = teamObj; else teams.push(teamObj);
+  // 教學的 click 監聽器在 capture 階段，會比這顆按鈕原本的 onclick 更早收到事件。
+  // 把本次實際儲存 Promise 公開給教學流程，讓它等 D1 確認寫入後再送 ending checkpoint，
+  // 避免「隊伍最後有存到，但較早送出的 checkpoint 誤判尚無隊伍」的競速。
+  const teamSavePromise = Promise.resolve().then(function(){ return saveTeams(); });
+  window.__lastTeamSavePromise = teamSavePromise;
   try{
-    await saveTeams();
+    await teamSavePromise;
   } catch(e){
     // Account saveTeams() already shows the network error; keep the editor open so
     // the player can retry instead of advancing the tutorial against stale D1 data.
+    if(existingIdx>=0) teams[existingIdx]=previousTeam;
+    else teams=teams.filter(function(team){ return team.id!==teamObj.id; });
     return;
   }
   editingTeamId = null;
@@ -9742,14 +9750,31 @@ function tutorialTeamStep(){
       tutorialWaitForClick('teamNewBtn', function(){
         tutorialSay([TUTORIAL_LINES.teamPick3[tutorialFaction]], function(){
           tutorialWaitForClick('confirmBtn', function(){
-            tutorialSay([TUTORIAL_LINES.teamDeck[tutorialFaction]], function(){
-              tutorialWaitForClick('deckConfirmBtn', tutorialSayAfterTeam, false, ['deck-picker','deckRandomBtn']);
-            });
+            tutorialSay([TUTORIAL_LINES.teamDeck[tutorialFaction]], tutorialWaitForSuccessfulTeamSave);
           }, false, ['roster-grid','teamNameInput']);
         });
       });
     });
   });
+}
+
+function tutorialWaitForSuccessfulTeamSave(){
+  tutorialWaitForClick('deckConfirmBtn', function(){
+    // capture listener runs before confirmDeckBuild(); defer one task so the button's
+    // normal onclick can create window.__lastTeamSavePromise first.
+    setTimeout(function(){
+      const pending=window.__lastTeamSavePromise;
+      if(!pending || typeof pending.then!=='function'){
+        tutorialWaitForSuccessfulTeamSave();
+        return;
+      }
+      pending.then(tutorialSayAfterTeam).catch(function(){
+        // confirmDeckBuild/saveTeams already displays the concrete network error.
+        // Restore the tutorial lock so the player can retry the required action.
+        tutorialWaitForSuccessfulTeamSave();
+      });
+    },0);
+  }, false, ['deck-picker','deckRandomBtn']);
 }
 
 function tutorialSayAfterTeam(){
