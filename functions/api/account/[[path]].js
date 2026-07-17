@@ -45,7 +45,7 @@ function isAdminUser(env, user) {
 }
 function defaultGlobalConfig() {
   return {
-    balanceVersion: 2,
+    balanceVersion: 3,
     characters: null, moves: null, cards: null,
     introStory: {
       black: ['哈哈，歡迎加入黑方，我是小黑。', '對了，你叫什麼？', '……原來如此。', '從今天開始，我就叫你『{name}』了。', '可別太早死啊。'],

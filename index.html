@@ -2485,7 +2485,7 @@
      遊戲每次開啟都會直接讀取那個檔案「當下」的內容（可以直接用文字編輯器打開改）；如果找不到
      這個檔案（例如只單獨複製了 html），就會自動
      改用下面內建在這個 html 裡的備援資料，不會整個壞掉。 -->
-<script src="chanceboard_db.js?v=20260717-burn-text1"></script>
+<script src="chanceboard_db.js?v=20260717-maboroshi-fix"></script>
 <script>
 (function(){
 "use strict";
@@ -2511,7 +2511,7 @@ const STATUS_BY_NAME = {}; DB.statuses.forEach(s=>STATUS_BY_NAME[s.name]=s);
 const DECKW_BY_CARDID = {}; DB.deckWeights.forEach(w=>DECKW_BY_CARDID[w.cardId]=w);
 
 let globalEconomySettings = {dailyGold:200,dailyDiamond:5,goldGachaOneCost:100,goldGachaTenCost:1000,diamondGachaOneCost:10,diamondGachaTenCost:100};
-const CURRENT_BALANCE_VERSION = 2;
+const CURRENT_BALANCE_VERSION = 3;
 let globalIntroStory = {
   black:['哈哈，歡迎加入黑方，我是小黑。','對了，你叫什麼？','……原來如此。','從今天開始，我就叫你『{name}』了。','可別太早死啊。'],
   white:['歡迎加入白方，我是小白。','在開始旅程之前。','請告訴我你的名字。','{name}。','我記住了。','希望有一天，大家都能記住這個名字。']
@@ -2567,16 +2567,27 @@ function globalGameConfigPayload(){
 // Captured before account bootstrap applies D1, so this remains the exact
 // Git/chanceboard_db.js data even when the current in-memory DB was overlaid by
 // an older D1 live row.
-function bundledGameConfigPayload(){
+function bundledGameConfigPayload(sourceDb){
+  const bundled=sourceDb && typeof sourceDb==='object' ? sourceDb : ORIGINAL_DB_SNAPSHOT;
   return {
     balanceVersion:CURRENT_BALANCE_VERSION,
-    characters:JSON.parse(JSON.stringify(ORIGINAL_DB_SNAPSHOT.characters||[])),
-    moves:JSON.parse(JSON.stringify(ORIGINAL_DB_SNAPSHOT.moves||[])),
-    cards:JSON.parse(JSON.stringify(ORIGINAL_DB_SNAPSHOT.cards||[])),
+    characters:JSON.parse(JSON.stringify(bundled.characters||[])),
+    moves:JSON.parse(JSON.stringify(bundled.moves||[])),
+    cards:JSON.parse(JSON.stringify(bundled.cards||[])),
     settings:Object.assign({},globalEconomySettings),
     introStory:JSON.parse(JSON.stringify(globalIntroStory)),
     tutorialStory:JSON.parse(JSON.stringify(TUTORIAL_LINES))
   };
+}
+async function fetchFreshBundledDatabase(){
+  const response=await fetch('chanceboard_db.js?d1sync='+Date.now(),{cache:'no-store'});
+  if(!response.ok) throw new Error('無法讀取部署站的 chanceboard_db.js（HTTP '+response.status+'）');
+  const source=await response.text();
+  const match=source.match(/^\s*window\.CHANCEBOARD_DB\s*=\s*([\s\S]*?)\s*;\s*$/);
+  if(!match) throw new Error('chanceboard_db.js 格式不正確。');
+  const parsed=JSON.parse(match[1]);
+  if(!parsed || !Array.isArray(parsed.characters) || !Array.isArray(parsed.moves) || !Array.isArray(parsed.cards)) throw new Error('chanceboard_db.js 缺少角色、招式或卡牌資料。');
+  return parsed;
 }
 const SUIT_CARD_IDS = DB.cards.filter(c=>c.isSuitCard).map(c=>c.id); // ['001'..'004']
 const FLOWER_CARD_IDS = DB.cards.filter(c=>!c.isSuitCard).map(c=>c.id);
@@ -9156,7 +9167,8 @@ async function syncBundledGameConfigToD1(){
   if(!confirm('確定要用目前「部署網站已載入」的 Git／chanceboard_db.js 角色、招式與花牌資料覆蓋 D1 全域設定嗎？\n\n若你剛另存或修改本機檔案，必須先把檔案放回 Git 並完成部署，再執行這個同步。')) return;
   btn.disabled=true; msg.textContent='⏳ 正在將 Git 內建資料同步到 D1…'; msg.className='admin-msg';
   try{
-    const result=await window.__adminAccountApi('admin-config',{config:bundledGameConfigPayload()});
+    const freshDb=await fetchFreshBundledDatabase();
+    const result=await window.__adminAccountApi('admin-config',{config:bundledGameConfigPayload(freshDb)});
     applyGlobalGameConfig(result.config);
     renderAdminDbSourceInfo();
     msg.textContent='✅ 同步完成。D1 已改為目前 Git 內建數值，所有玩家重新載入後生效。';
