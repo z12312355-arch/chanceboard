@@ -1975,7 +1975,7 @@ window.CHANCEBOARD_DB = {
       "critRate": null,
       "cooldown": null,
       "coefficient": null,
-      "description": "吸收自己格內所有隊友身上的所有狀態（含正面BUFF），保護隊友但也會奪走隊友的增益",
+      "description": "吸收自己格內所有隊友身上的所有狀態",
       "expectedValue": null,
       "strength": 0,
       "ownerName": "羽娘",

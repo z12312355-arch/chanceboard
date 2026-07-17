@@ -9171,6 +9171,13 @@ function savePlayerNameValue(value){
 function playerText(text){ return String(text==null?'':text).replace(/\{name\}/g,currentPlayerName()); }
 // 3 位候選棋子：外觀與定位互補（槍/劍/法各一），見角色資料庫 id 001/004/006。
 const TUTORIAL_STARTER_IDS = ['001','004','006'];
+// 選第一枚棋子時只提供足以做決定的定位摘要；完整招式留到角色資訊畫面查看，
+// 避免第一次選擇就被大量效果文字淹沒。數值直接讀角色資料，日後平衡調整會自動同步。
+const TUTORIAL_STARTER_META = {
+  '001': { role:'槍・高速支援', feature:'速度最快，擅長先手與手牌干擾' },
+  '004': { role:'劍・均衡輸出', feature:'攻守均衡，適合直接穩定進攻' },
+  '006': { role:'法・耐久回復', feature:'生命最高，擅長回復與持久戰' },
+};
 // 教學戰對手：全21位角色裡數值最低的3位（008/018/020），另外在 startGame() 裡再打6折，
 // 確保新手第一場幾乎必勝，見 startGame() 內 window.__tutorialFixedOpponentIds 的說明。
 const TUTORIAL_OPPONENT_IDS = ['008','018','020'];
@@ -9348,11 +9355,18 @@ function tutorialInjectStyle(){
     +"body.tutorial-action-lock button{pointer-events:none!important;opacity:.3!important;filter:grayscale(.75);}"
     +"body.tutorial-action-lock button.tutorial-highlight,body.tutorial-action-lock .tutorial-allowed,body.tutorial-action-lock .tutorial-allowed button{pointer-events:auto!important;opacity:1!important;filter:none!important;}"
     +"@keyframes tutorialPulse{0%,100%{box-shadow:0 0 0 4px #ffd35a,0 0 18px 4px rgba(255,211,90,.7);}50%{box-shadow:0 0 0 6px #ffd35a,0 0 30px 10px rgba(255,211,90,.95);}}"
-    +"#tutorialStarterGrid{display:flex;gap:14px;justify-content:center;flex-wrap:wrap;margin-top:16px;}"
-    +".tutorial-starter-card{width:130px;cursor:pointer;border:2px solid #333850;border-radius:12px;padding:8px;background:#1c1f2b;transition:transform .15s,border-color .15s;}"
+    +".tutorial-starter-note{margin:0;color:#b8bfd3;font-size:12px;line-height:1.55;}"
+    +"#tutorialStarterGrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-top:14px;}"
+    +".tutorial-starter-card{min-width:0;cursor:pointer;border:2px solid #333850;border-radius:12px;padding:8px;background:#1c1f2b;color:#f0f0f5;font:inherit;text-align:center;transition:transform .15s,border-color .15s;}"
     +".tutorial-starter-card:hover{transform:translateY(-4px);border-color:#ffd35a;}"
-    +".tutorial-starter-card img{width:100%;border-radius:8px;display:block;background:#0c0d12;}"
-    +".tutorial-starter-card .tsc-name{margin-top:6px;font-size:12px;text-align:center;color:#f0f0f5;}"
+    +".tutorial-starter-card:focus-visible{outline:3px solid #ffd35a;outline-offset:2px;}"
+    +".tutorial-starter-card img{width:100%;aspect-ratio:3/4;object-fit:contain;border-radius:8px;display:block;background:#0c0d12;}"
+    +".tutorial-starter-card .tsc-name{margin-top:7px;font-size:13px;font-weight:bold;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}"
+    +".tutorial-starter-card .tsc-role{display:inline-block;margin-top:5px;padding:2px 7px;border-radius:999px;background:rgba(242,193,78,.14);border:1px solid rgba(242,193,78,.38);color:#f2c14e;font-size:10.5px;font-weight:bold;}"
+    +".tutorial-starter-card .tsc-feature{min-height:34px;margin-top:6px;color:#c8ccda;font-size:10.5px;line-height:1.5;}"
+    +".tutorial-starter-card .tsc-stats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:3px 5px;margin-top:7px;padding-top:6px;border-top:1px solid rgba(255,255,255,.14);font-size:10px;color:#aeb5c8;}"
+    +".tutorial-starter-card .tsc-stats b{color:#fff;}"
+    +"@media(max-width:600px){#tutorialCenterCard.tutorial-starter-picker{max-height:calc(100vh - 24px);overflow-y:auto;padding:16px 14px;}#tutorialCenterCard.tutorial-starter-picker h3{margin-bottom:7px;font-size:17px;}#tutorialStarterGrid{grid-template-columns:1fr;gap:7px;margin-top:9px;}.tutorial-starter-card{display:grid;grid-template-columns:70px minmax(0,1fr);grid-template-areas:'art name' 'art role' 'art feature' 'art stats';column-gap:9px;padding:6px 8px;text-align:left;}.tutorial-starter-card:hover{transform:none;}.tutorial-starter-card img{grid-area:art;width:70px;height:100%;min-height:100px;aspect-ratio:auto;}.tutorial-starter-card .tsc-name{grid-area:name;margin-top:1px;font-size:12px;}.tutorial-starter-card .tsc-role{grid-area:role;justify-self:start;margin-top:2px;}.tutorial-starter-card .tsc-feature{grid-area:feature;min-height:0;margin-top:3px;font-size:10px;}.tutorial-starter-card .tsc-stats{grid-area:stats;margin-top:4px;padding-top:4px;}}"
     +"#tutorialOverlay.cutscene #tutorialDim{background:radial-gradient(ellipse at center,#1a1c28 0%,#06070c 100%);pointer-events:auto;}"
     +"#tutorialSceneArtWrap{position:fixed;left:50%;bottom:0;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;opacity:0;transition:opacity .6s;pointer-events:none;z-index:1;}"
     +"#tutorialSceneArtWrap.show{opacity:1;}"
@@ -9634,6 +9648,7 @@ function tutorialCrawlLines(lines, onDone){
 
 function tutorialShowFactionChoice(){
   const card = document.getElementById('tutorialCenterCard');
+  card.classList.remove('tutorial-starter-picker');
   card.style.display = 'block';
   card.innerHTML =
     '<h3 class="tutorial-guide-title">請選擇一位嚮導進行新手教學</h3>'+
@@ -9675,6 +9690,7 @@ function tutorialSayGreeting(){
 
 function tutorialAskPlayerName(remainingLines){
   const card=document.getElementById('tutorialCenterCard');
+  card.classList.remove('tutorial-starter-picker');
   card.innerHTML='<h3>你的名字</h3><input id="tutorialPlayerNameInput" maxlength="16" autocomplete="nickname" placeholder="輸入名字" style="width:100%;padding:10px;border-radius:7px;border:1px solid #59627e;background:#10131e;color:#fff"><button type="button" class="btn primary" id="tutorialPlayerNameConfirm" style="width:100%;margin-top:10px">確定</button><div id="tutorialPlayerNameError" style="color:#ff9c9c;font-size:12px;margin-top:7px"></div>';
   card.style.display='block';
   document.getElementById('tutorialBox').classList.add('hidden');
@@ -9698,12 +9714,17 @@ function tutorialShowStarterPicker(){
   const cardsHtml = TUTORIAL_STARTER_IDS.map(function(id){
     const c = CHAR_BY_ID[id];
     const dispName = c ? stripParenAlias(c.name) : id;
-    return '<div class="tutorial-starter-card" data-id="'+id+'">'+
+    const meta = TUTORIAL_STARTER_META[id] || {role:(c?c.element:'')+'系',feature:'各有不同的戰鬥特色'};
+    return '<button type="button" class="tutorial-starter-card" data-id="'+id+'" aria-label="選擇 '+escHtml(dispName)+'">'+
       '<img src="images/'+id+'_full.png" alt="">'+
-      '<div class="tsc-name">'+dispName+'</div>'+
-    '</div>';
+      '<div class="tsc-name">'+escHtml(dispName)+'</div>'+
+      '<div class="tsc-role">'+escHtml(meta.role)+'</div>'+
+      '<div class="tsc-feature">'+escHtml(meta.feature)+'</div>'+
+      '<div class="tsc-stats"><span>HP <b>'+c.hp+'</b></span><span>ATK <b>'+c.atk+'</b></span><span>DEF <b>'+c.def+'</b></span><span>SPD <b>'+c.spd+'</b></span></div>'+
+    '</button>';
   }).join('');
-  card.innerHTML = '<h3>選擇第一枚棋子</h3><div id="tutorialStarterGrid">'+cardsHtml+'</div>';
+  card.classList.add('tutorial-starter-picker');
+  card.innerHTML = '<h3>選擇第一枚棋子</h3><p class="tutorial-starter-note">三位都能完成教學，之後仍可取得其他棋子，依照喜歡的戰鬥方式選擇即可。</p><div id="tutorialStarterGrid">'+cardsHtml+'</div>';
   card.style.display = 'block';
   const overlay = document.getElementById('tutorialOverlay');
   overlay.classList.add('active');
