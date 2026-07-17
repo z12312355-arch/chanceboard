@@ -9235,12 +9235,12 @@ function savePlayerNameValue(value){
   return Promise.resolve(name);
 }
 function playerText(text){ return String(text==null?'':text).replace(/\{name\}/g,currentPlayerName()); }
-// 3 位候選棋子：外觀與定位互補（槍/劍/法各一），見角色資料庫 id 001/004/006。
-const TUTORIAL_STARTER_IDS = ['001','004','006'];
+// 3 位候選棋子：外觀與定位互補（槍/劍/法各一），見角色資料庫 id 003/004/006。
+const TUTORIAL_STARTER_IDS = ['003','004','006'];
 // 選第一枚棋子時只提供足以做決定的定位摘要；完整招式留到角色資訊畫面查看，
 // 避免第一次選擇就被大量效果文字淹沒。數值直接讀角色資料，日後平衡調整會自動同步。
 const TUTORIAL_STARTER_META = {
-  '001': { role:'槍・高速支援', feature:'速度最快，擅長先手與手牌干擾' },
+  '003': { role:'槍・黑炎控制', feature:'攻擊出色，擅長群體控制與持續強化' },
   '004': { role:'劍・均衡輸出', feature:'攻守均衡，適合直接穩定進攻' },
   '006': { role:'法・耐久回復', feature:'生命最高，擅長回復與持久戰' },
 };
