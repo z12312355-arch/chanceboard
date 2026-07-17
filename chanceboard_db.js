@@ -471,20 +471,66 @@ window.CHANCEBOARD_DB = {
     },
     {
       "id": "003",
-      "name": "法斯特．伊艾克斯．卡薩巴(First Ex Kasaba)",
-      "title": "超認真中二(Chuunibyou)",
-      "gender": "男",
+      "name": "黑炎．芙蕾雅(Blackflame Freya)",
+      "title": "中二(Chuunibyou)",
+      "gender": "女",
       "element": "槍",
-      "appearance": "信長式斗篷、魔法手套、腰邊錘鍊、靴子",
-      "hair": "遊戲王頭",
-      "hairColor": "遊戲王髮色",
+      "appearance": "戴著中二眼罩，天生麗質，五官精緻，膚白如瓷，眼神幽紫帶光，氣質高冷，眼罩下的左眼帶著金色隱形眼鏡",
+      "hair": "長直，綁側馬尾，隨風飄逸超有仙氣",
+      "hairColor": "黑髮帶紅色漸層",
       "expression": "中二表情",
-      "moveNameSword": "真666魔神斬(True 666 Demon Slash)",
-      "moveNameGun": "穿裂夜雨(Night Rain Piercer)",
-      "moveNameMagic": "閻王滅絕爆殺破(King Yama's Annihilation Blast)",
-      "moveNameWish": "天地龍崩傷(Heaven-Earth Dragon Ruin)",
-      "passiveName": "唬爛成真(Something Up His Sleeve)",
-      "story": "中學二年級的超認真中二，總是幻想自己擁有超能力，在打開汽水瓶時會唸出冗長的咒文大喊「附身在可樂內的惡靈啊！速速返回你的世界！」，電梯門打開時會蹲起馬步，雙手向前喊道「通往異世界的門啊！開啟吧！」，甚至有次在發招使出閻王滅絕爆殺破時，若無其事丟出藏在袖口中的手榴彈將教室炸掉，並留下意味深長的話語「那無法控制的黑暗力量，有時候連吾輩都恐懼不已……」。\n　　儘管超認真中二已經認為自己超強了，但他卻仍然企圖著更強大的力量，於是參與了棋盤的遊戲，以完成其宏偉的宿願。",
+      "moveNameSword": "黑炎斷界(Blackflame Severance)",
+      "moveNameGun": "深淵魔彈(Abyss Bullet)",
+      "moveNameMagic": "終焉魔法陣(Apocalypse Ritual)",
+      "moveNameWish": "虛空降臨(Void Awakening)",
+      "passiveName": "妄想成真(Fantasy Becomes Reality)",
+      "story": "沒有人知道黑炎．芙蕾雅真正的名字。
+
+她從轉學第一天開始，便自稱來自異界，肩負封印災厄的使命。
+她總是戴著一只眼罩，背著貼滿神秘符文的書包，嘴裡念著沒人聽得懂的咒語。
+有人說她只是中二病。
+也有人說，她只是太沉浸於自己的幻想。
+然而，總有一些事情令人無法解釋。
+每當天空即將下起大雨，她總會提前望向天空，低聲說：
+「結界要開始崩解了。」
+不久之後，暴雨便傾盆而下。
+校園裡偶爾有人遺失物品。
+她只是閉上眼睛，像是在傾聽什麼。
+片刻後，便能準確說出失物所在的位置。
+就連老師都曾親眼見過。
+某次地震發生前，黑炎．芙蕾雅突然站起身，神情凝重地望向教室外。
+「退後。」
+「不要靠近窗戶。」
+全班還來不及反應。
+數秒後，大地劇烈搖晃，窗邊的花盆應聲墜落。
+沒有人知道，那究竟是巧合，還是預知。
+她依然每天過著與眾不同的生活。
+晨間，她會面向朝陽低聲詠唱。
+午休時，她會在筆記本上記錄無人能理解的文字。
+放學後，她經常獨自站在校舍頂樓，靜靜望著天空。
+彷彿一直等待著什麼。
+有人曾好奇問她：
+「妳真的相信異世界存在嗎？」
+黑炎．芙蕾雅沒有立刻回答。
+她只是望向遠方，平靜地說：
+「不是相信。」
+「而是知道。」
+那份篤定，讓人一時之間分不清究竟是妄想，還是真相。
+有一次，學校舉辦天文觀測活動。
+所有人都拿著望遠鏡尋找流星。
+只有黑炎．芙蕾雅始終望著另一片空無一物的夜空。
+忽然，她露出了淡淡的笑容。
+「終於……開始了。」
+旁邊的同學順著她的方向望去。
+那裡什麼都沒有。
+然而下一秒。
+一顆流星，劃過了她注視的位置。
+究竟是巧合。
+還是她真的早已看見了什麼。
+沒有人知道答案。
+直到來到棋盤，她仍舊每天戴著眼罩。
+仍舊稱自己為黑炎．芙蕾雅。
+",
       "wish": "變成超能力者",
       "outer": "他是中二",
       "inner": "變成超能力者",
@@ -493,7 +539,8 @@ window.CHANCEBOARD_DB = {
       "def": 60,
       "spd": 110,
       "statStrength": 0.5,
-      "moveStrength": 0.55
+      "moveStrength": 0.55,
+      "gachaWeight": 1
     },
     {
       "id": "020",
@@ -3167,7 +3214,7 @@ window.CHANCEBOARD_DB = {
     },
     {
       "id": "011",
-      "name": "真666魔神斬(True 666 Demon Slash)",
+      "name": "黑炎斷界(Blackflame Severance)",
       "slot": "劍",
       "condition": 1,
       "rangeType": "劍",
@@ -3180,7 +3227,7 @@ window.CHANCEBOARD_DB = {
       "description": "命中不高但他喊得很用力的一擊；爆擊時自己進入強運狀態(1回合)，下次攻擊必定爆擊（他深信這一擊「真的」發動了）",
       "expectedValue": null,
       "strength": 1,
-      "ownerName": "法斯特．伊艾克斯．卡薩巴(First Ex Kasaba)",
+      "ownerName": "黑炎．芙蕾雅(Blackflame Freya)",
       "ownerId": "003",
       "effectOps": [
         {
@@ -3197,7 +3244,7 @@ window.CHANCEBOARD_DB = {
     },
     {
       "id": "012",
-      "name": "穿裂夜雨(Night Rain Piercer)",
+      "name": "深淵魔彈(Abyss Bullet)",
       "slot": "槍",
       "condition": 1,
       "rangeType": "槍",
@@ -3210,7 +3257,7 @@ window.CHANCEBOARD_DB = {
       "description": "命中時25%令對象陷入禁足狀態(1回合)，無法移動（夜雨打濕了地面，滑得站不穩）",
       "expectedValue": null,
       "strength": 0.9,
-      "ownerName": "法斯特．伊艾克斯．卡薩巴(First Ex Kasaba)",
+      "ownerName": "黑炎．芙蕾雅(Blackflame Freya)",
       "ownerId": "003",
       "effectOps": [
         {
@@ -3227,7 +3274,7 @@ window.CHANCEBOARD_DB = {
     },
     {
       "id": "013",
-      "name": "閻王滅絕爆殺破(King Yama's Annihilation Blast)",
+      "name": "終焉魔法陣(Apocalypse Ritual)",
       "slot": "法",
       "condition": 2,
       "rangeType": "法",
@@ -3240,7 +3287,7 @@ window.CHANCEBOARD_DB = {
       "description": "命中時50%令對象陷入燃燒狀態(2回合)，持續受到灼燒傷害（其實是他藏在袖口裡的手榴彈，不是魔法）",
       "expectedValue": null,
       "strength": 1,
-      "ownerName": "法斯特．伊艾克斯．卡薩巴(First Ex Kasaba)",
+      "ownerName": "黑炎．芙蕾雅(Blackflame Freya)",
       "ownerId": "003",
       "effectOps": [
         {
@@ -3257,7 +3304,7 @@ window.CHANCEBOARD_DB = {
     },
     {
       "id": "014",
-      "name": "天地龍崩傷(Heaven-Earth Dragon Ruin)",
+      "name": "虛空降臨(Void Awakening)",
       "slot": "願",
       "condition": 2,
       "rangeType": "法",
@@ -3270,7 +3317,7 @@ window.CHANCEBOARD_DB = {
       "description": "命中時40%令對象陷入麻痺狀態(2回合)，速度/2（他喊出招式名的瞬間，大地彷彿真的裂開了）",
       "expectedValue": null,
       "strength": 1.1,
-      "ownerName": "法斯特．伊艾克斯．卡薩巴(First Ex Kasaba)",
+      "ownerName": "黑炎．芙蕾雅(Blackflame Freya)",
       "ownerId": "003",
       "effectOps": [
         {
@@ -3287,7 +3334,7 @@ window.CHANCEBOARD_DB = {
     },
     {
       "id": "015",
-      "name": "唬爛成真(Something Up His Sleeve)",
+      "name": "妄想成真(Fantasy Manifest)",
       "slot": "被",
       "condition": null,
       "rangeType": null,
@@ -3300,7 +3347,7 @@ window.CHANCEBOARD_DB = {
       "description": "命中時20%機率額外引爆藏在袖口的道具，對目標造成其最大HP 12%的傷害",
       "expectedValue": null,
       "strength": 0.4,
-      "ownerName": "法斯特．伊艾克斯．卡薩巴(First Ex Kasaba)",
+      "ownerName": "黑炎．芙蕾雅(Blackflame Freya)",
       "ownerId": "003",
       "effectOps": [
         {
