@@ -7,7 +7,7 @@ CREATE TABLE IF NOT EXISTS players (
   diamond INTEGER NOT NULL DEFAULT 30 CHECK (diamond >= 0),
   owned_chars TEXT NOT NULL DEFAULT '[]',
   char_stars TEXT NOT NULL DEFAULT '{}',
-  -- 2026-07 升星改制：滿星溢出補償的願望結晶；招式技能等級（劍/槍/法 LV1-5，升級素材未開放，先預留）；
+  -- 2026-07 升星／培養：願望結晶；move_levels 保存四系技能等級，並以保留鍵保存技能碎片與狩獵派遣；
   -- stars_version=1 代表 char_stars 已是新制（1..5 星），舊資料由 API 端一次性遷移（見 [[path]].js）。
   wish_crystals INTEGER NOT NULL DEFAULT 0 CHECK (wish_crystals >= 0),
   move_levels TEXT NOT NULL DEFAULT '{}',

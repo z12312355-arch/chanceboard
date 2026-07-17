@@ -8,6 +8,8 @@ const FLOWER_CARD_IDS = Array.from({ length: 22 }, (_, i) => String(i + 5).padSt
 const ALL_CHARACTER_IDS = Array.from({ length: 21 }, (_, i) => String(i + 1).padStart(3, '0'));
 const DIAMOND_EXCLUSIVE_IDS = new Set(['016', '014', '003', '021', '018', '020']);
 const TUTORIAL_STEPS = ['intro', 'starter', 'battle', 'gold_summon', 'diamond_summon', 'team', 'ending', 'completed'];
+const SKILL_SLOTS = ['劍', '槍', '法', '願'];
+const HUNT_DURATION_MS = 30 * 60 * 1000;
 
 function json(data, status = 200) {
   return new Response(JSON.stringify(data), { status, headers: { 'content-type': 'application/json; charset=utf-8' } });
@@ -137,13 +139,40 @@ function configuredCardPrice(config, cardId) {
   const card = Array.isArray(config.cards) ? config.cards.find(c => String(c && c.id) === cardId) : null;
   return intInRange(card && card.shopPrice, 150, 0);
 }
+// move_levels 原本已是玩家進度欄位。碎片與狩獵使用保留鍵一起存放，避免既有 D1
+// 還需要額外 ALTER TABLE；對前端仍拆成 moveLevels / skillFragments / huntState。
+function progressionFromRow(row) {
+  const raw = parseJson(row.move_levels, {});
+  const levels = {};
+  for (const [key, value] of Object.entries(safeObject(raw))) {
+    if (!key.startsWith('__') && ALL_CHARACTER_IDS.includes(key) && value && typeof value === 'object') levels[key] = value;
+  }
+  const fragments = {};
+  SKILL_SLOTS.forEach(slot => { fragments[slot] = intInRange(raw.__fragments && raw.__fragments[slot], 0); });
+  return { raw, levels, fragments, hunt: raw.__hunt && typeof raw.__hunt === 'object' ? raw.__hunt : null };
+}
+function packedProgression(levels, fragments, hunt) {
+  const out = {};
+  for (const [charId, perChar] of Object.entries(safeObject(levels))) {
+    if (!ALL_CHARACTER_IDS.includes(charId)) continue;
+    const cleaned = {};
+    SKILL_SLOTS.forEach(slot => { if (perChar && perChar[slot] != null) cleaned[slot] = intInRange(perChar[slot], 1, 1, 5); });
+    if (Object.keys(cleaned).length) out[charId] = cleaned;
+  }
+  out.__fragments = {};
+  SKILL_SLOTS.forEach(slot => { out.__fragments[slot] = intInRange(fragments && fragments[slot], 0); });
+  if (hunt) out.__hunt = hunt;
+  return out;
+}
 function profileFromRow(row) {
+  const progression = progressionFromRow(row);
   return {
     playerName: row.player_name || '',
     gold: row.gold, diamond: row.diamond,
     ownedCharIds: parseJson(row.owned_chars, []), charStars: parseJson(row.char_stars, {}),
     // 2026-07 升星改制：願望結晶餘額與（預留的）招式技能等級。
-    wishCrystals: Number(row.wish_crystals) || 0, moveLevels: parseJson(row.move_levels, {}),
+    wishCrystals: Number(row.wish_crystals) || 0, moveLevels: progression.levels,
+    skillFragments: progression.fragments, huntState: progression.hunt,
     ownedCardCounts: parseJson(row.owned_cards, {}), teams: parseJson(row.teams, []),
     tutorialDone: !!row.tutorial_done, tutorialStep: tutorialStepFromRow(row), tutorialFaction: row.tutorial_faction || 'black',
     lobbyHeroId: row.lobby_hero_id || null, settings: parseJson(row.settings, {}),
@@ -405,6 +434,50 @@ export async function onRequest(context) {
       await db.prepare('UPDATE players SET ' + currency + '=' + currency + '-?2,owned_chars=?3,char_stars=?4,wish_crystals=?5,updated_at=unixepoch() WHERE uid=?1').bind(user.uid, cost, JSON.stringify(owned), JSON.stringify(stars), crystals).run();
       row = await db.prepare('SELECT * FROM players WHERE uid=?1').bind(user.uid).first();
       return json({ state: profileFromRow(row), results });
+    } else if (action === 'skill-upgrade') {
+      const charId = String(body.charId || ''), slot = String(body.slot || '');
+      const owned = parseJson(row.owned_chars, []);
+      if (!owned.includes(charId)) throw apiError('你尚未擁有這位角色。');
+      if (!SKILL_SLOTS.includes(slot)) throw apiError('無效的技能種類。');
+      const progress = progressionFromRow(row);
+      const perChar = safeObject(progress.levels[charId]);
+      const current = intInRange(perChar[slot], 1, 1, 5);
+      if (current >= 5) throw apiError('這項技能已經滿級。');
+      const cost = current * 2;
+      if (progress.fragments[slot] < cost) throw apiError(slot + '之碎片不足，需要 ' + cost + ' 枚。');
+      perChar[slot] = current + 1;
+      progress.levels[charId] = perChar;
+      progress.fragments[slot] -= cost;
+      const oldPacked = row.move_levels || '{}';
+      const nextPacked = JSON.stringify(packedProgression(progress.levels, progress.fragments, progress.hunt));
+      const result = await db.prepare('UPDATE players SET move_levels=?2,updated_at=unixepoch() WHERE uid=?1 AND move_levels=?3')
+        .bind(user.uid, nextPacked, oldPacked).run();
+      if (!result.meta || result.meta.changes !== 1) throw apiError('進度已在其他裝置更新，請重試。', 409);
+    } else if (action === 'hunt-start') {
+      const teamId = String(body.teamId || ''), slot = String(body.slot || '');
+      if (!SKILL_SLOTS.includes(slot)) throw apiError('無效的狩獵區域。');
+      const teams = parseJson(row.teams, []), team = teams.find(item => String(item.id) === teamId);
+      if (!team || !Array.isArray(team.characterIds) || !team.characterIds.length) throw apiError('找不到這支隊伍。');
+      const progress = progressionFromRow(row);
+      if (progress.hunt) throw apiError(Date.now() >= Number(progress.hunt.endsAt) ? '已有完成的狩獵尚未領取。' : '目前已有隊伍正在狩獵。');
+      const now = Date.now();
+      progress.hunt = { teamId, teamName: String(team.name || '隊伍'), slot, reward: Math.max(1, Math.min(3, team.characterIds.length)), startedAt: now, endsAt: now + HUNT_DURATION_MS };
+      const oldPacked = row.move_levels || '{}';
+      const nextPacked = JSON.stringify(packedProgression(progress.levels, progress.fragments, progress.hunt));
+      const result = await db.prepare('UPDATE players SET move_levels=?2,updated_at=unixepoch() WHERE uid=?1 AND move_levels=?3')
+        .bind(user.uid, nextPacked, oldPacked).run();
+      if (!result.meta || result.meta.changes !== 1) throw apiError('進度已在其他裝置更新，請重試。', 409);
+    } else if (action === 'hunt-claim') {
+      const progress = progressionFromRow(row), hunt = progress.hunt;
+      if (!hunt) throw apiError('目前沒有可領取的狩獵獎勵。');
+      if (Date.now() < Number(hunt.endsAt)) throw apiError('狩獵尚未完成。');
+      if (!SKILL_SLOTS.includes(hunt.slot)) throw apiError('狩獵資料異常。');
+      progress.fragments[hunt.slot] += Math.max(1, Math.min(3, intInRange(hunt.reward, 1, 1, 3)));
+      const oldPacked = row.move_levels || '{}';
+      const nextPacked = JSON.stringify(packedProgression(progress.levels, progress.fragments, null));
+      const result = await db.prepare('UPDATE players SET move_levels=?2,updated_at=unixepoch() WHERE uid=?1 AND move_levels=?3')
+        .bind(user.uid, nextPacked, oldPacked).run();
+      if (!result.meta || result.meta.changes !== 1) throw apiError('獎勵已被領取或進度已更新。', 409);
     } else if (action === 'starup') {
       // 用願望結晶幫角色升一星（2026-07升星改制）。消耗依目標星級遞增：升到 N+1 星要 N 顆
       // （★1→★2=1顆…★4→★5=4顆），跟前端 crystalCostForNextStar() 同一套規則，由伺服器驗證。

@@ -1785,6 +1785,45 @@
   body.battle-mode #actDetailPopup .cardface .cf-corner{font-size:15px;top:10px;left:12px;}
   body.battle-mode #actDetailPopup .cardface .cf-corner-icon{font-size:16px;}
   body.battle-mode #actDetailPopup .cardface .cf-corner-br{font-size:15px;bottom:10px;right:12px;}
+
+  /* ---- 棋子培養／狩獵 ---- */
+  body.pieces-mode #app,body.hunt-mode #app{max-width:1180px;}
+  body.pieces-mode #screen-pieces,body.hunt-mode #screen-hunt{background:none;border:none;box-shadow:none;padding:28px 0 100px;}
+  .resource-strip{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:10px 0 16px;}
+  .resource-chip{background:rgba(17,21,34,.88);border:1px solid var(--line);border-radius:999px;padding:6px 11px;font-size:12px;box-shadow:0 4px 14px rgba(0,0,0,.28);}
+  #piecesGrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:12px;}
+  .piece-manage-card{position:relative;min-height:260px;border:1px solid var(--line);border-radius:12px;overflow:hidden;background:linear-gradient(180deg,rgba(33,39,58,.96),rgba(15,18,28,.98));cursor:pointer;box-shadow:0 7px 22px rgba(0,0,0,.34);transition:.15s transform,.15s border-color;}
+  .piece-manage-card:hover{transform:translateY(-2px);border-color:var(--gold);}
+  .piece-manage-card img{width:100%;height:178px;object-fit:cover;object-position:top center;display:block;background:#0d1018;}
+  .piece-manage-card-body{padding:9px 10px 11px;}
+  .piece-manage-name{font-weight:bold;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .piece-manage-stars{color:var(--gold);font-size:12px;margin-top:4px;}
+  .piece-manage-stats{font-size:10px;line-height:1.55;color:#dce2f4;margin-top:5px;}
+  #pieceDetailBackdrop{position:fixed;inset:0;z-index:9800;background:rgba(0,0,0,.78);display:flex;align-items:center;justify-content:center;padding:16px;}
+  #pieceDetailBackdrop.hidden{display:none;}
+  .piece-detail-panel{width:min(900px,96vw);max-height:92vh;overflow:auto;background:#171c2b;border:1px solid #657091;border-radius:14px;padding:16px;box-shadow:0 20px 70px #000;}
+  .piece-detail-top{display:grid;grid-template-columns:190px 1fr;gap:16px;}
+  .piece-detail-art{width:190px;height:270px;object-fit:cover;object-position:top;border-radius:10px;border:1px solid var(--line);background:#0d1018;}
+  .piece-stat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;margin:10px 0;}
+  .piece-stat-cell{background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:8px;text-align:center;font-size:11px;}
+  .piece-stat-cell b{display:block;font-size:16px;color:#fff;margin-top:2px;}
+  .piece-star-row{display:flex;align-items:center;gap:9px;flex-wrap:wrap;background:#111522;border:1px solid var(--line);border-radius:9px;padding:9px;margin-top:8px;}
+  .piece-skill-list{display:grid;gap:8px;margin-top:14px;}
+  .piece-skill-row{display:grid;grid-template-columns:minmax(130px,.7fr) minmax(230px,1.6fr) auto;gap:10px;align-items:center;background:#111522;border:1px solid var(--line);border-radius:9px;padding:10px;}
+  .piece-skill-name{font-weight:bold;font-size:13px;}.piece-skill-meta{font-size:11px;color:var(--gold);margin-top:3px;}
+  .piece-skill-desc{font-size:11px;line-height:1.55;color:#d6dbea;}.piece-skill-action{min-width:150px;text-align:right;}
+  .piece-skill-cost{display:block;color:var(--muted);font-size:10px;margin-bottom:4px;}
+  .piece-passive{opacity:.88;}
+  .hunt-intro{color:var(--muted);font-size:12px;line-height:1.65;margin-bottom:14px;}
+  .hunt-layout{display:grid;grid-template-columns:minmax(260px,.9fr) minmax(320px,1.3fr);gap:14px;}
+  .hunt-panel{background:rgba(19,24,38,.94);border:1px solid var(--line);border-radius:12px;padding:14px;}
+  .hunt-panel h3{margin:0 0 10px;font-size:15px;}
+  .hunt-team-list,.hunt-zone-list{display:grid;gap:8px;}
+  .hunt-choice{border:1px solid var(--line);border-radius:9px;padding:10px;background:#111522;cursor:pointer;font-size:12px;line-height:1.5;}
+  .hunt-choice.selected{border-color:var(--gold);box-shadow:0 0 0 1px var(--gold) inset;background:#25233a;}
+  .hunt-status{margin-top:12px;border:1px solid #536487;border-radius:10px;padding:12px;background:#0f1422;line-height:1.65;font-size:12px;}
+  .hunt-timer{font-size:20px;font-weight:bold;color:var(--gold);margin:6px 0;}
+  @media(max-width:700px){.piece-detail-top,.hunt-layout{grid-template-columns:1fr}.piece-detail-art{width:135px;height:190px;margin:auto}.piece-stat-grid{grid-template-columns:repeat(2,1fr)}.piece-skill-row{grid-template-columns:1fr}.piece-skill-action{text-align:left}.piece-skill-action .btn{width:100%}}
   @media (pointer:coarse){
     body.battle-mode .btn, body.battle-mode .btn.slotbtn, body.battle-mode .btn.movebtn{min-height:38px;}
     body.battle-mode #actConfirmBtn{min-height:70px;}
@@ -1912,6 +1951,11 @@
             <span class="lobby-btn-icon">🧩</span>
             <span class="lobby-btn-label">棋子</span>
             <span class="lobby-btn-desc">查看已擁有的棋子與培養進度</span>
+          </button>
+          <button type="button" class="lobby-btn" id="lobbyHuntBtn">
+            <span class="lobby-btn-icon">🏹</span>
+            <span class="lobby-btn-label">狩獵</span>
+            <span class="lobby-btn-desc">派遣隊伍取得劍／槍／法／願之碎片</span>
           </button>
           <!-- 使用者要求「新增商店：可以課金或用金幣購買卡片」：除了4張基本花色牌，其餘
                招式卡改成需要在這裡花金幣解鎖才能放進卡組（見組卡畫面 renderDeckBuild() 的
@@ -2148,6 +2192,40 @@
     <div id="confirm-row">
       <button type="button" class="btn small" id="collectionBackBtn">◂ 返回大廳</button>
       <button type="button" class="btn primary" id="collectionGoGachaBtn">✨ 前往召喚</button>
+    </div>
+  </div>
+
+  <!-- 棋子培養：能力值、技能等級、升星與碎片強化集中於此。 -->
+  <div id="screen-pieces" class="hidden panel">
+    <h2 style="margin-top:0;font-size:22px;">🧩 棋子</h2>
+    <div style="color:var(--muted);font-size:12px;">點擊已擁有的棋子查看能力值與技能，並使用結晶或碎片進行培養。</div>
+    <div id="piecesResourceStrip" class="resource-strip"></div>
+    <div id="piecesGrid"></div>
+    <div id="confirm-row">
+      <button type="button" class="btn small" id="piecesBackBtn">◂ 返回大廳</button>
+      <button type="button" class="btn primary" id="piecesGoHuntBtn">🏹 前往狩獵</button>
+    </div>
+  </div>
+
+  <div id="pieceDetailBackdrop" class="hidden">
+    <div class="piece-detail-panel">
+      <div class="bl-head"><div class="bl-title" id="pieceDetailTitle">棋子培養</div><button type="button" class="btn small" id="pieceDetailCloseBtn">✕</button></div>
+      <div id="pieceDetailContent"></div>
+    </div>
+  </div>
+
+  <!-- 狩獵：同一時間只能派遣一支隊伍，完成後領取指定種類的技能碎片。 -->
+  <div id="screen-hunt" class="hidden panel">
+    <h2 style="margin-top:0;font-size:22px;">🏹 狩獵</h2>
+    <div class="hunt-intro">派遣一支已儲存的隊伍狩獵 30 分鐘。完成後可獲得與隊伍人數相同數量的指定碎片（1～3 枚）；同一時間只能進行一場狩獵。</div>
+    <div id="huntResourceStrip" class="resource-strip"></div>
+    <div class="hunt-layout">
+      <div class="hunt-panel"><h3>1. 選擇隊伍</h3><div id="huntTeamList" class="hunt-team-list"></div></div>
+      <div class="hunt-panel"><h3>2. 選擇狩獵區域</h3><div id="huntZoneList" class="hunt-zone-list"></div><div id="huntStatus" class="hunt-status"></div></div>
+    </div>
+    <div id="confirm-row">
+      <button type="button" class="btn small" id="huntBackBtn">◂ 返回大廳</button>
+      <button type="button" class="btn primary" id="huntPiecesBtn">🧩 棋子培養</button>
     </div>
   </div>
 
@@ -3464,10 +3542,12 @@ function starUpWithCrystals(id){
 // ・注意：戰鬥中敵我雙方的unit都會查這份等級表；目前全部都是LV1所以無感，未來開放升級後，
 //   AI敵人／連線對手的等級來源要另外定義（不能直接吃本機玩家的等級表）。
 const MOVE_LEVELS_KEY = 'chanceboard_move_levels_v1';
+const SKILL_FRAGMENTS_KEY = 'chanceboard_skill_fragments_v1';
 const MIN_MOVE_LEVEL = 1;
 const MAX_MOVE_LEVEL = 5;
 const MOVE_POWER_BONUS_PER_LEVEL = 0.05; // 每級+5%威力（LV1無加成，LV5=+20%）
-const LEVELED_MOVE_SLOTS = ['劍','槍','法']; // 願／被動不吃威力等級
+const LEVELED_MOVE_SLOTS = ['劍','槍','法','願']; // 被動不升級；願招強化威力與可量化效果
+const SKILL_FRAGMENT_ICON = {劍:'🗡️',槍:'🔫',法:'🔮',願:'🌟'};
 // moveInfoRowHtml 傳的是英文槽名（sword/gun/magic…），戰鬥中 move.slot 是中文（劍/槍/法/願/被），
 // 這裡統一轉成中文再查表。
 function normalizeMoveSlot(slot){ return SLOT_LABEL[slot] || slot; }
@@ -3480,7 +3560,17 @@ function loadMoveLevels(){
   } catch(e){ return {}; }
 }
 function saveMoveLevels(){ try{ localStorage.setItem(MOVE_LEVELS_KEY, JSON.stringify(moveLevels)); }catch(e){} }
-let moveLevels = loadMoveLevels(); // { charId: {劍:1, 槍:1, 法:1} }
+let moveLevels = loadMoveLevels(); // { charId: {劍:1, 槍:1, 法:1, 願:1} }
+function loadSkillFragments(){
+  try{
+    const obj=JSON.parse(localStorage.getItem(SKILL_FRAGMENTS_KEY)||'{}');
+    const out={}; LEVELED_MOVE_SLOTS.forEach(slot=>out[slot]=Math.max(0,Math.floor(Number(obj[slot])||0))); return out;
+  }catch(e){ return {劍:0,槍:0,法:0,願:0}; }
+}
+let skillFragments=loadSkillFragments();
+function saveSkillFragments(){ try{localStorage.setItem(SKILL_FRAGMENTS_KEY,JSON.stringify(skillFragments));}catch(e){} }
+function skillFragmentAmount(slot){ return Math.max(0,Math.floor(Number(skillFragments[normalizeMoveSlot(slot)])||0)); }
+function moveLevelUpCost(currentLevel){ return Math.max(2,Math.min(8,Number(currentLevel)||1)*2); }
 function moveSkillLevel(charId, slot){
   const zh = normalizeMoveSlot(slot);
   if(!LEVELED_MOVE_SLOTS.includes(zh)) return MIN_MOVE_LEVEL;
@@ -3492,6 +3582,20 @@ function moveSkillPowerMultiplier(charId, slot){
   const zh = normalizeMoveSlot(slot);
   if(!LEVELED_MOVE_SLOTS.includes(zh)) return 1;
   return 1 + (moveSkillLevel(charId, zh) - MIN_MOVE_LEVEL) * MOVE_POWER_BONUS_PER_LEVEL;
+}
+function upgradeMoveSkillLocal(charId, slot){
+  const zh=normalizeMoveSlot(slot),lv=moveSkillLevel(charId,zh);
+  if(!isCharOwned(charId) || !LEVELED_MOVE_SLOTS.includes(zh) || lv>=MAX_MOVE_LEVEL) return false;
+  const cost=moveLevelUpCost(lv);
+  if(skillFragmentAmount(zh)<cost) return false;
+  skillFragments[zh]=skillFragmentAmount(zh)-cost;
+  if(!moveLevels[charId] || typeof moveLevels[charId]!=='object') moveLevels[charId]={};
+  moveLevels[charId][zh]=lv+1;
+  saveSkillFragments(); saveMoveLevels();
+  return true;
+}
+function moveSkillEffectMultiplier(charId,slot){
+  return normalizeMoveSlot(slot)==='願' ? 1+(moveSkillLevel(charId,'願')-MIN_MOVE_LEVEL)*MOVE_POWER_BONUS_PER_LEVEL : 1;
 }
 // 戰鬥實際使用的威力＝招式基礎威力 × 技能等級倍率（四捨五入成整數，跟其他數值的呈現慣例一致）。
 function effectiveMovePower(charId, move){
@@ -4282,10 +4386,22 @@ function resolveOpTarget(code, ctx){
   }
 }
 
+function scaledMoveEffectOp(op,scale){
+  if(!scale || scale===1) return op;
+  const next=Object.assign({},op,{_effectScale:scale});
+  ['percent','amount','base','perDead','healFlat'].forEach(key=>{ if(typeof next[key]==='number') next[key]*=scale; });
+  if(typeof next.value==='number') next.value*=scale;
+  if(typeof next.chance==='number') next.chance=Math.min(1,next.chance*scale);
+  if(typeof next.durSec==='number' && next.durSec<100000) next.durSec*=scale;
+  if(Array.isArray(next.durSecRange)) next.durSecRange=next.durSecRange.map(n=>typeof n==='number'?n*scale:n);
+  if(Array.isArray(next.durByDist)) next.durByDist=next.durByDist.map(n=>typeof n==='number'?n*scale:n);
+  return next;
+}
 function executeOps(mover, moveTarget, ops, ctx){
   ctx = Object.assign({mover, moveTarget, ownTeam: mover.side==='A'?state.teamA:state.teamB,
     enemyTeam: mover.side==='A'?state.teamB:state.teamA}, ctx||{});
-  ops.forEach(op=>runOp(op, ctx));
+  const scale=Number(ctx.effectScale)||1;
+  ops.forEach(op=>runOp(scaledMoveEffectOp(op,scale), ctx));
 }
 
 function runOp(op, ctx){
@@ -4429,7 +4545,7 @@ function runOp(op, ctx){
     case 'clearStatuses':
       targets.forEach(t=>{
         const n = clearAllStatuses(t);
-        const countHeal = op.healCountBonus ? n*100 : 0;
+        const countHeal = op.healCountBonus ? Math.round(n*100*(op._effectScale||1)) : 0;
         if(op.healFlat) t.hp = Math.min(t.maxHp, t.hp+op.healFlat);
         if(countHeal){ t.hp = Math.min(t.maxHp, t.hp+countHeal); queueHealEffect(t, countHeal); }
         addLog('fx', unitName(t)+' 解除了全部狀態'+(op.healFlat?'，回復 '+op.healFlat+' 點血量':'')+(op.healCountBonus?'，回復 '+countHeal+' 點血量':''));
@@ -4540,6 +4656,7 @@ function runChargeDetonate(ctx){
       const isMaxed = stacks>=CHARGE_STACK_CAP;
       let dmg = Math.max(100, Math.round(u.maxHp*CHARGE_DETONATE_PCT_PER_STACK*stacks)); // 數值放大：下限 1→100
       if(isMaxed) dmg *= 2;
+      dmg=Math.round(dmg*(Number(ctx.effectScale)||1));
       applyDamage(ctx.mover, u, dmg, ctx.moveName);
       removeStatusKey(u, '帶電');
       addLog('dmg', unitName(u)+' 的帶電狀態('+stacks+'層)被引爆'+(isMaxed?'　（滿層雙倍傷害）':'')+'，受到 <span class="dmg">'+dmg+'</span> 點傷害'+(u.hp<=0?'　→ <b>陣亡</b>':''));
@@ -5793,7 +5910,7 @@ function resolveMove(unit, move, ownTeam, enemyTeam){
 
   if(move.rangeType==null || move.powerRatio==null){
     // pure support / self-team move (願-slot non-damaging, or passive-like active)
-    const ctx = {mover:unit, moveTarget:null, ownTeam, enemyTeam, moveName:move.name};
+    const ctx = {mover:unit, moveTarget:null, ownTeam, enemyTeam, moveName:move.name,effectScale:moveSkillEffectMultiplier(unit.baseId,move.slot)};
     if(move.effectOps && move.effectOps.length){
       const chance = move.effectChance!=null?move.effectChance:1;
       if(Math.random()<=chance){
@@ -5821,7 +5938,7 @@ function resolveMove(unit, move, ownTeam, enemyTeam){
   const phantomActive = hasStatus(unit,'魅影模式') || unit.phantomNextDoubleMove;
   let phantomHit = false;
   hitTargets.forEach(target=>{
-    const ctx = {mover:unit, moveTarget:target, ownTeam, enemyTeam, moveName:move.name, actionEffectFlags};
+    const ctx = {mover:unit, moveTarget:target, ownTeam, enemyTeam, moveName:move.name, actionEffectFlags,effectScale:moveSkillEffectMultiplier(unit.baseId,move.slot)};
     // preHit ops run before damage (e.g. HP swap)
     if(move.effectTrigger==='preHit' && move.effectOps && move.effectOps.length) executeOps(unit, target, move.effectOps, ctx);
     if(!target.alive) return;
@@ -5864,7 +5981,7 @@ function resolveMove(unit, move, ownTeam, enemyTeam){
     const passive = unit.moves.passive;
     if(target.alive && passive && passive.effectTrigger==='onHit' && passive.effectOps && passive.effectOps.length){
       const pChance = passive.effectChance!=null?passive.effectChance:1;
-      if(Math.random()<=pChance) executeOps(unit, target, passive.effectOps, ctx);
+      if(Math.random()<=pChance) executeOps(unit, target, passive.effectOps, Object.assign({},ctx,{effectScale:1}));
     }
   });
   if(phantomActive && phantomHit){
@@ -5878,7 +5995,7 @@ function resolveMove(unit, move, ownTeam, enemyTeam){
   if(move.effectTrigger==='postAction' && move.effectOps && move.effectOps.length){
     const chance=move.effectChance!=null?move.effectChance:1;
     if(Math.random()<=chance){
-      executeOps(unit, null, move.effectOps, {mover:unit, moveTarget:null, ownTeam, enemyTeam, moveName:move.name});
+      executeOps(unit, null, move.effectOps, {mover:unit, moveTarget:null, ownTeam, enemyTeam, moveName:move.name,effectScale:moveSkillEffectMultiplier(unit.baseId,move.slot)});
     }
   }
   // One cast flourish for the whole move-use (not per-target — a group-hit move shouldn't
@@ -6823,7 +6940,7 @@ function finishByTimeCap(){
 // 平行的頂層畫面（大廳／隊伍列表／隊伍挑選），統一用這組 helper 切換，不用每個切換的地方都重複寫
 // 一長串 classList.add('hidden')／remove('hidden')，以後再新增畫面也只要把 id 加進
 // TOP_SCREEN_IDS，不用改任何切換邏輯。
-const TOP_SCREEN_IDS = ['screen-login','screen-lobby','screen-teamlist','screen-teampick','screen-gacha','screen-collection','screen-shop','screen-select','screen-deckbuild','screen-battle','screen-end'];
+const TOP_SCREEN_IDS = ['screen-login','screen-lobby','screen-teamlist','screen-teampick','screen-gacha','screen-collection','screen-pieces','screen-hunt','screen-shop','screen-select','screen-deckbuild','screen-battle','screen-end'];
 function hideAllTopScreens(){
   TOP_SCREEN_IDS.forEach(id=>{ const el=document.getElementById(id); if(el) el.classList.add('hidden'); });
 }
@@ -6852,6 +6969,8 @@ function showTopScreen(id){
   document.body.classList.toggle('gacha-mode', id==='screen-gacha');
   // 使用者要求「把我的收藏改成在大廳獨立的按鈕」：收藏畫面拆出來後一樣走同一套hub視覺。
   document.body.classList.toggle('collection-mode', id==='screen-collection');
+  document.body.classList.toggle('pieces-mode', id==='screen-pieces');
+  document.body.classList.toggle('hunt-mode', id==='screen-hunt');
   // 使用者要求「新增商店：可以課金或用金幣購買卡片」：商店畫面一樣走同一套hub視覺。
   document.body.classList.toggle('shop-mode', id==='screen-shop');
 }
@@ -6984,6 +7103,55 @@ function goToCollection(){
   showTopScreen('screen-collection');
   renderGachaCollectionGrid();
 }
+
+/* ============ 棋子培養／技能碎片／狩獵 ============ */
+const HUNT_STATE_KEY='chanceboard_hunt_state_v1';
+const HUNT_DURATION_MS=30*60*1000;
+let huntState=loadHuntState(),huntSelectedTeamId=null,huntSelectedSlot='劍',huntTicker=null,currentPieceDetailId=null;
+function loadHuntState(){try{const v=JSON.parse(localStorage.getItem(HUNT_STATE_KEY)||'null');return v&&typeof v==='object'?v:null;}catch(e){return null;}}
+function saveHuntState(){try{if(huntState)localStorage.setItem(HUNT_STATE_KEY,JSON.stringify(huntState));else localStorage.removeItem(HUNT_STATE_KEY);}catch(e){}}
+function skillResourcesHtml(){return '<span class="resource-chip">💠 願望結晶 <b>'+wishCrystals+'</b></span>'+LEVELED_MOVE_SLOTS.map(slot=>'<span class="resource-chip">'+SKILL_FRAGMENT_ICON[slot]+' '+slot+'之碎片 <b>'+skillFragmentAmount(slot)+'</b></span>').join('');}
+function renderSkillResourceStrips(){['piecesResourceStrip','huntResourceStrip'].forEach(id=>{const el=document.getElementById(id);if(el)el.innerHTML=skillResourcesHtml();});}
+function goToPieces(){showTopScreen('screen-pieces');renderPiecesScreen();}
+function renderPiecesScreen(){
+  renderSkillResourceStrips();const grid=document.getElementById('piecesGrid'),owned=DB.characters.filter(c=>isCharOwned(c.id));
+  if(!owned.length){grid.innerHTML='<div class="hunt-panel">目前尚未擁有棋子，請先完成召喚。</div>';return;}
+  grid.innerHTML=owned.map(c=>{const star=charStarLevel(c.id),mul=charStatMultiplier(c.id);return '<div class="piece-manage-card" data-char-id="'+c.id+'"><img src="'+charFullThumbSrc(c.id)+'" alt="" onerror="'+charFullThumbOnErrorAttr(c.id)+'"><div class="piece-manage-card-body"><div class="piece-manage-name">'+escHtml(stripParenAlias(c.name))+'</div><div class="piece-manage-stars">'+('★'.repeat(star))+'<span style="opacity:.28">'+('★'.repeat(MAX_CHAR_STARS-star))+'</span></div><div class="piece-manage-stats">HP '+Math.round(c.hp*mul)+'　ATK '+Math.round(c.atk*mul)+'<br>DEF '+Math.round(c.def*mul)+'　SPD '+c.spd+'</div></div></div>';}).join('');
+  grid.querySelectorAll('[data-char-id]').forEach(el=>el.onclick=()=>openPieceDetail(el.dataset.charId));
+}
+function pieceMoveSummary(c,move){const parts=[];if(move.powerRatio!=null)parts.push('威力 '+effectiveMovePower(c.id,move));if(move.hitRate!=null)parts.push('命中 '+Math.round(move.hitRate*100)+'%');if(move.critRate)parts.push('爆擊 '+Math.round(move.critRate*100)+'%');if(move.condition!=null)parts.push('條件 '+move.condition);if(move.cooldown!=null)parts.push('冷卻 '+move.cooldown+' 回合');return parts.join('　');}
+function openPieceDetail(charId){currentPieceDetailId=charId;renderPieceDetail(charId);document.getElementById('pieceDetailBackdrop').classList.remove('hidden');}
+function closePieceDetail(){document.getElementById('pieceDetailBackdrop').classList.add('hidden');currentPieceDetailId=null;}
+function renderPieceDetail(charId){
+  const c=CHAR_BY_ID[charId];if(!c||!isCharOwned(charId))return;const star=charStarLevel(charId),statMul=charStatMultiplier(charId);
+  document.getElementById('pieceDetailTitle').textContent='🧩 '+stripParenAlias(c.name);
+  const order={'劍':0,'槍':1,'法':2,'願':3,'被':4},moves=(MOVES_BY_OWNER[charId]||[]).slice().sort((a,b)=>(order[a.slot]??9)-(order[b.slot]??9));
+  const starCost=star<MAX_CHAR_STARS?crystalCostForNextStar(star):0,starButton=star<MAX_CHAR_STARS?'<button type="button" class="btn small" id="pieceStarUpBtn"'+(wishCrystals>=starCost?'':' disabled')+'>升至 ★'+(star+1)+'（💠'+starCost+'）</button>':'<span style="color:var(--good)">已滿星（HP／ATK／DEF +20%）</span>';
+  const skillHtml=moves.map(move=>{
+    if(move.slot==='被')return '<div class="piece-skill-row piece-passive"><div><div class="piece-skill-name">🔸 '+escHtml(stripParenAlias(move.name))+'</div><div class="piece-skill-meta">被動技能</div></div><div class="piece-skill-desc">'+escHtml(move.description||'無描述')+'</div><div></div></div>';
+    const lv=moveSkillLevel(charId,move.slot),bonus=(lv-1)*5,cost=lv<MAX_MOVE_LEVEL?moveLevelUpCost(lv):0,have=skillFragmentAmount(move.slot),effectText=move.slot==='願'?'願效果 +'+bonus+'%':'威力 +'+bonus+'%';
+    const action=lv<MAX_MOVE_LEVEL?'<span class="piece-skill-cost">持有 '+SKILL_FRAGMENT_ICON[move.slot]+have+'／需要 '+cost+'</span><button type="button" class="btn small piece-skill-up" data-slot="'+move.slot+'"'+(have>=cost?'':' disabled')+'>提升至 LV'+(lv+1)+'</button>':'<span style="color:var(--good)">技能已滿級</span>';
+    return '<div class="piece-skill-row"><div><div class="piece-skill-name">'+(CLASS_ICON[move.slot]||'🔹')+' '+escHtml(stripParenAlias(move.name))+'</div><div class="piece-skill-meta">LV'+lv+'/'+MAX_MOVE_LEVEL+'　'+effectText+'</div></div><div class="piece-skill-desc">'+escHtml(move.description||'無描述')+'<br><span style="color:var(--muted)">'+pieceMoveSummary(c,move)+'</span></div><div class="piece-skill-action">'+action+'</div></div>';
+  }).join('');
+  document.getElementById('pieceDetailContent').innerHTML='<div class="piece-detail-top"><img class="piece-detail-art" src="images/'+charId+'_full.png" alt=""><div><h2 style="margin:0">'+escHtml(stripParenAlias(c.name))+'</h2><div style="color:var(--muted);font-size:12px">'+escHtml(c.title||'')+'　'+(ELEMENT_ICON[c.element]||'')+' '+c.element+'</div><div class="piece-stat-grid"><div class="piece-stat-cell">HP<b>'+Math.round(c.hp*statMul)+'</b></div><div class="piece-stat-cell">ATK<b>'+Math.round(c.atk*statMul)+'</b></div><div class="piece-stat-cell">DEF<b>'+Math.round(c.def*statMul)+'</b></div><div class="piece-stat-cell">SPD<b>'+c.spd+'</b></div></div><div style="font-size:10px;color:var(--muted)">基礎：HP '+c.hp+'／ATK '+c.atk+'／DEF '+c.def+'／SPD '+c.spd+'</div><div class="piece-star-row"><b style="color:var(--gold)">'+('★'.repeat(star))+'<span style="opacity:.28">'+('★'.repeat(MAX_CHAR_STARS-star))+'</span></b><span>💠 '+wishCrystals+'</span>'+starButton+'</div></div></div><div class="piece-skill-list">'+skillHtml+'</div>';
+  const starBtn=document.getElementById('pieceStarUpBtn');if(starBtn)starBtn.onclick=()=>upgradePieceStar(charId);document.querySelectorAll('#pieceDetailContent .piece-skill-up').forEach(btn=>btn.onclick=()=>upgradePieceSkill(charId,btn.dataset.slot));
+}
+async function upgradePieceStar(charId){try{if(window.__accountMode){const d=await window.__adminAccountApi('starup',{charId});if(d&&d.state&&window.__applyAccountState)window.__applyAccountState(d.state);}else if(!starUpWithCrystals(charId))return;renderPiecesScreen();renderPieceDetail(charId);}catch(e){alert('升星失敗：'+e.message);}}
+async function upgradePieceSkill(charId,slot){try{if(window.__accountMode){const d=await window.__adminAccountApi('skill-upgrade',{charId,slot});if(d&&d.state&&window.__applyAccountState)window.__applyAccountState(d.state);}else if(!upgradeMoveSkillLocal(charId,slot))return;renderSkillResourceStrips();renderPiecesScreen();renderPieceDetail(charId);}catch(e){alert('技能升級失敗：'+e.message);}}
+function goToHunt(){showTopScreen('screen-hunt');renderHuntScreen();if(!huntTicker)huntTicker=setInterval(()=>{const s=document.getElementById('screen-hunt');if(s&&!s.classList.contains('hidden'))renderHuntStatus();},1000);}
+function renderHuntScreen(){
+  renderSkillResourceStrips();if(!huntSelectedTeamId&&teams.length)huntSelectedTeamId=teams[0].id;const teamList=document.getElementById('huntTeamList');
+  teamList.innerHTML=teams.length?teams.map(team=>'<div class="hunt-choice'+(team.id===huntSelectedTeamId?' selected':'')+'" data-team-id="'+escHtml(team.id)+'"><b>'+escHtml(team.name)+'</b><br><span style="color:var(--muted)">'+team.characterIds.map(id=>CHAR_BY_ID[id]?stripParenAlias(CHAR_BY_ID[id].name):id).join('、')+'</span></div>').join(''):'<div style="color:var(--muted);font-size:12px">尚未儲存隊伍，請先到「隊伍」建立隊伍。</div>';
+  teamList.querySelectorAll('[data-team-id]').forEach(el=>el.onclick=()=>{if(huntState)return;huntSelectedTeamId=el.dataset.teamId;renderHuntScreen();});
+  const zoneNames={劍:'劍之荒野',槍:'槍之峽谷',法:'法之遺跡',願:'願之聖域'},zones=document.getElementById('huntZoneList');zones.innerHTML=LEVELED_MOVE_SLOTS.map(slot=>'<div class="hunt-choice'+(slot===huntSelectedSlot?' selected':'')+'" data-slot="'+slot+'"><b>'+SKILL_FRAGMENT_ICON[slot]+' '+zoneNames[slot]+'</b><br><span style="color:var(--muted)">取得「'+slot+'之碎片」</span></div>').join('');zones.querySelectorAll('[data-slot]').forEach(el=>el.onclick=()=>{if(huntState)return;huntSelectedSlot=el.dataset.slot;renderHuntScreen();});renderHuntStatus();
+}
+function formatHuntTime(ms){const sec=Math.max(0,Math.ceil(ms/1000)),m=Math.floor(sec/60),s=sec%60;return String(m).padStart(2,'0')+':'+String(s).padStart(2,'0');}
+function renderHuntStatus(){
+  const box=document.getElementById('huntStatus');if(!box)return;if(!huntState){const team=teams.find(t=>t.id===huntSelectedTeamId),reward=team?Math.max(1,Math.min(3,team.characterIds.length)):0;box.innerHTML='<b>準備出發</b><br>預計獲得：'+SKILL_FRAGMENT_ICON[huntSelectedSlot]+' '+huntSelectedSlot+'之碎片 ×'+reward+'<br><button type="button" class="btn primary" id="huntStartBtn" style="margin-top:9px"'+(team?'':' disabled')+'>開始狩獵（30 分鐘）</button>';const b=document.getElementById('huntStartBtn');if(b)b.onclick=startHunt;return;}
+  const left=Number(huntState.endsAt)-Date.now(),done=left<=0,team=teams.find(t=>t.id===huntState.teamId);box.innerHTML='<b>'+(done?'狩獵完成':'狩獵進行中')+'</b><br>隊伍：'+escHtml(team?team.name:huntState.teamName||'未知隊伍')+'<br>目標：'+SKILL_FRAGMENT_ICON[huntState.slot]+' '+huntState.slot+'之碎片 ×'+huntState.reward+'<div class="hunt-timer">'+(done?'可以領取':formatHuntTime(left))+'</div>'+(done?'<button type="button" class="btn primary" id="huntClaimBtn">領取碎片</button>':'');const claim=document.getElementById('huntClaimBtn');if(claim)claim.onclick=claimHunt;
+}
+async function startHunt(){const team=teams.find(t=>t.id===huntSelectedTeamId);if(!team||huntState)return;try{if(window.__accountMode){const d=await window.__adminAccountApi('hunt-start',{teamId:team.id,slot:huntSelectedSlot});if(d&&d.state&&window.__applyAccountState)window.__applyAccountState(d.state);}else{huntState={teamId:team.id,teamName:team.name,slot:huntSelectedSlot,reward:Math.max(1,Math.min(3,team.characterIds.length)),startedAt:Date.now(),endsAt:Date.now()+HUNT_DURATION_MS};saveHuntState();}renderHuntScreen();}catch(e){alert('無法開始狩獵：'+e.message);}}
+async function claimHunt(){if(!huntState||Date.now()<Number(huntState.endsAt))return;try{if(window.__accountMode){const d=await window.__adminAccountApi('hunt-claim',{});if(d&&d.state&&window.__applyAccountState)window.__applyAccountState(d.state);}else{skillFragments[huntState.slot]=skillFragmentAmount(huntState.slot)+Math.max(1,Number(huntState.reward)||1);saveSkillFragments();huntState=null;saveHuntState();}renderHuntScreen();}catch(e){alert('領取失敗：'+e.message);}}
 // 使用者要求「新增商店：可以課金或用金幣購買卡片」：招式卡（FLOWER_CARD_IDS）用金幣買，
 // 價格看cardShopPrice()（後臺可調）。買下去的永久記錄在ownedCardCounts／localStorage
 // （見上面OWNED_CARD_COUNTS_KEY那組），組卡畫面（#screen-deckbuild）之後才能把買到的卡
@@ -8492,7 +8660,8 @@ document.getElementById('gachaPoolInfoBtn').onclick = openGachaPoolInfo;
 document.getElementById('gachaPoolInfoCloseBtn').onclick = closeGachaPoolInfo;
 document.getElementById('gachaPoolInfoBackdrop').onclick = function(e){ if(e.target===this) closeGachaPoolInfo(); };
 document.getElementById('lobbyCollectionBtn').onclick = goToCollection;
-document.getElementById('lobbyPiecesBtn').onclick = goToCollection;
+document.getElementById('lobbyPiecesBtn').onclick = goToPieces;
+document.getElementById('lobbyHuntBtn').onclick = goToHunt;
 [
   ['lobbyMissionsBtn','🎯 任務'],
   ['lobbyMailboxBtn','📬 信箱'],
@@ -8503,6 +8672,12 @@ document.getElementById('lobbyPiecesBtn').onclick = goToCollection;
 });
 document.getElementById('collectionBackBtn').onclick = goToLobby;
 document.getElementById('collectionGoGachaBtn').onclick = goToGacha;
+document.getElementById('piecesBackBtn').onclick = goToLobby;
+document.getElementById('piecesGoHuntBtn').onclick = goToHunt;
+document.getElementById('huntBackBtn').onclick = goToLobby;
+document.getElementById('huntPiecesBtn').onclick = goToPieces;
+document.getElementById('pieceDetailCloseBtn').onclick = closePieceDetail;
+document.getElementById('pieceDetailBackdrop').onclick = function(e){if(e.target===this)closePieceDetail();};
 // 商店：見 goToShop()／renderShopGrid()／buyCard() 的說明。
 document.getElementById('lobbyShopBtn').onclick = goToShop;
 document.getElementById('shopBackBtn').onclick = goToLobby;
@@ -11254,8 +11429,10 @@ document.getElementById('admin1v1BattleBtn').onclick=function(){ closeAdminPanel
     if(!p) return;
     // 願望結晶（2026-07升星改制）：帳號模式的結晶餘額以伺服器為準。
     wishCrystals=Number(p.wishCrystals)||0; refreshCrystalDisplays();
-    // 招式技能等級（升級素材未開放，伺服器欄位先預留；沒有就維持空物件＝全LV1）。
+    // 招式技能等級、四類技能碎片與目前狩獵派遣都以伺服器狀態為準。
     moveLevels=p.moveLevels&&typeof p.moveLevels==='object'?p.moveLevels:{};
+    skillFragments=p.skillFragments&&typeof p.skillFragments==='object'?p.skillFragments:{劍:0,槍:0,法:0,願:0};
+    huntState=p.huntState&&typeof p.huntState==='object'?p.huntState:null;
     if(typeof p.playerName==='string'){
       playerName=p.playerName; window.__playerName=playerName;
       try{ if(playerName)localStorage.setItem(PLAYER_NAME_KEY,playerName);else localStorage.removeItem(PLAYER_NAME_KEY); }catch(e){}
@@ -11280,6 +11457,9 @@ document.getElementById('admin1v1BattleBtn').onclick=function(){ closeAdminPanel
     refreshCurrencyDisplays();
     if(typeof renderGachaCollectionGrid==='function' && document.getElementById('gachaCollectionGrid')) renderGachaCollectionGrid();
     if(typeof renderShopGrid==='function' && document.getElementById('shopCardGrid')) renderShopGrid();
+    if(typeof renderSkillResourceStrips==='function') renderSkillResourceStrips();
+    if(typeof renderPiecesScreen==='function' && document.getElementById('screen-pieces')&&!document.getElementById('screen-pieces').classList.contains('hidden')) renderPiecesScreen();
+    if(typeof renderHuntScreen==='function' && document.getElementById('screen-hunt')&&!document.getElementById('screen-hunt').classList.contains('hidden')) renderHuntScreen();
   }
   // 圖鑑升星按鈕（renderGalleryStarup）在帳號模式下需要把伺服器回傳的最新狀態套回來。
   window.__applyAccountState=applyAccountState;
