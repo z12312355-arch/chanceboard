@@ -9322,11 +9322,15 @@ function tutorialInjectStyle(){
     +"#tutorialCenter{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;padding:24px;pointer-events:none;z-index:5;}"
     +"#tutorialCenterCard{pointer-events:auto;max-width:560px;width:100%;background:rgba(18,20,28,.94);border:1px solid #333850;border-radius:16px;padding:28px 24px;color:#f0f0f5;text-align:center;box-shadow:0 12px 40px rgba(0,0,0,.55);}"
     +"#tutorialCenterCard h3{margin:0 0 14px;font-size:20px;letter-spacing:2px;}"
+    +".tutorial-guide-title{line-height:1.45;letter-spacing:1px!important;}"
     +".tutorial-faction-btns{display:flex;gap:16px;justify-content:center;margin-top:18px;}"
-    +".tutorial-faction-btn{flex:1;padding:18px 10px;border-radius:12px;border:2px solid #333850;cursor:pointer;font-size:18px;font-weight:bold;transition:transform .15s;background:#1c1f2b;color:#fff;}"
+    +".tutorial-faction-btn{flex:1;min-width:0;padding:0 10px 12px;overflow:hidden;border-radius:12px;border:2px solid #333850;cursor:pointer;font-size:18px;font-weight:bold;transition:transform .15s;background:#1c1f2b;color:#fff;}"
+    +".tutorial-faction-art{display:block;width:100%;height:clamp(130px,28vh,210px);object-fit:contain;object-position:center bottom;pointer-events:none;filter:drop-shadow(0 8px 10px rgba(0,0,0,.55));}"
+    +".tutorial-faction-name{display:block;padding-top:8px;letter-spacing:2px;}"
     +".tutorial-faction-btn:hover{transform:translateY(-3px);}"
     +".tutorial-faction-btn.tf-black{border-color:#3a6cff;background:linear-gradient(160deg,#0c0d12,#132043);color:#8fb3ff;}"
     +".tutorial-faction-btn.tf-white{border-color:#ff5a6a;background:linear-gradient(160deg,#2a2a2e,#3a1418);color:#ffb3ba;}"
+    +"@media(max-width:480px){#tutorialCenter{padding:12px;}#tutorialCenterCard{padding:20px 14px;}#tutorialCenterCard .tutorial-guide-title{font-size:17px;}.tutorial-faction-btns{gap:10px;}.tutorial-faction-btn{padding-left:5px;padding-right:5px;}.tutorial-faction-name{font-size:16px;}}"
     +"#tutorialBox{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);width:min(640px,92vw);pointer-events:auto;background:rgba(14,15,22,.95);border:2px solid #333850;border-radius:16px;padding:16px 20px;color:#f0f0f5;box-shadow:0 10px 32px rgba(0,0,0,.55);cursor:pointer;z-index:5;}"
     +"#tutorialBox.hidden{display:none;}"
     +"#tutorialSpeaker{font-weight:bold;font-size:15px;margin-bottom:6px;display:flex;align-items:center;gap:8px;}"
@@ -9632,10 +9636,16 @@ function tutorialShowFactionChoice(){
   const card = document.getElementById('tutorialCenterCard');
   card.style.display = 'block';
   card.innerHTML =
-    '<h3>請選擇你的陣營</h3>'+
+    '<h3 class="tutorial-guide-title">請選擇一位嚮導進行新手教學</h3>'+
     '<div class="tutorial-faction-btns">'+
-      '<button type="button" class="tutorial-faction-btn tf-black" id="tutorialPickBlack">⚫ 黑</button>'+
-      '<button type="button" class="tutorial-faction-btn tf-white" id="tutorialPickWhite">⚪ 白</button>'+
+      '<button type="button" class="tutorial-faction-btn tf-black" id="tutorialPickBlack" aria-label="選擇小黑作為嚮導">'+
+        '<img class="tutorial-faction-art" src="images/demon_01_full.png" alt="小黑">'+
+        '<span class="tutorial-faction-name">小黑</span>'+
+      '</button>'+
+      '<button type="button" class="tutorial-faction-btn tf-white" id="tutorialPickWhite" aria-label="選擇小白作為嚮導">'+
+        '<img class="tutorial-faction-art" src="images/demon_02_full.png" alt="小白">'+
+        '<span class="tutorial-faction-name">小白</span>'+
+      '</button>'+
     '</div>';
   const overlay = document.getElementById('tutorialOverlay');
   overlay.classList.add('active');
@@ -9650,7 +9660,7 @@ async function tutorialChooseFaction(faction){
   factionButtons.forEach(function(button){button.disabled=true;});
   tutorialFaction = faction;
   try{ await saveTutorialFaction(faction); }
-  catch(e){ factionButtons.forEach(function(button){button.disabled=false;});alert('陣營尚未同步成功：'+e.message+'\n請確認網路後再選一次。'); return; }
+  catch(e){ factionButtons.forEach(function(button){button.disabled=false;});alert('嚮導尚未同步成功：'+e.message+'\n請確認網路後再選一次。'); return; }
   document.getElementById('tutorialCenterCard').style.display = 'none';
   tutorialSetSceneArt(faction);
   tutorialSayGreeting();
