@@ -156,6 +156,10 @@
     background:linear-gradient(180deg, rgba(42,46,64,.55), rgba(30,33,46,.65));
     border:1px solid rgba(242,193,78,.22);border-radius:10px;}
   #lobbyBtnSecondary .lobby-btn:hover{border-color:var(--gold);box-shadow:0 0 14px rgba(242,193,78,.25);transform:translateY(-2px);}
+  #lobbyBtnSecondary .lobby-btn-upcoming{position:relative;border-color:rgba(151,163,190,.24);}
+  #lobbyBtnSecondary .lobby-btn-upcoming::after{content:'開發中';position:absolute;top:4px;right:5px;
+    padding:1px 4px;border-radius:6px;background:rgba(10,12,18,.82);border:1px solid rgba(151,163,190,.35);
+    color:var(--muted);font-size:8px;line-height:1.25;text-shadow:none;}
   #lobbyBtnSecondary .lobby-btn-icon{font-size:19px;}
   #lobbyBtnSecondary .lobby-btn-label{font-size:12.5px;}
   #lobbyBtnSecondary .lobby-btn-desc{display:none;}
@@ -1904,6 +1908,11 @@
             <span class="lobby-btn-label">收藏</span>
             <span class="lobby-btn-desc">查看已召喚的角色與升星進度</span>
           </button>
+          <button type="button" class="lobby-btn" id="lobbyPiecesBtn">
+            <span class="lobby-btn-icon">🧩</span>
+            <span class="lobby-btn-label">棋子</span>
+            <span class="lobby-btn-desc">查看已擁有的棋子與培養進度</span>
+          </button>
           <!-- 使用者要求「新增商店：可以課金或用金幣購買卡片」：除了4張基本花色牌，其餘
                招式卡改成需要在這裡花金幣解鎖才能放進卡組（見組卡畫面 renderDeckBuild() 的
                鎖定樣式），位置排在收藏後面——邏輯上跟「先召喚角色→再組卡組」同一條引導
@@ -1937,6 +1946,26 @@
             <span class="lobby-btn-icon">👥</span>
             <span class="lobby-btn-label">好友</span>
             <span class="lobby-btn-desc">新增與管理好友（最多 50 人）</span>
+          </button>
+          <button type="button" class="lobby-btn lobby-btn-upcoming" id="lobbyMissionsBtn">
+            <span class="lobby-btn-icon">🎯</span>
+            <span class="lobby-btn-label">任務</span>
+            <span class="lobby-btn-desc">完成每日與成長任務</span>
+          </button>
+          <button type="button" class="lobby-btn lobby-btn-upcoming" id="lobbyMailboxBtn">
+            <span class="lobby-btn-icon">📬</span>
+            <span class="lobby-btn-label">信箱</span>
+            <span class="lobby-btn-desc">接收系統通知與獎勵</span>
+          </button>
+          <button type="button" class="lobby-btn lobby-btn-upcoming" id="lobbyAchievementsBtn">
+            <span class="lobby-btn-icon">🏆</span>
+            <span class="lobby-btn-label">成就</span>
+            <span class="lobby-btn-desc">查看成就與完成進度</span>
+          </button>
+          <button type="button" class="lobby-btn lobby-btn-upcoming" id="lobbyAnnouncementsBtn">
+            <span class="lobby-btn-icon">📢</span>
+            <span class="lobby-btn-label">公告</span>
+            <span class="lobby-btn-desc">查看遊戲更新與活動消息</span>
           </button>
           <button type="button" class="lobby-btn" id="lobbyRulesBtn">
             <span class="lobby-btn-icon">📖</span>
@@ -8462,6 +8491,15 @@ document.getElementById('gachaPoolInfoBtn').onclick = openGachaPoolInfo;
 document.getElementById('gachaPoolInfoCloseBtn').onclick = closeGachaPoolInfo;
 document.getElementById('gachaPoolInfoBackdrop').onclick = function(e){ if(e.target===this) closeGachaPoolInfo(); };
 document.getElementById('lobbyCollectionBtn').onclick = goToCollection;
+document.getElementById('lobbyPiecesBtn').onclick = goToCollection;
+[
+  ['lobbyMissionsBtn','🎯 任務'],
+  ['lobbyMailboxBtn','📬 信箱'],
+  ['lobbyAchievementsBtn','🏆 成就'],
+  ['lobbyAnnouncementsBtn','📢 公告']
+].forEach(function(entry){
+  document.getElementById(entry[0]).onclick = function(){ alert(entry[1]+'功能正在開發中，敬請期待。'); };
+});
 document.getElementById('collectionBackBtn').onclick = goToLobby;
 document.getElementById('collectionGoGachaBtn').onclick = goToGacha;
 // 商店：見 goToShop()／renderShopGrid()／buyCard() 的說明。
