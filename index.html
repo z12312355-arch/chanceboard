@@ -2446,6 +2446,7 @@ const STATUS_BY_NAME = {}; DB.statuses.forEach(s=>STATUS_BY_NAME[s.name]=s);
 const DECKW_BY_CARDID = {}; DB.deckWeights.forEach(w=>DECKW_BY_CARDID[w.cardId]=w);
 
 let globalEconomySettings = {dailyGold:200,dailyDiamond:5,goldGachaOneCost:100,goldGachaTenCost:1000,diamondGachaOneCost:10,diamondGachaTenCost:100};
+const CURRENT_BALANCE_VERSION = 2;
 let globalIntroStory = {
   black:['哈哈，歡迎加入黑方，我是小黑。','對了，你叫什麼？','……原來如此。','從今天開始，我就叫你『{name}』了。','可別太早死啊。'],
   white:['歡迎加入白方，我是小白。','在開始旅程之前。','請告訴我你的名字。','{name}。','我記住了。','希望有一天，大家都能記住這個名字。']
@@ -2453,14 +2454,20 @@ let globalIntroStory = {
 const TUTORIAL_SIDE_TEXT_KEYS = ['pickIntro','afterPick','goldIntro','goldOffer','afterGold','diamondIntro','diamondOffer','afterDiamond','teamIntro','teamPick3','teamDeck','afterTeam','battleIntro','battlePickTeam','afterBattleWin','afterBattleLose','returnLobby','ending'];
 function applyGlobalGameConfig(config){
   if(!config || typeof config!=='object') return;
-  ['characters','moves','cards'].forEach(function(key){
-    if(!Array.isArray(config[key])) return;
-    const liveList=DB[key]||[];
-    config[key].forEach(function(saved){
-      const live=liveList.find(function(item){ return String(item.id)===String(saved && saved.id); });
-      if(live && saved && typeof saved==='object') Object.assign(live,saved);
+  // D1 rows created before the large-number balance rework contain a complete
+  // snapshot of the old HP/power/flower-card data. Do not let that legacy snapshot
+  // overwrite the new bundled combat database. Story/economy values below remain
+  // editable and continue to load normally. The next admin save writes v2.
+  if(Number(config.balanceVersion||1)>=CURRENT_BALANCE_VERSION){
+    ['characters','moves','cards'].forEach(function(key){
+      if(!Array.isArray(config[key])) return;
+      const liveList=DB[key]||[];
+      config[key].forEach(function(saved){
+        const live=liveList.find(function(item){ return String(item.id)===String(saved && saved.id); });
+        if(live && saved && typeof saved==='object') Object.assign(live,saved);
+      });
     });
-  });
+  }
   if(config.settings && typeof config.settings==='object') globalEconomySettings=Object.assign({},globalEconomySettings,config.settings);
   if(config.introStory && typeof config.introStory==='object'){
     ['black','white'].forEach(function(side){ if(Array.isArray(config.introStory[side])) globalIntroStory[side]=config.introStory[side].map(String); });
@@ -2490,7 +2497,7 @@ function applyGlobalGameConfig(config){
   if(typeof renderShopGrid==='function' && document.getElementById('shopCardGrid')) renderShopGrid();
 }
 function globalGameConfigPayload(){
-  return {characters:DB.characters,moves:DB.moves,cards:DB.cards,settings:globalEconomySettings,introStory:globalIntroStory,tutorialStory:JSON.parse(JSON.stringify(TUTORIAL_LINES))};
+  return {balanceVersion:CURRENT_BALANCE_VERSION,characters:DB.characters,moves:DB.moves,cards:DB.cards,settings:globalEconomySettings,introStory:globalIntroStory,tutorialStory:JSON.parse(JSON.stringify(TUTORIAL_LINES))};
 }
 const SUIT_CARD_IDS = DB.cards.filter(c=>c.isSuitCard).map(c=>c.id); // ['001'..'004']
 const FLOWER_CARD_IDS = DB.cards.filter(c=>!c.isSuitCard).map(c=>c.id);

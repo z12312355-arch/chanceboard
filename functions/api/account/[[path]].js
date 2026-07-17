@@ -38,6 +38,7 @@ function isAdminUser(env, user) {
 }
 function defaultGlobalConfig() {
   return {
+    balanceVersion: 2,
     characters: null, moves: null, cards: null,
     introStory: {
       black: ['哈哈，歡迎加入黑方，我是小黑。', '對了，你叫什麼？', '……原來如此。', '從今天開始，我就叫你『{name}』了。', '可別太早死啊。'],
@@ -53,6 +54,10 @@ function defaultGlobalConfig() {
 function normalizeGlobalConfig(input) {
   const fallback = defaultGlobalConfig();
   const source = input && typeof input === 'object' ? input : {};
+  // Rows saved before the 2026-07 stat/power rework have no version. Keep them
+  // identifiable as v1 so the client does not overwrite the new bundled combat
+  // data with the old small-number character/move/card snapshot.
+  const balanceVersion = Number.isInteger(Number(source.balanceVersion)) ? Number(source.balanceVersion) : 1;
   const list = (key, max) => Array.isArray(source[key]) && source[key].length <= max ? source[key] : null;
   const settings = source.settings && typeof source.settings === 'object' ? source.settings : {};
   const introFallback = fallback.introStory;
@@ -83,6 +88,7 @@ function normalizeGlobalConfig(input) {
     if (typeof tutorialSource.endingNote === 'string') tutorialStory.endingNote = tutorialSource.endingNote.slice(0, 1000);
   }
   return {
+    balanceVersion,
     characters: list('characters', 100), moves: list('moves', 500), cards: list('cards', 200),
     introStory: { black: storyLines('black'), white: storyLines('white') },
     tutorialStory,
