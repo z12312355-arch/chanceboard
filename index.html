@@ -2360,7 +2360,7 @@
      遊戲每次開啟都會直接讀取那個檔案「當下」的內容（可以直接用文字編輯器打開改）；如果找不到
      這個檔案（例如只單獨複製了 html），就會自動
      改用下面內建在這個 html 裡的備援資料，不會整個壞掉。 -->
-<script src="chanceboard_db.js?v=20260717-star-rework-2"></script>
+<script src="chanceboard_db.js?v=20260717-char003-1"></script>
 <script>
 (function(){
 "use strict";
@@ -8812,7 +8812,7 @@ async function syncBundledGameConfigToD1(){
   if(typeof window.__adminAccountApi!=='function'){
     msg.textContent='❌ 請先以管理者帳號登入。'; msg.className='admin-msg err'; return;
   }
-  if(!confirm('確定要用目前 Git／chanceboard_db.js 內建的角色、招式與花牌資料覆蓋 D1 全域設定嗎？所有玩家下次載入都會使用這份資料。')) return;
+  if(!confirm('確定要用目前「部署網站已載入」的 Git／chanceboard_db.js 角色、招式與花牌資料覆蓋 D1 全域設定嗎？\n\n若你剛另存或修改本機檔案，必須先把檔案放回 Git 並完成部署，再執行這個同步。')) return;
   btn.disabled=true; msg.textContent='⏳ 正在將 Git 內建資料同步到 D1…'; msg.className='admin-msg';
   try{
     const result=await window.__adminAccountApi('admin-config',{config:bundledGameConfigPayload()});
@@ -8865,6 +8865,7 @@ function renderAdminAccountManager(){
   box.innerHTML='<h3 style="margin:0 0 8px">☁️ 全域帳號與經濟管理</h3>'
     +'<p style="margin:0 0 9px;font-size:12px;color:var(--muted)">角色、招式、卡牌價格、抽卡成本與每日獎勵會儲存在 D1，所有玩家重新載入後都會收到相同設定。</p>'
     +'<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:12px"><button type="button" class="btn primary small" id="adminSyncBundledToD1Btn">將 Git 內建資料同步到 D1</button><span id="admin-d1-sync-msg" class="admin-msg"></span></div>'
+    +'<p style="margin:-5px 0 12px;font-size:11px;color:var(--muted)">注意：這裡同步的是部署網站目前已載入的 <code>chanceboard_db.js</code>。另存或修改本機檔案後，必須先放回 Git 並完成部署，才會同步到新內容。</p>'
     +'<div class="admin-grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px">'
     +adminManagerField('每日金幣','global-daily-gold','number',globalEconomySettings.dailyGold)
     +adminManagerField('每日鑽石','global-daily-diamond','number',globalEconomySettings.dailyDiamond)
