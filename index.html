@@ -876,7 +876,8 @@
   /* 姓名跟數值中間加一條細金線分隔，呼應實體卡牌「名稱框／數值框」之間常見的分隔線——
      原本純靠margin-top留白，現在改用border-top+padding-top，多一條看得到的線而不只是空白。 */
   .rcard .stats{font-size:16px;color:var(--text);text-shadow:0 1px 3px rgba(0,0,0,.9);
-    margin-top:6px;padding-top:5px;border-top:1px solid rgba(255,255,255,.22);line-height:1.4;}
+    margin-top:6px;padding-top:5px;border-top:1px solid rgba(255,255,255,.22);line-height:1.4;
+    white-space:nowrap;}
   /* ATK/DEF 數值換行問題：這條 @container 規則一定要寫在上面 .rcard .stats{font-size:16px}／
      .rcard .name{font-size:16px}（見上面319行）這兩條「之後」——CSS層疊規則裡，選擇器特異度
      （specificity）相同時是看原始碼裡「誰寫在後面」誰贏，跟有沒有符合 @container 的條件無關。
@@ -890,6 +891,13 @@
   @container (max-width:190px){
     .rcard .stats{font-size:13px;}
     .rcard .name{font-size:14px;}
+  }
+  /* 六欄選角畫面裡卡片約只有 130～145px 寬。數值放大後，即使 13px 仍可能讓
+     「HP／ATK」或「DEF／SPD」溢出，因此再縮一級並減少字幕框左右留白；搭配
+     white-space:nowrap，兩組數值會固定維持兩行，不再各自拆成三、四行。 */
+  @container (max-width:150px){
+    .rcard-caption{padding-left:4px;padding-right:4px;}
+    .rcard .stats{font-size:11px;letter-spacing:-.15px;line-height:1.3;}
   }
   .rcard .check{position:absolute;top:-8px;left:-8px;background:var(--gold);color:#222;border-radius:50%;width:22px;height:22px;display:none;align-items:center;justify-content:center;font-size:13px;font-weight:bold;z-index:3;
     box-shadow:0 2px 5px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.55), inset 0 -1px 2px rgba(0,0,0,.2);}
