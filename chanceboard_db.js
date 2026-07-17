@@ -636,10 +636,10 @@ window.CHANCEBOARD_DB = {
       "condition": 3,
       "rangeType": "法",
       "scope": "群",
-      "powerRatio": 100,
+      "powerRatio": 120,
       "hitRate": 0.9,
       "critRate": 0.5,
-      "cooldown": 5,
+      "cooldown": 3,
       "coefficient": 0.7,
       "description": "爆擊時令對象陷入封招狀態(1回合)，無法攻擊",
       "expectedValue": 1.9575,
@@ -657,7 +657,28 @@ window.CHANCEBOARD_DB = {
         }
       ],
       "effectTrigger": "onCrit",
-      "effectChance": 1
+      "effectChance": 1,
+      "lv1": {
+        "effectOps": [
+          {
+            "op": "status",
+            "key": "封招",
+            "mode": "value",
+            "target": "target",
+            "chance": 1,
+            "durSec": 10
+          }
+        ],
+        "name": "遊戲人間(Game World)",
+        "condition": 3,
+        "powerRatio": 100,
+        "hitRate": 0.9,
+        "critRate": 0.5,
+        "cooldown": 5,
+        "effectChance": 1,
+        "effectTrigger": "onCrit",
+        "description": "爆擊時令對象陷入封招狀態(1回合)，無法攻擊"
+      }
     },
     {
       "id": "005",
@@ -781,7 +802,7 @@ window.CHANCEBOARD_DB = {
       "condition": 1,
       "rangeType": "槍",
       "scope": "單",
-      "powerRatio": 200,
+      "powerRatio": 240,
       "hitRate": 1,
       "critRate": null,
       "cooldown": null,
@@ -799,7 +820,25 @@ window.CHANCEBOARD_DB = {
         }
       ],
       "effectTrigger": "postAction",
-      "effectChance": 1
+      "effectChance": 1,
+      "lv1": {
+        "effectOps": [
+          {
+            "op": "discard",
+            "target": "ownHand",
+            "mode": "all"
+          }
+        ],
+        "name": "癲導視解(Psycho Path-Breaker)",
+        "condition": 1,
+        "powerRatio": 200,
+        "hitRate": 1,
+        "critRate": null,
+        "cooldown": 2,
+        "effectChance": 1,
+        "effectTrigger": "postAction",
+        "description": "攻擊後丟棄全部的手牌"
+      }
     },
     {
       "id": "010",
@@ -921,7 +960,7 @@ window.CHANCEBOARD_DB = {
       "condition": 1,
       "rangeType": "槍",
       "scope": "單",
-      "powerRatio": 100,
+      "powerRatio": 120,
       "hitRate": 0.75,
       "critRate": null,
       "cooldown": null,
@@ -942,7 +981,28 @@ window.CHANCEBOARD_DB = {
         }
       ],
       "effectTrigger": "postAction",
-      "effectChance": 1
+      "effectChance": 1,
+      "lv1": {
+        "effectOps": [
+          {
+            "op": "status",
+            "key": "魅影模式",
+            "mode": "value",
+            "target": "self",
+            "chance": 1,
+            "durSec": 999999
+          }
+        ],
+        "name": "魅影(Maboroshi)",
+        "condition": 1,
+        "powerRatio": 100,
+        "hitRate": 0.75,
+        "critRate": null,
+        "cooldown": 2,
+        "effectChance": 1,
+        "effectTrigger": "postAction",
+        "description": "使用後進入魅影模式；下一次成功命中的整次攻擊威力×2，隨後解除魅影模式"
+      }
     },
     {
       "id": "020",
@@ -1070,7 +1130,7 @@ window.CHANCEBOARD_DB = {
       "powerRatio": null,
       "hitRate": null,
       "critRate": null,
-      "cooldown": null,
+      "cooldown": 3,
       "coefficient": 1,
       "description": "出招後自己進入必中狀態(5回合)，攻擊必定命中",
       "expectedValue": 0,
@@ -1088,7 +1148,28 @@ window.CHANCEBOARD_DB = {
         }
       ],
       "effectTrigger": "postAction",
-      "effectChance": 1
+      "effectChance": 1,
+      "lv1": {
+        "effectOps": [
+          {
+            "op": "status",
+            "key": "必中",
+            "mode": "value",
+            "target": "self",
+            "chance": 1,
+            "durSec": 30
+          }
+        ],
+        "name": "血腥機關(Bloody Body)",
+        "condition": 1,
+        "powerRatio": null,
+        "hitRate": null,
+        "critRate": null,
+        "cooldown": 3,
+        "effectChance": 1,
+        "effectTrigger": "postAction",
+        "description": "出招後自己進入必中狀態(3回合)，攻擊必定命中"
+      }
     },
     {
       "id": "025",
@@ -1223,7 +1304,27 @@ window.CHANCEBOARD_DB = {
         }
       ],
       "effectTrigger": "postAction",
-      "effectChance": 1
+      "effectChance": 1,
+      "lv1": {
+        "effectOps": [
+          {
+            "op": "healPct",
+            "percent": 0.1,
+            "of": "max",
+            "target": "ownCell",
+            "chance": 1
+          }
+        ],
+        "name": "夜鶯(Nattergalen)",
+        "condition": 3,
+        "powerRatio": null,
+        "hitRate": null,
+        "critRate": null,
+        "cooldown": null,
+        "effectChance": 1,
+        "effectTrigger": "postAction",
+        "description": "出招後自己格內所有角色回復最大HP的10%"
+      }
     },
     {
       "id": "030",
@@ -1354,7 +1455,7 @@ window.CHANCEBOARD_DB = {
       "powerRatio": null,
       "hitRate": null,
       "critRate": null,
-      "cooldown": null,
+      "cooldown": 5,
       "coefficient": 3,
       "description": "出招後自己進入隱身狀態(4回合)，令對手無法看見與攻擊",
       "expectedValue": 0,
@@ -1372,7 +1473,28 @@ window.CHANCEBOARD_DB = {
         }
       ],
       "effectTrigger": "postAction",
-      "effectChance": 1
+      "effectChance": 1,
+      "lv1": {
+        "effectOps": [
+          {
+            "op": "status",
+            "key": "隱身",
+            "mode": "value",
+            "target": "self",
+            "chance": 1,
+            "durSec": 30
+          }
+        ],
+        "name": "無思不在",
+        "condition": 3,
+        "powerRatio": null,
+        "hitRate": null,
+        "critRate": null,
+        "cooldown": 5,
+        "effectChance": 1,
+        "effectTrigger": "postAction",
+        "description": "出招後自己進入隱身狀態(3回合)，令對手無法看見與攻擊"
+      }
     },
     {
       "id": "035",
@@ -1508,7 +1630,7 @@ window.CHANCEBOARD_DB = {
       "condition": 1,
       "rangeType": "劍",
       "scope": "群",
-      "powerRatio": 170,
+      "powerRatio": 200,
       "hitRate": 1,
       "critRate": 0.1,
       "cooldown": null,
@@ -1526,7 +1648,25 @@ window.CHANCEBOARD_DB = {
         }
       ],
       "effectTrigger": "onHit",
-      "effectChance": 1
+      "effectChance": 1,
+      "lv1": {
+        "effectOps": [
+          {
+            "op": "knockback",
+            "target": "target",
+            "dist": "far"
+          }
+        ],
+        "name": "野獸散(Yajuu)",
+        "condition": 1,
+        "powerRatio": 170,
+        "hitRate": 1,
+        "critRate": 0.1,
+        "cooldown": 2,
+        "effectChance": 1,
+        "effectTrigger": "onHit",
+        "description": "命中時將對象擊至遠距離"
+      }
     },
     {
       "id": "040",
@@ -1643,7 +1783,7 @@ window.CHANCEBOARD_DB = {
       "powerRatio": null,
       "hitRate": null,
       "critRate": null,
-      "cooldown": null,
+      "cooldown": 3,
       "coefficient": 2,
       "description": "出招後自己進入無敵狀態(2回合)，受到的傷害歸0",
       "expectedValue": 0,
@@ -1662,7 +1802,29 @@ window.CHANCEBOARD_DB = {
         }
       ],
       "effectTrigger": "postAction",
-      "effectChance": 1
+      "effectChance": 1,
+      "lv1": {
+        "effectOps": [
+          {
+            "op": "status",
+            "key": "減傷%",
+            "mode": "pct",
+            "target": "self",
+            "chance": 1,
+            "value": 1,
+            "durSec": 20
+          }
+        ],
+        "name": "梅朵之名(The Name Of The Meytal)",
+        "condition": 2,
+        "powerRatio": null,
+        "hitRate": null,
+        "critRate": null,
+        "cooldown": 5,
+        "effectChance": 1,
+        "effectTrigger": "postAction",
+        "description": "出招後自己進入無敵狀態(2回合)，受到的傷害歸0"
+      }
     },
     {
       "id": "045",
@@ -1794,9 +1956,9 @@ window.CHANCEBOARD_DB = {
       "powerRatio": null,
       "hitRate": null,
       "critRate": null,
-      "cooldown": null,
+      "cooldown": 3,
       "coefficient": 3,
-      "description": "出招後隨機使一位陣亡的隊友復活歸隊，並回復最大HP的15%",
+      "description": "出招後隨機使一位陣亡的隊友復活歸隊，並回復最大HP的20%",
       "expectedValue": 0,
       "strength": 1,
       "ownerName": "露露(Ruru)",
@@ -1804,12 +1966,30 @@ window.CHANCEBOARD_DB = {
       "effectOps": [
         {
           "op": "revive",
-          "percent": 0.15,
+          "percent": 0.2,
           "target": "randomDeadAlly"
         }
       ],
       "effectTrigger": "postAction",
-      "effectChance": 1
+      "effectChance": 1,
+      "lv1": {
+        "effectOps": [
+          {
+            "op": "revive",
+            "percent": 0.15,
+            "target": "randomDeadAlly"
+          }
+        ],
+        "name": "返魂(Hangon)",
+        "condition": 3,
+        "powerRatio": null,
+        "hitRate": null,
+        "critRate": null,
+        "cooldown": 5,
+        "effectChance": 1,
+        "effectTrigger": "postAction",
+        "description": "出招後隨機使一位陣亡的隊友復活歸隊，並回復最大HP的15%"
+      }
     },
     {
       "id": "050",
@@ -1962,7 +2142,27 @@ window.CHANCEBOARD_DB = {
         }
       ],
       "effectTrigger": "postAction",
-      "effectChance": 1
+      "effectChance": 1,
+      "lv1": {
+        "effectOps": [
+          {
+            "op": "damagePct",
+            "percent": 0.15,
+            "of": "max",
+            "target": "enemyTeam",
+            "chance": 1
+          }
+        ],
+        "name": "災禍降臨",
+        "condition": 2,
+        "powerRatio": null,
+        "hitRate": null,
+        "critRate": null,
+        "cooldown": 2,
+        "effectChance": 1,
+        "effectTrigger": "postAction",
+        "description": "出招後令對方所有角色減最大HP的15%"
+      }
     },
     {
       "id": "055",
@@ -2106,7 +2306,27 @@ window.CHANCEBOARD_DB = {
         }
       ],
       "effectTrigger": "postAction",
-      "effectChance": 1
+      "effectChance": 1,
+      "lv1": {
+        "effectOps": [
+          {
+            "op": "healPct",
+            "percent": 0.15,
+            "of": "max",
+            "target": "self",
+            "chance": 1
+          }
+        ],
+        "name": "甜點時間(Dezato No Jikan)",
+        "condition": 2,
+        "powerRatio": null,
+        "hitRate": null,
+        "critRate": null,
+        "cooldown": 2,
+        "effectChance": 1,
+        "effectTrigger": "postAction",
+        "description": "出招後自己回復最大HP的15%"
+      }
     },
     {
       "id": "060",
@@ -2229,7 +2449,7 @@ window.CHANCEBOARD_DB = {
       "powerRatio": null,
       "hitRate": null,
       "critRate": null,
-      "cooldown": 10,
+      "cooldown": 3,
       "coefficient": 3,
       "description": "自己回合數越長，傷害越大，出招後給予對方所有角色 (1+回合數/3)×100 的傷害",
       "expectedValue": 0,
@@ -2244,7 +2464,25 @@ window.CHANCEBOARD_DB = {
         }
       ],
       "effectTrigger": "postAction",
-      "effectChance": 1
+      "effectChance": 1,
+      "lv1": {
+        "effectOps": [
+          {
+            "op": "vengeanceScaling",
+            "base": 1,
+            "divisor": 3
+          }
+        ],
+        "name": "巨浪來襲(Kaishou)",
+        "condition": 2,
+        "powerRatio": null,
+        "hitRate": null,
+        "critRate": null,
+        "cooldown": 5,
+        "effectChance": 1,
+        "effectTrigger": "postAction",
+        "description": "自己回合數越長，傷害越大，出招後給予對方所有角色 (1+回合數/3)×100 的傷害"
+      }
     },
     {
       "id": "065",
@@ -2376,7 +2614,7 @@ window.CHANCEBOARD_DB = {
       "powerRatio": null,
       "hitRate": null,
       "critRate": null,
-      "cooldown": null,
+      "cooldown": 2,
       "coefficient": 1,
       "description": "出招後自己進入連動狀態(2回合)，行動次數*2",
       "expectedValue": 0,
@@ -2394,7 +2632,28 @@ window.CHANCEBOARD_DB = {
         }
       ],
       "effectTrigger": "postAction",
-      "effectChance": 1
+      "effectChance": 1,
+      "lv1": {
+        "effectOps": [
+          {
+            "op": "status",
+            "key": "連動",
+            "mode": "value",
+            "target": "self",
+            "chance": 1,
+            "durSec": 20
+          }
+        ],
+        "name": "真相的單片眼鏡(Truth Monocle)",
+        "condition": 1,
+        "powerRatio": null,
+        "hitRate": null,
+        "critRate": null,
+        "cooldown": 3,
+        "effectChance": 1,
+        "effectTrigger": "postAction",
+        "description": "出招後自己進入連動狀態(2回合)，行動次數*2"
+      }
     },
     {
       "id": "070",
@@ -2513,7 +2772,7 @@ window.CHANCEBOARD_DB = {
       "powerRatio": null,
       "hitRate": null,
       "critRate": null,
-      "cooldown": null,
+      "cooldown": 5,
       "coefficient": 2,
       "description": "出招後自己進入解放狀態(5回合)，招式條件固定為1",
       "expectedValue": 0,
@@ -2531,7 +2790,28 @@ window.CHANCEBOARD_DB = {
         }
       ],
       "effectTrigger": "postAction",
-      "effectChance": 1
+      "effectChance": 1,
+      "lv1": {
+        "effectOps": [
+          {
+            "op": "status",
+            "key": "解放",
+            "mode": "value",
+            "target": "self",
+            "chance": 1,
+            "durSec": 30
+          }
+        ],
+        "name": "恥力失衡(Shame Imbalance)",
+        "condition": 2,
+        "powerRatio": null,
+        "hitRate": null,
+        "critRate": null,
+        "cooldown": 5,
+        "effectChance": 1,
+        "effectTrigger": "postAction",
+        "description": "出招後自己進入解放狀態(3回合)，招式條件固定為1"
+      }
     },
     {
       "id": "075",
@@ -2666,13 +2946,13 @@ window.CHANCEBOARD_DB = {
       "id": "079",
       "name": "大地恩惠(Earth Grace)",
       "slot": "願",
-      "condition": 3,
+      "condition": 2,
       "rangeType": null,
       "scope": null,
       "powerRatio": null,
       "hitRate": null,
       "critRate": null,
-      "cooldown": null,
+      "cooldown": 2,
       "coefficient": 3,
       "description": "出招後我方所有角色進入DEF+50%狀態(2回合)，防禦提升50%",
       "expectedValue": 0,
@@ -2691,7 +2971,29 @@ window.CHANCEBOARD_DB = {
         }
       ],
       "effectTrigger": "postAction",
-      "effectChance": 1
+      "effectChance": 1,
+      "lv1": {
+        "effectOps": [
+          {
+            "op": "status",
+            "key": "DEF+",
+            "mode": "pct",
+            "target": "ownTeam",
+            "chance": 1,
+            "value": 0.5,
+            "durSec": 20
+          }
+        ],
+        "name": "大地恩惠(Earth Grace)",
+        "condition": 3,
+        "powerRatio": null,
+        "hitRate": null,
+        "critRate": null,
+        "cooldown": 3,
+        "effectChance": 1,
+        "effectTrigger": "postAction",
+        "description": "出招後我方所有角色進入DEF+50%狀態(2回合)，防禦提升50%"
+      }
     },
     {
       "id": "080",
@@ -2820,9 +3122,9 @@ window.CHANCEBOARD_DB = {
       "powerRatio": null,
       "hitRate": null,
       "critRate": null,
-      "cooldown": null,
+      "cooldown": 3,
       "coefficient": 2,
-      "description": "出招後自己進入威能狀態(4回合)，攻擊*2",
+      "description": "出招後自己進入威能狀態(5回合)，攻擊*2",
       "expectedValue": 0,
       "strength": 1,
       "ownerName": "武愛",
@@ -2834,11 +3136,32 @@ window.CHANCEBOARD_DB = {
           "mode": "value",
           "target": "self",
           "chance": 1,
-          "durSec": 40
+          "durSec": 50
         }
       ],
       "effectTrigger": "postAction",
-      "effectChance": 1
+      "effectChance": 1,
+      "lv1": {
+        "effectOps": [
+          {
+            "op": "status",
+            "key": "威能",
+            "mode": "value",
+            "target": "self",
+            "chance": 1,
+            "durSec": 30
+          }
+        ],
+        "name": "天龍樂舞",
+        "condition": 2,
+        "powerRatio": null,
+        "hitRate": null,
+        "critRate": null,
+        "cooldown": 3,
+        "effectChance": 1,
+        "effectTrigger": "postAction",
+        "description": "出招後自己進入威能狀態(3回合)，攻擊*2"
+      }
     },
     {
       "id": "085",
@@ -2994,7 +3317,7 @@ window.CHANCEBOARD_DB = {
       "critRate": null,
       "cooldown": null,
       "coefficient": 3,
-      "description": "出招後解除我方所有角色全部狀態，並且回復解除狀態數量的HP",
+      "description": "出招後解除我方所有角色全部狀態，並且回復解除狀態數量x100的HP",
       "expectedValue": 0,
       "strength": 1,
       "ownerName": "海瑟(Hesher)",
@@ -3007,7 +3330,25 @@ window.CHANCEBOARD_DB = {
         }
       ],
       "effectTrigger": "postAction",
-      "effectChance": 1
+      "effectChance": 1,
+      "lv1": {
+        "effectOps": [
+          {
+            "op": "clearStatuses",
+            "target": "ownTeam",
+            "healCountBonus": true
+          }
+        ],
+        "name": "我們將喚醒你(We Will Rock You)",
+        "condition": 1,
+        "powerRatio": null,
+        "hitRate": null,
+        "critRate": null,
+        "cooldown": 2,
+        "effectChance": 1,
+        "effectTrigger": "postAction",
+        "description": "出招後解除我方所有角色全部狀態，並且回復解除狀態數量x100的HP"
+      }
     },
     {
       "id": "090",
@@ -3123,7 +3464,7 @@ window.CHANCEBOARD_DB = {
       "powerRatio": null,
       "hitRate": null,
       "critRate": null,
-      "cooldown": 3,
+      "cooldown": null,
       "coefficient": -1,
       "description": "出招後引爆場上所有帶電狀態的角色，每層帶電造成其最大HP 10%的傷害，帶電層數滿3層時傷害再提高一倍，並解除其帶電狀態",
       "expectedValue": null,
@@ -3136,7 +3477,23 @@ window.CHANCEBOARD_DB = {
         }
       ],
       "effectTrigger": "postAction",
-      "effectChance": 1
+      "effectChance": 1,
+      "lv1": {
+        "effectOps": [
+          {
+            "op": "chargeDetonate"
+          }
+        ],
+        "name": "電磁軌砲(Railgun)",
+        "condition": 2,
+        "powerRatio": null,
+        "hitRate": null,
+        "critRate": null,
+        "cooldown": 2,
+        "effectChance": 1,
+        "effectTrigger": "postAction",
+        "description": "出招後引爆場上所有帶電狀態的角色，每層帶電造成其最大HP 10%的傷害，帶電層數滿3層時傷害再提高一倍，並解除其帶電狀態"
+      }
     },
     {
       "id": "100",
@@ -3254,10 +3611,10 @@ window.CHANCEBOARD_DB = {
       "condition": 3,
       "rangeType": "法",
       "scope": "群",
-      "powerRatio": 260,
+      "powerRatio": 310,
       "hitRate": 0.85,
       "critRate": null,
-      "cooldown": 4,
+      "cooldown": null,
       "coefficient": 2,
       "description": "她解開眼罩下的封印，令虛空短暫覆蓋戰場。命中時30%令目標陷入麻痺狀態20秒，行動間隔加倍。",
       "expectedValue": null,
@@ -3275,7 +3632,28 @@ window.CHANCEBOARD_DB = {
         }
       ],
       "effectTrigger": "onHit",
-      "effectChance": 1
+      "effectChance": 1,
+      "lv1": {
+        "effectOps": [
+          {
+            "op": "status",
+            "key": "麻痺",
+            "mode": "value",
+            "target": "target",
+            "chance": 0.3,
+            "durSec": 20
+          }
+        ],
+        "name": "虛空降臨(Void Awakening)",
+        "condition": 3,
+        "powerRatio": 260,
+        "hitRate": 0.85,
+        "critRate": null,
+        "cooldown": 2,
+        "effectChance": 1,
+        "effectTrigger": "onHit",
+        "description": "她解開眼罩下的封印，令虛空短暫覆蓋戰場。命中時30%令目標陷入麻痺狀態20秒，行動間隔加倍。"
+      }
     },
     {
       "id": "015",
@@ -3410,9 +3788,9 @@ window.CHANCEBOARD_DB = {
       "powerRatio": null,
       "hitRate": null,
       "critRate": null,
-      "cooldown": null,
+      "cooldown": 3,
       "coefficient": 3,
-      "description": "出招後借用神技的力量，讓一位陣亡的隊友以偽物之身歸隊，回復最大HP的15%",
+      "description": "出招後借用神技的力量，讓一位陣亡的隊友以偽物之身歸隊，回復最大HP的20%",
       "expectedValue": null,
       "strength": 1,
       "ownerName": "尼多",
@@ -3420,12 +3798,30 @@ window.CHANCEBOARD_DB = {
       "effectOps": [
         {
           "op": "revive",
-          "percent": 0.15,
+          "percent": 0.2,
           "target": "randomDeadAlly"
         }
       ],
       "effectTrigger": "postAction",
-      "effectChance": 1
+      "effectChance": 1,
+      "lv1": {
+        "effectOps": [
+          {
+            "op": "revive",
+            "percent": 0.15,
+            "target": "randomDeadAlly"
+          }
+        ],
+        "name": "神技・創世(Divine Skill: Creation)",
+        "condition": 3,
+        "powerRatio": null,
+        "hitRate": null,
+        "critRate": null,
+        "cooldown": 5,
+        "effectChance": 1,
+        "effectTrigger": "postAction",
+        "description": "出招後借用神技的力量，讓一位陣亡的隊友以偽物之身歸隊，回復最大HP的15%"
+      }
     },
     {
       "id": "095",
@@ -3556,7 +3952,7 @@ window.CHANCEBOARD_DB = {
       "condition": 2,
       "rangeType": "法",
       "scope": "單",
-      "powerRatio": 200,
+      "powerRatio": 240,
       "hitRate": 0.85,
       "critRate": null,
       "cooldown": 3,
@@ -3580,7 +3976,31 @@ window.CHANCEBOARD_DB = {
         }
       ],
       "effectTrigger": "onHit",
-      "effectChance": 1
+      "effectChance": 1,
+      "lv1": {
+        "effectOps": [
+          {
+            "op": "damagePct",
+            "target": "self",
+            "of": "max",
+            "percent": 0.15,
+            "chance": 1
+          },
+          {
+            "op": "deadAllyScaling",
+            "perDead": 0.15
+          }
+        ],
+        "name": "思親之痛(Pain of Missing Family)",
+        "condition": 2,
+        "powerRatio": 200,
+        "hitRate": 0.85,
+        "critRate": null,
+        "cooldown": 3,
+        "effectChance": 1,
+        "effectTrigger": "onHit",
+        "description": "命中時對自己造成最大HP 15%的傷害，並依己方陣亡人數對對象追加傷害（每位陣亡隊友追加對象最大HP 15%的傷害）——每一次心碎都化為攻擊的力量"
+      }
     },
     {
       "id": "105",
