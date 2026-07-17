@@ -10,6 +10,11 @@ const DIAMOND_EXCLUSIVE_IDS = new Set(['016', '014', '003', '021', '018', '020']
 const TUTORIAL_STEPS = ['intro', 'starter', 'battle', 'gold_summon', 'diamond_summon', 'team', 'ending', 'completed'];
 const SKILL_SLOTS = ['劍', '槍', '法', '願'];
 const HUNT_DURATION_MS = 30 * 60 * 1000;
+function skillMaxLevel(slot) { return slot === '願' ? 2 : 5; }
+function skillLevelInRange(value, slot) {
+  const n = Number(value);
+  return Number.isInteger(n) ? Math.min(skillMaxLevel(slot), Math.max(1, n)) : 1;
+}
 
 function json(data, status = 200) {
   return new Response(JSON.stringify(data), { status, headers: { 'content-type': 'application/json; charset=utf-8' } });
@@ -156,7 +161,7 @@ function packedProgression(levels, fragments, hunt) {
   for (const [charId, perChar] of Object.entries(safeObject(levels))) {
     if (!ALL_CHARACTER_IDS.includes(charId)) continue;
     const cleaned = {};
-    SKILL_SLOTS.forEach(slot => { if (perChar && perChar[slot] != null) cleaned[slot] = intInRange(perChar[slot], 1, 1, 5); });
+    SKILL_SLOTS.forEach(slot => { if (perChar && perChar[slot] != null) cleaned[slot] = skillLevelInRange(perChar[slot], slot); });
     if (Object.keys(cleaned).length) out[charId] = cleaned;
   }
   out.__fragments = {};
@@ -222,6 +227,21 @@ function safeStars(value, owned) {
   }
   // 後臺編輯若漏填某位已擁有角色的星級，補回最低的★1，避免寫進 0/undefined。
   owned.forEach(id => { if (!(id in out)) out[id] = 1; });
+  return out;
+}
+function safeMoveLevels(value, owned) {
+  const out = {};
+  for (const [charId, perChar] of Object.entries(safeObject(value))) {
+    if (!owned.includes(charId) || !perChar || typeof perChar !== 'object') continue;
+    const cleaned = {};
+    SKILL_SLOTS.forEach(slot => { cleaned[slot] = skillLevelInRange(perChar[slot], slot); });
+    out[charId] = cleaned;
+  }
+  return out;
+}
+function safeSkillFragments(value) {
+  const source = safeObject(value), out = {};
+  SKILL_SLOTS.forEach(slot => { out[slot] = intInRange(source[slot], 0); });
   return out;
 }
 function safeCards(value) {
@@ -321,14 +341,18 @@ export async function onRequest(context) {
       const stars = safeStars(input.charStars, owned);
       const cards = safeCards(input.ownedCardCounts);
       const teams = safeTeams(input.teams, owned);
+      const currentProgress = progressionFromRow(target);
+      const levels = safeMoveLevels(input.moveLevels === undefined ? currentProgress.levels : input.moveLevels, owned);
+      const fragments = safeSkillFragments(input.skillFragments === undefined ? currentProgress.fragments : input.skillFragments);
+      const progression = packedProgression(levels, fragments, currentProgress.hunt);
       const settings = safeObject(input.settings);
       const faction = input.tutorialFaction === 'white' || input.tutorialFaction === 'black' ? input.tutorialFaction : (target.tutorial_faction || 'black');
       const hero = input.lobbyHeroId === null ? null : (typeof input.lobbyHeroId === 'string' && owned.includes(input.lobbyHeroId) ? input.lobbyHeroId : target.lobby_hero_id || null);
       const dailyDate = typeof input.dailyBonusDate === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(input.dailyBonusDate) ? input.dailyBonusDate : '';
       const tutorialDone = !!input.tutorialDone;
       const tutorialStep = tutorialDone ? 'completed' : (target.tutorial_done ? 'intro' : safeTutorialStep(input.tutorialStep, tutorialStepFromRow(target)));
-      await db.prepare('UPDATE players SET gold=?2,diamond=?3,owned_chars=?4,char_stars=?5,owned_cards=?6,teams=?7,tutorial_done=?8,tutorial_step=?9,tutorial_faction=?10,lobby_hero_id=?11,settings=?12,daily_bonus_date=?13,wish_crystals=?14,updated_at=unixepoch() WHERE uid=?1')
-        .bind(uid, intInRange(input.gold, target.gold), intInRange(input.diamond, target.diamond), JSON.stringify(owned), JSON.stringify(stars), JSON.stringify(cards), JSON.stringify(teams), tutorialDone ? 1 : 0, tutorialStep, faction, hero, JSON.stringify(settings), dailyDate, intInRange(input.wishCrystals, Number(target.wish_crystals) || 0)).run();
+      await db.prepare('UPDATE players SET gold=?2,diamond=?3,owned_chars=?4,char_stars=?5,owned_cards=?6,teams=?7,tutorial_done=?8,tutorial_step=?9,tutorial_faction=?10,lobby_hero_id=?11,settings=?12,daily_bonus_date=?13,wish_crystals=?14,move_levels=?15,updated_at=unixepoch() WHERE uid=?1')
+        .bind(uid, intInRange(input.gold, target.gold), intInRange(input.diamond, target.diamond), JSON.stringify(owned), JSON.stringify(stars), JSON.stringify(cards), JSON.stringify(teams), tutorialDone ? 1 : 0, tutorialStep, faction, hero, JSON.stringify(settings), dailyDate, intInRange(input.wishCrystals, Number(target.wish_crystals) || 0), JSON.stringify(progression)).run();
       const updated = await db.prepare('SELECT * FROM players WHERE uid=?1').bind(uid).first();
       return json({ player: { uid: updated.uid, email: updated.email, state: profileFromRow(updated) } });
     }
@@ -441,8 +465,9 @@ export async function onRequest(context) {
       if (!SKILL_SLOTS.includes(slot)) throw apiError('無效的技能種類。');
       const progress = progressionFromRow(row);
       const perChar = safeObject(progress.levels[charId]);
-      const current = intInRange(perChar[slot], 1, 1, 5);
-      if (current >= 5) throw apiError('這項技能已經滿級。');
+      const maxLevel = skillMaxLevel(slot);
+      const current = skillLevelInRange(perChar[slot], slot);
+      if (current >= maxLevel) throw apiError('這項技能已經滿級。');
       const cost = current * 2;
       if (progress.fragments[slot] < cost) throw apiError(slot + '之碎片不足，需要 ' + cost + ' 枚。');
       perChar[slot] = current + 1;

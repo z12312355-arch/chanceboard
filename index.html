@@ -3092,7 +3092,7 @@ function moveInfoRowHtml(key, move, charId, condOverride, onCd){
     // 所以這裡只有顯示、沒有升級入口（見 moveSkillLevel() 的說明）。
     const skillLv = moveSkillLevel(charId, key);
     const shownPower = effectiveMovePower(charId, move);
-    const lvText = LEVELED_MOVE_SLOTS.includes(normalizeMoveSlot(key)) ? '　技能LV'+skillLv+'/'+MAX_MOVE_LEVEL : '';
+    const lvText = LEVELED_MOVE_SLOTS.includes(normalizeMoveSlot(key)) ? '　技能LV'+skillLv+'/'+moveSkillMaxLevel(key) : '';
     extra = '威力 '+shownPower+lvText+'　命中 '+Math.round((move.hitRate||0)*100)+'%'+(move.critRate?('　爆擊 '+Math.round(move.critRate*100)+'%'):'')+'　範圍：'+(move.scope==='群'?'群體':'單體');
   }
   const cdText = (move.cooldown!=null ? '　冷卻 '+move.cooldown+' 回合' : '')+(onCd ? '　⏳冷卻中' : '');
@@ -3545,6 +3545,7 @@ const MOVE_LEVELS_KEY = 'chanceboard_move_levels_v1';
 const SKILL_FRAGMENTS_KEY = 'chanceboard_skill_fragments_v1';
 const MIN_MOVE_LEVEL = 1;
 const MAX_MOVE_LEVEL = 5;
+const MAX_WISH_MOVE_LEVEL = 2;
 const MOVE_POWER_BONUS_PER_LEVEL = 0.05; // 每級+5%威力（LV1無加成，LV5=+20%）
 const LEVELED_MOVE_SLOTS = ['劍','槍','法','願']; // 被動不升級；願招強化威力與可量化效果
 const SKILL_FRAGMENT_ICON = {劍:'🗡️',槍:'🔫',法:'🔮',願:'🌟'};
@@ -3571,21 +3572,23 @@ let skillFragments=loadSkillFragments();
 function saveSkillFragments(){ try{localStorage.setItem(SKILL_FRAGMENTS_KEY,JSON.stringify(skillFragments));}catch(e){} }
 function skillFragmentAmount(slot){ return Math.max(0,Math.floor(Number(skillFragments[normalizeMoveSlot(slot)])||0)); }
 function moveLevelUpCost(currentLevel){ return Math.max(2,Math.min(8,Number(currentLevel)||1)*2); }
+function moveSkillMaxLevel(slot){ return normalizeMoveSlot(slot)==='願' ? MAX_WISH_MOVE_LEVEL : MAX_MOVE_LEVEL; }
 function moveSkillLevel(charId, slot){
   const zh = normalizeMoveSlot(slot);
   if(!LEVELED_MOVE_SLOTS.includes(zh)) return MIN_MOVE_LEVEL;
   const perChar = moveLevels[charId];
   const lv = perChar ? Number(perChar[zh]) : NaN;
-  return Math.min(MAX_MOVE_LEVEL, Math.max(MIN_MOVE_LEVEL, (isFinite(lv) && lv) ? lv : MIN_MOVE_LEVEL));
+  return Math.min(moveSkillMaxLevel(zh), Math.max(MIN_MOVE_LEVEL, (isFinite(lv) && lv) ? lv : MIN_MOVE_LEVEL));
 }
 function moveSkillPowerMultiplier(charId, slot){
   const zh = normalizeMoveSlot(slot);
   if(!LEVELED_MOVE_SLOTS.includes(zh)) return 1;
+  if(zh==='願') return moveSkillLevel(charId,zh)>=MAX_WISH_MOVE_LEVEL ? 1 : 0.95;
   return 1 + (moveSkillLevel(charId, zh) - MIN_MOVE_LEVEL) * MOVE_POWER_BONUS_PER_LEVEL;
 }
 function upgradeMoveSkillLocal(charId, slot){
   const zh=normalizeMoveSlot(slot),lv=moveSkillLevel(charId,zh);
-  if(!isCharOwned(charId) || !LEVELED_MOVE_SLOTS.includes(zh) || lv>=MAX_MOVE_LEVEL) return false;
+  if(!isCharOwned(charId) || !LEVELED_MOVE_SLOTS.includes(zh) || lv>=moveSkillMaxLevel(zh)) return false;
   const cost=moveLevelUpCost(lv);
   if(skillFragmentAmount(zh)<cost) return false;
   skillFragments[zh]=skillFragmentAmount(zh)-cost;
@@ -3595,7 +3598,7 @@ function upgradeMoveSkillLocal(charId, slot){
   return true;
 }
 function moveSkillEffectMultiplier(charId,slot){
-  return normalizeMoveSlot(slot)==='願' ? 1+(moveSkillLevel(charId,'願')-MIN_MOVE_LEVEL)*MOVE_POWER_BONUS_PER_LEVEL : 1;
+  return normalizeMoveSlot(slot)==='願' ? (moveSkillLevel(charId,'願')>=MAX_WISH_MOVE_LEVEL?1:0.95) : 1;
 }
 // 戰鬥實際使用的威力＝招式基礎威力 × 技能等級倍率（四捨五入成整數，跟其他數值的呈現慣例一致）。
 function effectiveMovePower(charId, move){
@@ -7129,9 +7132,9 @@ function renderPieceDetail(charId){
   const starCost=star<MAX_CHAR_STARS?crystalCostForNextStar(star):0,starButton=star<MAX_CHAR_STARS?'<button type="button" class="btn small" id="pieceStarUpBtn"'+(wishCrystals>=starCost?'':' disabled')+'>升至 ★'+(star+1)+'（💠'+starCost+'）</button>':'<span style="color:var(--good)">已滿星（HP／ATK／DEF +20%）</span>';
   const skillHtml=moves.map(move=>{
     if(move.slot==='被')return '<div class="piece-skill-row piece-passive"><div><div class="piece-skill-name">🔸 '+escHtml(stripParenAlias(move.name))+'</div><div class="piece-skill-meta">被動技能</div></div><div class="piece-skill-desc">'+escHtml(move.description||'無描述')+'</div><div></div></div>';
-    const lv=moveSkillLevel(charId,move.slot),bonus=(lv-1)*5,cost=lv<MAX_MOVE_LEVEL?moveLevelUpCost(lv):0,have=skillFragmentAmount(move.slot),effectText=move.slot==='願'?'願效果 +'+bonus+'%':'威力 +'+bonus+'%';
-    const action=lv<MAX_MOVE_LEVEL?'<span class="piece-skill-cost">持有 '+SKILL_FRAGMENT_ICON[move.slot]+have+'／需要 '+cost+'</span><button type="button" class="btn small piece-skill-up" data-slot="'+move.slot+'"'+(have>=cost?'':' disabled')+'>提升至 LV'+(lv+1)+'</button>':'<span style="color:var(--good)">技能已滿級</span>';
-    return '<div class="piece-skill-row"><div><div class="piece-skill-name">'+(CLASS_ICON[move.slot]||'🔹')+' '+escHtml(stripParenAlias(move.name))+'</div><div class="piece-skill-meta">LV'+lv+'/'+MAX_MOVE_LEVEL+'　'+effectText+'</div></div><div class="piece-skill-desc">'+escHtml(move.description||'無描述')+'<br><span style="color:var(--muted)">'+pieceMoveSummary(c,move)+'</span></div><div class="piece-skill-action">'+action+'</div></div>';
+    const lv=moveSkillLevel(charId,move.slot),maxLv=moveSkillMaxLevel(move.slot),bonus=(lv-1)*5,cost=lv<maxLv?moveLevelUpCost(lv):0,have=skillFragmentAmount(move.slot),effectText=move.slot==='願'?(lv===1?'願效果為原效果的 95%':'願效果為原效果'):'威力 +'+bonus+'%';
+    const action=lv<maxLv?'<span class="piece-skill-cost">持有 '+SKILL_FRAGMENT_ICON[move.slot]+have+'／需要 '+cost+'</span><button type="button" class="btn small piece-skill-up" data-slot="'+move.slot+'"'+(have>=cost?'':' disabled')+'>提升至 LV'+(lv+1)+'</button>':'<span style="color:var(--good)">技能已滿級</span>';
+    return '<div class="piece-skill-row"><div><div class="piece-skill-name">'+(CLASS_ICON[move.slot]||'🔹')+' '+escHtml(stripParenAlias(move.name))+'</div><div class="piece-skill-meta">LV'+lv+'/'+maxLv+'　'+effectText+'</div></div><div class="piece-skill-desc">'+escHtml(move.description||'無描述')+'<br><span style="color:var(--muted)">'+pieceMoveSummary(c,move)+'</span></div><div class="piece-skill-action">'+action+'</div></div>';
   }).join('');
   document.getElementById('pieceDetailContent').innerHTML='<div class="piece-detail-top"><img class="piece-detail-art" src="images/'+charId+'_full.png" alt=""><div><h2 style="margin:0">'+escHtml(stripParenAlias(c.name))+'</h2><div style="color:var(--muted);font-size:12px">'+escHtml(c.title||'')+'　'+(ELEMENT_ICON[c.element]||'')+' '+c.element+'</div><div class="piece-stat-grid"><div class="piece-stat-cell">HP<b>'+Math.round(c.hp*statMul)+'</b></div><div class="piece-stat-cell">ATK<b>'+Math.round(c.atk*statMul)+'</b></div><div class="piece-stat-cell">DEF<b>'+Math.round(c.def*statMul)+'</b></div><div class="piece-stat-cell">SPD<b>'+c.spd+'</b></div></div><div style="font-size:10px;color:var(--muted)">基礎：HP '+c.hp+'／ATK '+c.atk+'／DEF '+c.def+'／SPD '+c.spd+'</div><div class="piece-star-row"><b style="color:var(--gold)">'+('★'.repeat(star))+'<span style="opacity:.28">'+('★'.repeat(MAX_CHAR_STARS-star))+'</span></b><span>💠 '+wishCrystals+'</span>'+starButton+'</div></div></div><div class="piece-skill-list">'+skillHtml+'</div>';
   const starBtn=document.getElementById('pieceStarUpBtn');if(starBtn)starBtn.onclick=()=>upgradePieceStar(charId);document.querySelectorAll('#pieceDetailContent .piece-skill-up').forEach(btn=>btn.onclick=()=>upgradePieceSkill(charId,btn.dataset.slot));
@@ -9294,8 +9297,9 @@ function renderAdminManagedPlayerEditor(){
     +'<label style="font-size:12px"><input id="managed-tutorial" type="checkbox" '+(state.tutorialDone?'checked':'')+'> 已完成新手教學</label> '
     +'<label style="font-size:12px">新手陣營 <select id="managed-faction"><option value="black" '+(state.tutorialFaction==='black'?'selected':'')+'>小黑</option><option value="white" '+(state.tutorialFaction==='white'?'selected':'')+'>小白</option></select></label> '
     +adminManagerField('大廳立繪角色 ID（清空＝預設）','managed-hero','text',state.lobbyHeroId||'')
-    +adminManagerJson('擁有角色 ID（陣列）','managed-owned',state.ownedCharIds)+adminManagerJson('角色星級（物件）','managed-stars',state.charStars)+adminManagerJson('持有卡牌（物件）','managed-cards',state.ownedCardCounts)+adminManagerJson('隊伍（陣列；每副牌合計必須 10 張）','managed-teams',state.teams)+adminManagerJson('帳號設定（物件）','managed-settings',state.settings)
-    +'<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px"><button type="button" class="btn primary small" id="admin-save-player">儲存此帳號</button><button type="button" class="btn small" id="admin-grant-full-inventory">開通全角色五星＋滿卡牌</button><button type="button" class="btn small" id="admin-clear-inventory" style="border-color:var(--bad);color:#ffb0b0">清空全角色／全卡牌</button></div>';
+    +'<div class="admin-grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px;margin-top:8px">'+adminManagerField('劍之碎片','managed-frag-sword','number',(state.skillFragments&&state.skillFragments['劍'])||0)+adminManagerField('槍之碎片','managed-frag-gun','number',(state.skillFragments&&state.skillFragments['槍'])||0)+adminManagerField('法之碎片','managed-frag-magic','number',(state.skillFragments&&state.skillFragments['法'])||0)+adminManagerField('願之碎片','managed-frag-wish','number',(state.skillFragments&&state.skillFragments['願'])||0)+'</div>'
+    +adminManagerJson('擁有角色 ID（陣列）','managed-owned',state.ownedCharIds)+adminManagerJson('角色星級（物件）','managed-stars',state.charStars)+adminManagerJson('技能等級（劍槍法最高5；願最高2）','managed-move-levels',state.moveLevels||{})+adminManagerJson('持有卡牌（物件）','managed-cards',state.ownedCardCounts)+adminManagerJson('隊伍（陣列；每副牌合計必須 10 張）','managed-teams',state.teams)+adminManagerJson('帳號設定（物件）','managed-settings',state.settings)
+    +'<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px"><button type="button" class="btn primary small" id="admin-save-player">儲存此帳號</button><button type="button" class="btn small" id="admin-grant-full-inventory">開通全角色五星＋滿技能＋滿卡牌</button><button type="button" class="btn small" id="admin-clear-inventory" style="border-color:var(--bad);color:#ffb0b0">清空全角色／全卡牌</button></div>';
   document.getElementById('admin-save-player').onclick=saveAdminManagedPlayer;
   document.getElementById('admin-grant-full-inventory').onclick=function(){applyAdminInventoryPreset('full');};
   document.getElementById('admin-clear-inventory').onclick=function(){applyAdminInventoryPreset('clear');};
@@ -9309,17 +9313,17 @@ async function applyAdminInventoryPreset(kind){
   if(!confirm(prompt)) return;
   const current=adminManagedPlayer.state;
   const ids=isFull ? DB.characters.map(function(character){return String(character.id);}) : [];
-  const stars={},cards={};
+  const stars={},cards={},levels={};
   if(isFull){
-    ids.forEach(function(id){stars[id]=5;});
+    ids.forEach(function(id){stars[id]=5;levels[id]={劍:5,槍:5,法:5,願:2};});
     FLOWER_CARD_IDS.forEach(function(id){cards[id]=10;});
   }
-  const state=Object.assign({},current,{ownedCharIds:ids,charStars:stars,ownedCardCounts:cards,teams:isFull?(current.teams||[]):[],lobbyHeroId:isFull?current.lobbyHeroId:null,tutorialDone:isFull?true:current.tutorialDone});
+  const state=Object.assign({},current,{ownedCharIds:ids,charStars:stars,moveLevels:levels,ownedCardCounts:cards,teams:isFull?(current.teams||[]):[],lobbyHeroId:isFull?current.lobbyHeroId:null,tutorialDone:isFull?true:current.tutorialDone});
   try{
     const result=await window.__adminAccountApi('admin-player-update',{uid:adminManagedPlayer.uid,state:state});
     adminManagedPlayer=result.player;
     renderAdminManagedPlayerEditor();
-    adminManagerMessage(isFull?'✅ 已開通全角色五星與所有滿卡牌。':'✅ 已清空角色、卡牌、星級與隊伍。');
+    adminManagerMessage(isFull?'✅ 已開通全角色五星、滿技能與所有滿卡牌。':'✅ 已清空角色、卡牌、星級、技能與隊伍。');
     await refreshAdminManagedPlayers();
   }catch(e){adminManagerMessage('❌ 快捷操作失敗：'+e.message,true);}
 }
@@ -9327,7 +9331,7 @@ async function saveAdminManagedPlayer(){
   if(!adminManagedPlayer)return;
   const parse=id=>JSON.parse(document.getElementById(id).value);
   let state;
-  try{const hero=document.getElementById('managed-hero').value.trim();state={gold:Number(document.getElementById('managed-gold').value),diamond:Number(document.getElementById('managed-diamond').value),dailyBonusDate:document.getElementById('managed-daily').value.trim(),tutorialDone:document.getElementById('managed-tutorial').checked,tutorialFaction:document.getElementById('managed-faction').value,lobbyHeroId:hero||null,ownedCharIds:parse('managed-owned'),charStars:parse('managed-stars'),ownedCardCounts:parse('managed-cards'),teams:parse('managed-teams'),settings:parse('managed-settings')};}
+  try{const hero=document.getElementById('managed-hero').value.trim();state={gold:Number(document.getElementById('managed-gold').value),diamond:Number(document.getElementById('managed-diamond').value),dailyBonusDate:document.getElementById('managed-daily').value.trim(),tutorialDone:document.getElementById('managed-tutorial').checked,tutorialFaction:document.getElementById('managed-faction').value,lobbyHeroId:hero||null,ownedCharIds:parse('managed-owned'),charStars:parse('managed-stars'),moveLevels:parse('managed-move-levels'),skillFragments:{劍:Number(document.getElementById('managed-frag-sword').value),槍:Number(document.getElementById('managed-frag-gun').value),法:Number(document.getElementById('managed-frag-magic').value),願:Number(document.getElementById('managed-frag-wish').value)},ownedCardCounts:parse('managed-cards'),teams:parse('managed-teams'),settings:parse('managed-settings')};}
   catch(e){adminManagerMessage('❌ JSON 格式錯誤：'+e.message,true);return;}
   try{const result=await window.__adminAccountApi('admin-player-update',{uid:adminManagedPlayer.uid,state:state});adminManagedPlayer=result.player;renderAdminManagedPlayerEditor();adminManagerMessage('✅ 帳號資料已更新。');await refreshAdminManagedPlayers();}
   catch(e){adminManagerMessage('❌ 儲存帳號資料失敗：'+e.message,true);}
