@@ -1447,22 +1447,38 @@
   /* ---- 角色圖鑑彈窗 ---- */
   #galleryBackdrop{position:fixed;inset:0;background:rgba(0,0,0,.72);display:flex;align-items:center;justify-content:center;z-index:150;padding:20px;}
   #galleryBackdrop.hidden{display:none;}
-  .gallery-panel{max-width:480px;}
-  #gallery-main{width:100%;aspect-ratio:768/1376;border-radius:10px;overflow:hidden;
+  .gallery-panel{max-width:1050px;max-height:92vh;overflow-y:auto;}
+  #gallery-viewer{display:grid;grid-template-columns:minmax(280px,480px) minmax(340px,1fr);gap:18px;align-items:start;min-height:0;}
+  #gallery-main-wrap{min-width:0;}
+  #gallery-main{width:100%;aspect-ratio:768/1376;max-height:68vh;border-radius:10px;overflow:hidden;
     background:linear-gradient(165deg, rgba(34,38,58,.9) 0%, rgba(26,29,41,.95) 100%);
     border:1px solid rgba(242,193,78,.35);margin-bottom:12px;display:flex;align-items:center;justify-content:center;flex:0 0 auto;}
   /* object-fit:contain（不是cover）：這裡是「欣賞圖片」用的檢視器，跟其他地方（.rcard-art-img
      等）裁切填滿框不同，希望完整看到整張圖，不要裁到任何部分。 */
   #gallery-main img{width:100%;height:100%;object-fit:contain;display:block;}
-  #gallery-thumbs{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;flex:0 0 auto;}
-  .gallery-thumb{width:56px;aspect-ratio:768/1376;border-radius:6px;overflow:hidden;cursor:pointer;
-    border:2px solid var(--line);opacity:.65;transition:all .15s;flex:0 0 auto;}
-  .gallery-thumb img{width:100%;height:100%;object-fit:cover;display:block;}
+  #gallery-current-label{font-size:14px;font-weight:bold;color:var(--gold);text-align:center;line-height:1.45;min-height:21px;}
+  #gallery-thumbs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;align-content:start;}
+  .gallery-thumb{min-width:0;min-height:94px;border-radius:8px;overflow:hidden;cursor:pointer;display:flex;align-items:center;gap:9px;padding:7px;
+    background:rgba(20,23,34,.82);border:2px solid var(--line);opacity:.72;transition:all .15s;}
+  .gallery-thumb img{width:48px;aspect-ratio:768/1376;object-fit:cover;display:block;border-radius:5px;flex:0 0 auto;background:var(--bg);}
+  .gallery-thumb-text{min-width:0;display:flex;flex-direction:column;gap:4px;line-height:1.3;}
+  .gallery-thumb-label{font-size:12px;font-weight:bold;color:var(--text);}
+  .gallery-thumb-name{font-size:10.5px;color:var(--muted);overflow:hidden;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;}
   .gallery-thumb:hover{opacity:1;border-color:rgba(242,193,78,.5);}
   .gallery-thumb.active{opacity:1;border-color:var(--gold);box-shadow:0 0 10px rgba(242,193,78,.4);}
   /* 有些角色的招式圖（劍/槍/法/願）目前還沒畫完（見art-gen-tools那批生成進度），縮圖圖片
      404時整格隱藏，不留破圖圖示、也不留一個點了沒反應的空縮圖。 */
   .gallery-thumb.missing{display:none;}
+  @media (max-width:760px){
+    .gallery-panel{max-width:520px;}
+    #gallery-viewer{grid-template-columns:1fr;}
+    #gallery-main{max-height:58vh;}
+    #gallery-thumbs{grid-template-columns:repeat(2,minmax(0,1fr));}
+  }
+  @media (max-width:430px){
+    #gallery-thumbs{grid-template-columns:1fr;}
+    .gallery-thumb{min-height:82px;}
+  }
   #bl-body{background:#0e1018;border:1px solid var(--line);border-radius:8px;padding:10px 12px;
     overflow-y:auto;font-size:12.5px;line-height:1.65;box-shadow:inset 0 2px 8px rgba(0,0,0,.5);
     flex:1 1 auto;min-height:0;}
@@ -2081,8 +2097,13 @@
   <div id="galleryBackdrop" class="hidden">
     <div class="battlelog-panel gallery-panel">
       <div class="bl-head"><div class="bl-title" id="gallery-title">角色圖鑑</div><button class="btn small" id="galleryCloseBtn">✕</button></div>
-      <div id="gallery-main"><img id="gallery-main-img" src="" alt="" onerror="this.style.display='none';"></div>
-      <div id="gallery-thumbs"></div>
+      <div id="gallery-viewer">
+        <div id="gallery-main-wrap">
+          <div id="gallery-main"><img id="gallery-main-img" src="" alt="" onerror="this.style.display='none';"></div>
+          <div id="gallery-current-label"></div>
+        </div>
+        <div id="gallery-thumbs"></div>
+      </div>
       <!-- 2026-07 升星改制：圖鑑裡直接顯示星級與「用願望結晶升星」的入口（滿星後抽到重複
            會轉成結晶，見 gachaPullOne()/starUpWithCrystals()）。內容由 openCharGallery() 動態填。 -->
       <div id="gallery-starup"></div>
@@ -7292,26 +7313,42 @@ function fitGachaCardNames(){
 // 卡片時彈出圖鑑視窗，可切換該角色的全身/立繪/招式插圖（不是每個角色都已生成全部6種圖，缺的
 // 縮圖直接用 onerror 隱藏，見 GALLERY_TYPES 迴圈）。
 const GALLERY_TYPES = [
-  {key:'full', label:'全身'},
-  {key:'wide', label:'立繪'},
-  {key:'sword', label:'劍招'},
-  {key:'gun', label:'槍招'},
-  {key:'magic', label:'法招'},
-  {key:'wish', label:'願招'}
+  {key:'full', label:'正面圖'},
+  {key:'wide', label:'側面圖'},
+  {key:'sword', label:'⚔️ 劍招', slot:'劍'},
+  {key:'gun', label:'🔫 槍招', slot:'槍'},
+  {key:'magic', label:'✨ 法招', slot:'法'},
+  {key:'wish', label:'💫 願招', slot:'願'}
 ];
+function galleryItemsForChar(charId){
+  const c=CHAR_BY_ID[charId];
+  const moves=MOVES_BY_OWNER[charId]||[];
+  return GALLERY_TYPES.map(function(type){
+    const move=type.slot ? moves.find(function(m){return m.slot===type.slot;}) : null;
+    let name='';
+    if(type.key==='full') name=c ? stripParenAlias(c.name) : '';
+    else if(type.key==='wide') name=c ? (c.title||stripParenAlias(c.name)) : '';
+    else name=move ? stripParenAlias(move.name) : '尚未設定招式名稱';
+    return {key:type.key,label:type.label,name:name};
+  });
+}
 function openCharGallery(charId){
   const c = CHAR_BY_ID[charId];
   if(!c || !isCharOwned(charId)) return;
   document.getElementById('gallery-title').textContent = stripParenAlias(c.name) + ' 圖鑑';
   const mainImg = document.getElementById('gallery-main-img');
   const thumbs = document.getElementById('gallery-thumbs');
-  thumbs.innerHTML = GALLERY_TYPES.map((t,i)=>
+  const items=galleryItemsForChar(charId);
+  thumbs.innerHTML = items.map((t,i)=>
     '<div class="gallery-thumb'+(i===0?' active':'')+'" data-idx="'+i+'" onclick="galleryPick(\''+charId+'\','+i+',this)" title="'+t.label+'">'
     + '<img src="images/'+charId+'_'+t.key+'.png" alt="'+t.label+'" onerror="this.closest(\'.gallery-thumb\').classList.add(\'missing\');">'
+    + '<div class="gallery-thumb-text"><div class="gallery-thumb-label">'+escHtml(t.label)+'</div><div class="gallery-thumb-name">'+escHtml(t.name)+'</div></div>'
     + '</div>'
   ).join('');
   mainImg.style.display = '';
-  mainImg.src = 'images/'+charId+'_'+GALLERY_TYPES[0].key+'.png';
+  mainImg.src = 'images/'+charId+'_'+items[0].key+'.png';
+  mainImg.alt = items[0].label+'－'+items[0].name;
+  document.getElementById('gallery-current-label').textContent=items[0].label+'｜'+items[0].name;
   renderGalleryStarup(charId);
   document.getElementById('galleryBackdrop').classList.remove('hidden');
 }
@@ -7350,10 +7387,13 @@ function renderGalleryStarup(charId){
   };
 }
 function galleryPick(charId, idx, el){
-  const t = GALLERY_TYPES[idx];
+  const t = galleryItemsForChar(charId)[idx];
+  if(!t) return;
   const mainImg = document.getElementById('gallery-main-img');
   mainImg.style.display = '';
   mainImg.src = 'images/'+charId+'_'+t.key+'.png';
+  mainImg.alt = t.label+'－'+t.name;
+  document.getElementById('gallery-current-label').textContent=t.label+'｜'+t.name;
   document.querySelectorAll('#gallery-thumbs .gallery-thumb').forEach(function(n){ n.classList.remove('active'); });
   if(el) el.classList.add('active');
 }
