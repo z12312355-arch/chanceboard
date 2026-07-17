@@ -3713,7 +3713,7 @@ window.CHANCEBOARD_DB = {
     {
       "id": "019",
       "name": "護盾+",
-      "description": "抵免 點的傷害"
+      "description": "可抵免的傷害值，受到傷害時消耗"
     },
     {
       "id": "020",
@@ -3863,7 +3863,7 @@ window.CHANCEBOARD_DB = {
       "id": "010",
       "name": "保護(Protect)",
       "color": "花牌",
-      "description": "角色護盾+500(20秒)，抵免500點的傷害",
+      "description": "角色獲得500點護盾，抵免傷害時消耗，最多持續20秒",
       "isSuitCard": false,
       "effectOps": [
         {
@@ -3899,7 +3899,7 @@ window.CHANCEBOARD_DB = {
       "id": "012",
       "name": "愛心(Heart)",
       "color": "花牌",
-      "description": "角色HP+100(10秒)，每秒回復100HP",
+      "description": "角色HP+50(10秒)，每秒回復50HP",
       "isSuitCard": false,
       "effectOps": [
         {
@@ -3908,7 +3908,7 @@ window.CHANCEBOARD_DB = {
           "mode": "flat",
           "target": "chosen",
           "chance": 1,
-          "value": 100,
+          "value": 50,
           "durSec": 10
         }
       ],
