@@ -47,7 +47,7 @@ function isAdminUser(env, user) {
 function defaultGlobalConfig() {
   return {
     balanceVersion: 3,
-    characters: null, moves: null, cards: null,
+    characters: null, moves: null, cards: null, storyMode: null,
     introStory: {
       black: ['哈哈，歡迎加入黑方，我是小黑。', '對了，你叫什麼？', '……原來如此。', '從今天開始，我就叫你『{name}』了。', '可別太早死啊。'],
       white: ['歡迎加入白方，我是小白。', '在開始旅程之前。', '請告訴我你的名字。', '{name}。', '我記住了。', '希望有一天，大家都能記住這個名字。']
@@ -95,11 +95,37 @@ function normalizeGlobalConfig(input) {
     });
     if (typeof tutorialSource.endingNote === 'string') tutorialStory.endingNote = tutorialSource.endingNote.slice(0, 1000);
   }
+  const storyModeSource = source.storyMode && typeof source.storyMode === 'object' ? source.storyMode : null;
+  let storyMode = null;
+  if (storyModeSource) {
+    const text = value => typeof value === 'string' ? value.trim().slice(0, 500) : '';
+    const routeObject = key => {
+      const value = storyModeSource[key] && typeof storyModeSource[key] === 'object' ? storyModeSource[key] : {};
+      return { black: text(value.black), white: text(value.white) };
+    };
+    const portraits = {};
+    const portraitSource = storyModeSource.portraits && typeof storyModeSource.portraits === 'object' ? storyModeSource.portraits : {};
+    Object.entries(portraitSource).slice(0, 100).forEach(([speaker, path]) => {
+      const safeSpeaker = String(speaker).trim().slice(0, 100), safePath = text(path);
+      if (safeSpeaker && safePath) portraits[safeSpeaker] = safePath;
+    });
+    storyMode = {
+      chapterTitle: text(storyModeSource.chapterTitle) || '第一章　兵（Pawn）',
+      chapter1Text: typeof storyModeSource.chapter1Text === 'string' ? storyModeSource.chapter1Text.slice(0, 200000) : '',
+      openingCg: routeObject('openingCg'),
+      routeLabels: routeObject('routeLabels'),
+      routeDescriptions: routeObject('routeDescriptions'),
+      portraits,
+      typewriterMs: intInRange(storyModeSource.typewriterMs, 24, 8, 120),
+      cinematicIntervalMs: intInRange(storyModeSource.cinematicIntervalMs, 560, 150, 3000)
+    };
+  }
   return {
     balanceVersion,
     characters: list('characters', 100), moves: list('moves', 500), cards: list('cards', 200),
     introStory: { black: storyLines('black'), white: storyLines('white') },
     tutorialStory,
+    storyMode,
     settings: {
       dailyGold: intInRange(settings.dailyGold, fallback.settings.dailyGold),
       dailyDiamond: intInRange(settings.dailyDiamond, fallback.settings.dailyDiamond),

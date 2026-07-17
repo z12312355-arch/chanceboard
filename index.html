@@ -2118,7 +2118,7 @@
     <div id="storyMenu">
       <div class="story-menu-card">
         <h2>故事</h2>
-        <div class="story-menu-sub">第一章　兵（Pawn）｜選擇陣營後，故事與選項將走向不同結局。</div>
+        <div class="story-menu-sub" id="storyMenuSubtitle">第一章　兵（Pawn）｜選擇陣營後，故事與選項將走向不同結局。</div>
         <div class="story-route-grid">
           <button type="button" class="story-route-card black" data-story-route="black"><span class="story-route-name">執黑</span><span class="story-route-desc">與小黑同行，學會在殘酷棋盤中求生。</span></button>
           <button type="button" class="story-route-card white" data-story-route="white"><span class="story-route-name">執白</span><span class="story-route-desc">與小白同行，守護每一枚棋子的願望。</span></button>
@@ -2561,6 +2561,7 @@
       <button type="button" class="admin-tab" data-admin-tab="flowers">🌸 花牌設定</button>
       <button type="button" class="admin-tab" data-admin-tab="global">☁️ 全域設定</button>
       <button type="button" class="admin-tab" data-admin-tab="story">📜 新手劇情</button>
+      <button type="button" class="admin-tab" data-admin-tab="story-mode">🎬 故事模式</button>
       <button type="button" class="admin-tab" data-admin-tab="players">👤 玩家帳號</button>
     </div>
     <div class="admin-body">
@@ -2629,7 +2630,31 @@ let globalIntroStory = {
   black:['哈哈，歡迎加入黑方，我是小黑。','對了，你叫什麼？','……原來如此。','從今天開始，我就叫你『{name}』了。','可別太早死啊。'],
   white:['歡迎加入白方，我是小白。','在開始旅程之前。','請告訴我你的名字。','{name}。','我記住了。','希望有一天，大家都能記住這個名字。']
 };
+const DEFAULT_STORY_PORTRAITS = {
+  '小黑':'images/demon_01_full.png','小白':'images/demon_02_full.png',
+  '圖卡勒絲':'images/005_full.png','少年棋子':'images/005_full.png','被圍棋子':'images/005_full.png',
+  '梅朵':'images/009_full.png','少女棋子':'images/009_full.png','無名戰士':'images/004_full.png',
+  '另一位玩家':'images/020_full.png','受傷棋子':'images/018_full.png','村中孩子':'images/010_full.png'
+};
+let globalStoryModeConfig = {
+  chapterTitle:'第一章　兵（Pawn）',chapter1Text:'',
+  openingCg:{black:'story/01_01.png',white:'story/01_02.png'},
+  routeLabels:{black:'執黑・小黑線',white:'執白・小白線'},
+  routeDescriptions:{black:'與小黑同行，學會在殘酷棋盤中求生。',white:'與小白同行，守護每一枚棋子的願望。'},
+  portraits:Object.assign({},DEFAULT_STORY_PORTRAITS),typewriterMs:24,cinematicIntervalMs:560
+};
 const TUTORIAL_SIDE_TEXT_KEYS = ['pickIntro','afterPick','goldIntro','goldOffer','afterGold','diamondIntro','diamondOffer','afterDiamond','teamIntro','teamPick3','teamDeck','afterTeam','battleIntro','battlePickTeam','afterBattleWin','afterBattleLose','returnLobby','ending'];
+function applyStoryModePresentationConfig(){
+  const cfg=globalStoryModeConfig;
+  const title=document.getElementById('storyChapterTitle');if(title)title.textContent=cfg.chapterTitle;
+  const subtitle=document.getElementById('storyMenuSubtitle');if(subtitle)subtitle.textContent=cfg.chapterTitle+'｜選擇陣營後，故事與選項將走向不同結局。';
+  ['black','white'].forEach(function(route){
+    const card=document.querySelector('[data-story-route="'+route+'"]');if(!card)return;
+    if(cfg.openingCg[route])card.style.backgroundImage='url("'+String(cfg.openingCg[route]).replace(/"/g,'%22')+'")';
+    const name=card.querySelector('.story-route-name'),desc=card.querySelector('.story-route-desc');
+    if(name)name.textContent=(cfg.routeLabels[route]||route).split('・')[0];if(desc)desc.textContent=cfg.routeDescriptions[route]||'';
+  });
+}
 function applyGlobalGameConfig(config){
   if(!config || typeof config!=='object') return;
   // D1 rows created before the large-number balance rework contain a complete
@@ -2671,11 +2696,20 @@ function applyGlobalGameConfig(config){
     });
     if(typeof story.endingNote==='string') TUTORIAL_LINES.endingNote=story.endingNote;
   }
+  if(config.storyMode && typeof config.storyMode==='object'){
+    const source=config.storyMode,next=JSON.parse(JSON.stringify(globalStoryModeConfig));
+    if(typeof source.chapterTitle==='string'&&source.chapterTitle.trim())next.chapterTitle=source.chapterTitle.trim();
+    if(typeof source.chapter1Text==='string')next.chapter1Text=source.chapter1Text;
+    ['openingCg','routeLabels','routeDescriptions'].forEach(function(key){if(source[key]&&typeof source[key]==='object')['black','white'].forEach(function(route){if(typeof source[key][route]!=='string')return;const value=source[key][route].trim();if(value||key==='routeDescriptions')next[key][route]=value;});});
+    if(source.portraits&&typeof source.portraits==='object')next.portraits=Object.fromEntries(Object.entries(source.portraits).filter(function(entry){return String(entry[0]).trim()&&typeof entry[1]==='string'&&entry[1].trim();}).map(function(entry){return [String(entry[0]).trim(),entry[1].trim()];}));
+    const typeMs=Number(source.typewriterMs),cinematicMs=Number(source.cinematicIntervalMs);if(Number.isInteger(typeMs))next.typewriterMs=Math.max(8,Math.min(120,typeMs));if(Number.isInteger(cinematicMs))next.cinematicIntervalMs=Math.max(150,Math.min(3000,cinematicMs));
+    globalStoryModeConfig=next;if(typeof window.__resetStoryBlocks==='function')window.__resetStoryBlocks();applyStoryModePresentationConfig();
+  }
   if(typeof updateGachaCostDisplay==='function') updateGachaCostDisplay();
   if(typeof renderShopGrid==='function' && document.getElementById('shopCardGrid')) renderShopGrid();
 }
 function globalGameConfigPayload(){
-  return {balanceVersion:CURRENT_BALANCE_VERSION,characters:DB.characters,moves:DB.moves,cards:DB.cards,settings:globalEconomySettings,introStory:globalIntroStory,tutorialStory:JSON.parse(JSON.stringify(TUTORIAL_LINES))};
+  return {balanceVersion:CURRENT_BALANCE_VERSION,characters:DB.characters,moves:DB.moves,cards:DB.cards,settings:globalEconomySettings,introStory:globalIntroStory,tutorialStory:JSON.parse(JSON.stringify(TUTORIAL_LINES)),storyMode:JSON.parse(JSON.stringify(globalStoryModeConfig))};
 }
 // Captured before account bootstrap applies D1, so this remains the exact
 // Git/chanceboard_db.js data even when the current in-memory DB was overlaid by
@@ -2689,7 +2723,8 @@ function bundledGameConfigPayload(sourceDb){
     cards:JSON.parse(JSON.stringify(bundled.cards||[])),
     settings:Object.assign({},globalEconomySettings),
     introStory:JSON.parse(JSON.stringify(globalIntroStory)),
-    tutorialStory:JSON.parse(JSON.stringify(TUTORIAL_LINES))
+    tutorialStory:JSON.parse(JSON.stringify(TUTORIAL_LINES)),
+    storyMode:JSON.parse(JSON.stringify(globalStoryModeConfig))
   };
 }
 async function fetchFreshBundledDatabase(){
@@ -7523,6 +7558,7 @@ function closeCharGallery(){
 const STORY_PROGRESS_KEY='chanceboard_story_progress_v1';
 const STORY_TEAM_KEY='chanceboard_story_team_v1';
 let storyBlocks=null,storyRun=null,storyBattleTimer=null,storyTextTimer=null,storyReveal=null;
+window.__resetStoryBlocks=function(){storyBlocks=null;};
 function loadStoryProgress(){try{const v=JSON.parse(localStorage.getItem(STORY_PROGRESS_KEY)||'null');return v&&typeof v==='object'?v:null;}catch(e){return null;}}
 function saveStoryProgress(){try{if(storyRun)localStorage.setItem(STORY_PROGRESS_KEY,JSON.stringify(storyRun));}catch(e){}}
 function storySavedTeamId(){try{return localStorage.getItem(STORY_TEAM_KEY)||'';}catch(e){return '';}}
@@ -7530,9 +7566,9 @@ function storySetSavedTeamId(id){try{localStorage.setItem(STORY_TEAM_KEY,id||'')
 async function storyEnsureSource(){
   if(storyBlocks)return storyBlocks;
   const msg=document.getElementById('storyLoadMessage');if(msg)msg.textContent='讀取故事文本中…';
-  const res=await fetch('story/chapter1.txt?v=20260718',{cache:'no-store'});
-  if(!res.ok)throw new Error('故事文本讀取失敗（HTTP '+res.status+'）');
-  const raw=await res.text();storyBlocks=raw.split(/^_{5,}\s*$/m).map(s=>s.trim()).filter(Boolean);
+  let raw=String(globalStoryModeConfig.chapter1Text||'');
+  if(!raw.trim()){const res=await fetch('story/chapter1.txt?v=20260718',{cache:'no-store'});if(!res.ok)throw new Error('故事文本讀取失敗（HTTP '+res.status+'）');raw=await res.text();}
+  storyBlocks=raw.split(/^_{5,}\s*$/m).map(s=>s.trim()).filter(Boolean);
   if(storyBlocks.length<41)throw new Error('故事文本格式不完整。');if(msg)msg.textContent='';return storyBlocks;
 }
 function storyBuildTeamOptions(){
@@ -7541,7 +7577,7 @@ function storyBuildTeamOptions(){
   if(teams.some(t=>t.id===saved))select.value=saved;else if(teams[0])select.value=teams[0].id;
   select.onchange=function(){storySetSavedTeamId(this.value);};
 }
-function storyRouteText(route){return route==='white'?'執白・小白線':'執黑・小黑線';}
+function storyRouteText(route){return globalStoryModeConfig.routeLabels[route]||(route==='white'?'執白・小白線':'執黑・小黑線');}
 function storyCancelReveal(){
   if(storyTextTimer){clearTimeout(storyTextTimer);storyTextTimer=null;}
   if(storyReveal&&storyReveal.timers)storyReveal.timers.forEach(clearTimeout);
@@ -7559,7 +7595,7 @@ function storyShowMenu(){
 }
 async function openStoryMode(){showTopScreen('screen-story');storyShowMenu();try{await storyEnsureSource();}catch(e){document.getElementById('storyLoadMessage').textContent='❌ '+e.message;}}
 function storyExit(){storyHidePresentation();saveStoryProgress();goToLobby();}
-function storyBlockHeader(blockIndex){const first=(storyBlocks[blockIndex]||'').split(/\r?\n/).map(s=>s.trim()).find(Boolean)||'';return /^(第一節|第二節|第三節|第四節|第一章結尾)/.test(first)?first:'第一章　兵（Pawn）';}
+function storyBlockHeader(blockIndex){const first=(storyBlocks[blockIndex]||'').split(/\r?\n/).map(s=>s.trim()).find(Boolean)||'';return /^(第一節|第二節|第三節|第四節|第一章結尾)/.test(first)?first:globalStoryModeConfig.chapterTitle;}
 function storyIsSpeaker(lines,i){return i+1<lines.length&&/^「/.test(lines[i+1])&&!/^「/.test(lines[i]);}
 function storyStripQuote(line){return line.replace(/^「/,'').replace(/」$/,'');}
 function storyParseBlock(blockIndex){
@@ -7580,7 +7616,7 @@ function storyParseBlock(blockIndex){
 }
 function storySetCg(){
   const img=document.getElementById('storyCg'),blur=document.getElementById('storyCgBlur');
-  const src=storyRun&&storyRun.block===(storyRun.route==='white'?22:2)?'story/'+(storyRun.route==='white'?'01_02.png':'01_01.png'):'';
+  const src=storyRun&&storyRun.block===(storyRun.route==='white'?22:2)?globalStoryModeConfig.openingCg[storyRun.route]:'';
   if(src){[img,blur].forEach(el=>{if(!el.src.endsWith(src))el.src=src;el.classList.add('show');});}
   else [img,blur].forEach(el=>el.classList.remove('show'));
 }
@@ -7591,16 +7627,8 @@ function storyPlayerPortrait(){
 }
 function storyPortraitForSpeaker(s){
   const name=storyNormalizeSpeaker(s),player=playerName||'玩家';
-  if(name==='小黑')return {key:'black',name:'小黑',src:'images/demon_01_full.png'};
-  if(name==='小白')return {key:'white',name:'小白',src:'images/demon_02_full.png'};
   if(name===player||name==='玩家')return storyPlayerPortrait();
-  if(/圖卡勒絲|少年棋子|被圍棋子/.test(name))return {key:'005',name:name,src:'images/005_full.png'};
-  if(/梅朵|少女棋子/.test(name))return {key:'009',name:name,src:'images/009_full.png'};
-  if(name==='無名戰士')return {key:'boss',name:name,src:'images/004_full.png'};
-  if(name==='另一位玩家')return {key:'other-player',name:name,src:'images/020_full.png'};
-  if(name==='受傷棋子')return {key:'wounded',name:name,src:'images/018_full.png'};
-  if(name==='村中孩子')return {key:'child',name:name,src:'images/010_full.png'};
-  return null;
+  const src=globalStoryModeConfig.portraits[name];return src?{key:name,name:name,src:src}:null;
 }
 function storyRenderStage(beat){
   const left=document.getElementById('storyActorLeft'),right=document.getElementById('storyActorRight');
@@ -7610,7 +7638,7 @@ function storyRenderStage(beat){
   const active=storyPortraitForSpeaker(beat.speaker),guide=storyPortraitForSpeaker(storyRun.route==='white'?'小白':'小黑');
   const blockPortraits=storyParseBlock(storyRun.block).filter(b=>b.type==='dialogue').map(b=>storyPortraitForSpeaker(b.speaker)).filter(Boolean);
   let cast=[];[active,guide].concat(blockPortraits).forEach(p=>{if(p&&!cast.some(x=>x.src===p.src))cast.push(p);});cast=cast.slice(0,2);
-  const guideKey=storyRun.route==='white'?'white':'black';
+  const guideKey=storyRun.route==='white'?'小白':'小黑';
   if(cast.length===2&&cast[1].key===guideKey&&cast[0].key!==guideKey)cast=[cast[1],cast[0]];
   [left,right].forEach((el,i)=>{const p=cast[i];el.className='story-actor '+(i===0?'left':'right');if(!p){el.removeAttribute('src');el.alt='';return;}el.src=p.src;el.alt=p.name;el.classList.add('visible');if(active&&p.src===active.src)el.classList.add('active');el.onerror=function(){this.classList.remove('visible','active');};});
 }
@@ -7625,16 +7653,16 @@ function storyFinishReveal(){
 function storyTypeText(text,hint){
   storyCancelReveal();const el=document.getElementById('storyText'),chars=Array.from(text||'');let i=0;el.textContent='';
   document.getElementById('storyContinueHint').textContent='點擊顯示全部 ◆';storyReveal={mode:'text',text:text||'',hint,timers:[]};
-  function tick(){if(!storyReveal||storyReveal.mode!=='text')return;if(i>=chars.length){storyReveal=null;storyTextTimer=null;document.getElementById('storyContinueHint').textContent=hint;return;}const ch=chars[i++];el.textContent+=ch;const delay=/[。！？!?]/.test(ch)?105:/[，、；：]/.test(ch)?62:ch==='\n'?90:24;storyTextTimer=setTimeout(tick,delay);}
+  function tick(){if(!storyReveal||storyReveal.mode!=='text')return;if(i>=chars.length){storyReveal=null;storyTextTimer=null;document.getElementById('storyContinueHint').textContent=hint;return;}const ch=chars[i++],base=globalStoryModeConfig.typewriterMs;el.textContent+=ch;const delay=/[。！？!?]/.test(ch)?Math.max(70,base*4):/[，、；：]/.test(ch)?Math.max(42,base*2.5):ch==='\n'?Math.max(65,base*3):base;storyTextTimer=setTimeout(tick,delay);}
   tick();
 }
 function storyPlayCinematic(text){
   storyCancelReveal();const el=document.getElementById('storyCinematic'),lines=String(text||'').split('\n').filter(Boolean),timers=[];el.innerHTML='';el.classList.remove('hidden');
   lines.forEach(line=>{const row=document.createElement('div');row.className='story-cinematic-line';row.textContent=line;el.appendChild(row);});
   const hint=document.createElement('div');hint.className='story-cinematic-hint';hint.textContent='點擊繼續 ◆';el.appendChild(hint);
-  const rows=Array.from(el.querySelectorAll('.story-cinematic-line'));rows.forEach((row,i)=>timers.push(setTimeout(()=>row.classList.add('show'),160+i*560)));
+  const rows=Array.from(el.querySelectorAll('.story-cinematic-line')),interval=globalStoryModeConfig.cinematicIntervalMs;rows.forEach((row,i)=>timers.push(setTimeout(()=>row.classList.add('show'),160+i*interval)));
   storyReveal={mode:'cinematic',text:text||'',hint:'點擊繼續 ◆',timers};
-  timers.push(setTimeout(()=>{if(storyReveal&&storyReveal.mode==='cinematic')storyReveal=null;},220+rows.length*560));
+  timers.push(setTimeout(()=>{if(storyReveal&&storyReveal.mode==='cinematic')storyReveal=null;},220+rows.length*interval));
 }
 function storyFlash(text){const el=document.getElementById('storySystemNote');el.textContent=text;el.classList.add('show');setTimeout(()=>el.classList.remove('show'),1800);}
 function storyApplyBeatEvent(beat){if(!storyRun.applied)storyRun.applied={};const key=storyRun.block+':'+storyRun.beat;if(storyRun.applied[key])return;if(beat.type==='score'){storyRun.score=(Number(storyRun.score)||0)+beat.amount;storyRun.applied[key]=true;saveStoryProgress();storyFlash(beat.label+(beat.amount>=0?'＋':'－')+Math.abs(beat.amount));}}
@@ -9525,6 +9553,43 @@ function adminTutorialSideFieldsHtml(){
       +'</div></div>';
   }).join('');
 }
+function storyPortraitConfigText(map){return Object.entries(map||{}).map(function(entry){return entry[0]+' = '+entry[1];}).join('\n');}
+function parseStoryPortraitConfig(text){
+  const result={},errors=[];
+  String(text||'').split(/\r?\n/).forEach(function(line,index){
+    const value=line.trim();if(!value||value.startsWith('#'))return;const cut=value.indexOf('=');
+    if(cut<1||!value.slice(cut+1).trim()){errors.push('第 '+(index+1)+' 行格式應為「角色名稱 = 圖片路徑」');return;}
+    const speaker=storyNormalizeSpeaker(value.slice(0,cut)),path=value.slice(cut+1).trim();if(!speaker||!path){errors.push('第 '+(index+1)+' 行缺少角色名稱或圖片路徑');return;}result[speaker]=path;
+  });
+  return {map:result,errors:errors};
+}
+function validateStoryChapterText(text){
+  const raw=String(text||'').trim();if(!raw)return '第一章文本不能留白。';
+  if(raw.length>200000)return '第一章文本超過 200,000 字元上限。';
+  const blocks=raw.split(/^_{5,}\s*$/m).map(function(s){return s.trim();}).filter(Boolean);
+  if(blocks.length!==41)return '故事目前使用固定的黑白分支骨架，必須保留 41 個分段；目前為 '+blocks.length+' 個。';
+  if(!/^黑方線/.test(blocks[1]||'')||!/^白方線/.test(blocks[21]||''))return '黑方線／白方線的路線標題分段位置已被改動。';
+  if(!/^【開場CG】/.test(blocks[2]||'')||!/^【開場CG】/.test(blocks[22]||''))return '黑白路線都必須保留【開場CG】分段。';
+  const required=['【幫忙】','【不幫】','【同意】','【不同意】','【我會負責】','【拖累就丟下】','【我的隊伍沒有餘力】','【弱者只會拖累我】','【我答應妳】','【我不能保證】','【我的隊伍不適合她】','【我不想背負她的生命】','【Boss戰】','【第一章　完】'];
+  const missing=required.filter(function(marker){return !raw.includes(marker);});return missing.length?'缺少流程必要標記：'+missing.join('、'):'';
+}
+async function loadBundledStoryTextForAdmin(){
+  const field=document.getElementById('admin-storymode-text'),msg=document.getElementById('admin-storymode-msg'),save=document.getElementById('admin-save-storymode');if(!field)return;
+  try{const res=await fetch('story/chapter1.txt?admin='+Date.now(),{cache:'no-store'});if(!res.ok)throw new Error('HTTP '+res.status);field.value=await res.text();if(save)save.disabled=false;if(msg){msg.textContent='✅ 已載入 Git 內建文本；按「儲存故事模式設定」後才會寫入 D1。';msg.className='admin-msg';}}
+  catch(e){if(msg){msg.textContent='❌ 無法讀取 Git 文本：'+e.message;msg.className='admin-msg err';}}
+}
+async function saveAdminStoryMode(){
+  const msg=document.getElementById('admin-storymode-msg'),text=document.getElementById('admin-storymode-text').value,error=validateStoryChapterText(text),portraits=parseStoryPortraitConfig(document.getElementById('admin-storymode-portraits').value);
+  if(error||portraits.errors.length){msg.textContent='❌ '+(error||portraits.errors[0]);msg.className='admin-msg err';return;}
+  const integer=function(id,min,max){const n=Number(document.getElementById(id).value);return Number.isInteger(n)&&n>=min&&n<=max?n:null;},typeMs=integer('admin-storymode-type-ms',8,120),cinematicMs=integer('admin-storymode-cinematic-ms',150,3000);
+  if(typeMs==null||cinematicMs==null){msg.textContent='❌ 逐字速度需為 8–120ms，開場逐行間隔需為 150–3000ms。';msg.className='admin-msg err';return;}
+  const read=function(id){return document.getElementById(id).value.trim();};
+  const next={chapterTitle:read('admin-storymode-title'),chapter1Text:text,openingCg:{black:read('admin-storymode-cg-black'),white:read('admin-storymode-cg-white')},routeLabels:{black:read('admin-storymode-label-black'),white:read('admin-storymode-label-white')},routeDescriptions:{black:read('admin-storymode-desc-black'),white:read('admin-storymode-desc-white')},portraits:portraits.map,typewriterMs:typeMs,cinematicIntervalMs:cinematicMs};
+  if(!next.chapterTitle||!next.openingCg.black||!next.openingCg.white||!next.routeLabels.black||!next.routeLabels.white){msg.textContent='❌ 章名、黑白路線名稱與兩張開場 CG 都不能留白。';msg.className='admin-msg err';return;}
+  globalStoryModeConfig=next;window.__resetStoryBlocks();applyStoryModePresentationConfig();msg.textContent='⏳ 儲存中…';msg.className='admin-msg';
+  try{await saveGlobalAdminConfig();msg.textContent='✅ 故事模式設定與完整第一章文本已儲存到 D1。所有玩家重新載入後生效。';msg.className='admin-msg';}
+  catch(e){msg.textContent='❌ 儲存失敗：'+e.message;msg.className='admin-msg err';}
+}
 function renderAdminAccountManager(){
   const form=document.getElementById('admin-form');
   if(!form) return;
@@ -9569,6 +9634,37 @@ function renderAdminAccountManager(){
     +adminStoryTextarea('共同結尾提示','admin-story-endingNote',TUTORIAL_LINES.endingNote,3)
     +'<button type="button" class="btn primary small" id="admin-save-story">儲存完整新手劇情</button><div id="admin-story-msg" class="admin-msg" style="display:block;margin:7px 0"></div>';
     document.getElementById('admin-save-story').onclick=saveAdminTutorialStory;
+    return;
+  }
+  if(adminActiveTab==='story-mode'){
+    const cfg=globalStoryModeConfig,hasOverride=!!String(cfg.chapter1Text||'').trim();
+    box.innerHTML='<h3 style="margin:0 0 8px">🎬 故事模式管理</h3>'
+    +'<p style="font-size:12px;color:var(--muted);line-height:1.65">可調整完整第一章文本、路線顯示、CG、角色立繪與演出速度。台詞與敘事可以自由修改；目前黑白分支拓樸仍使用既有 41 段骨架，儲存時會檢查必要標記，避免玩家進入無法繼續的故事。</p>'
+    +'<details open class="admin-section"><summary style="cursor:pointer;font-weight:800;color:var(--gold)">章節與路線</summary><div class="admin-grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:8px;margin-top:10px">'
+      +adminManagerField('章節名稱','admin-storymode-title','text',cfg.chapterTitle)
+      +adminManagerField('黑方路線名稱','admin-storymode-label-black','text',cfg.routeLabels.black)
+      +adminManagerField('白方路線名稱','admin-storymode-label-white','text',cfg.routeLabels.white)
+      +adminManagerField('黑方路線說明','admin-storymode-desc-black','text',cfg.routeDescriptions.black)
+      +adminManagerField('白方路線說明','admin-storymode-desc-white','text',cfg.routeDescriptions.white)
+    +'</div></details>'
+    +'<details open class="admin-section"><summary style="cursor:pointer;font-weight:800;color:var(--gold)">CG 與演出速度</summary><div class="admin-grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:8px;margin-top:10px">'
+      +adminManagerField('黑方開場 CG 路徑','admin-storymode-cg-black','text',cfg.openingCg.black)
+      +adminManagerField('白方開場 CG 路徑','admin-storymode-cg-white','text',cfg.openingCg.white)
+      +adminManagerField('逐字顯示速度（8–120ms）','admin-storymode-type-ms','number',cfg.typewriterMs)
+      +adminManagerField('開場字幕逐行間隔（150–3000ms）','admin-storymode-cinematic-ms','number',cfg.cinematicIntervalMs)
+    +'</div></details>'
+    +'<details class="admin-section"><summary style="cursor:pointer;font-weight:800;color:var(--gold)">角色立繪對應</summary><p style="font-size:11px;color:var(--muted);line-height:1.6">每行格式：<code>劇本中的角色名稱 = 圖片路徑</code>。可新增任意說話者；同名角色會自動沿用。括號內的動作提示（例如「小黑（拍手）」）會自動忽略。</p>'
+      +adminStoryTextarea('角色與立繪路徑','admin-storymode-portraits',storyPortraitConfigText(cfg.portraits),14)
+    +'</details>'
+    +'<details open class="admin-section"><summary style="cursor:pointer;font-weight:800;color:var(--gold)">第一章完整文本</summary><p style="font-size:11px;color:var(--muted);line-height:1.6">分段線、選項名稱、【進入戰鬥】、【Boss戰】與【第一章　完】屬於流程標記。可以修改其餘台詞、旁白與人物名稱；若新增人物，請在「角色立繪對應」補上圖片。</p>'
+      +adminStoryTextarea('story/chapter1.txt／D1 即時版本','admin-storymode-text',cfg.chapter1Text,32)
+      +'<div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" class="btn small" id="admin-load-git-story">從 Git 重新載入文本</button><button type="button" class="btn small" id="admin-preview-storymode">開啟故事畫面預覽</button></div>'
+    +'</details>'
+    +'<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:12px"><button type="button" class="btn primary small" id="admin-save-storymode" '+(hasOverride?'':'disabled')+'>儲存故事模式設定</button><span style="font-size:11px;color:var(--muted)">儲存後寫入 D1，不必修改 chanceboard_db.js。</span></div><div id="admin-storymode-msg" class="admin-msg" style="display:block;margin:7px 0"></div>';
+    document.getElementById('admin-save-storymode').onclick=saveAdminStoryMode;
+    document.getElementById('admin-load-git-story').onclick=loadBundledStoryTextForAdmin;
+    document.getElementById('admin-preview-storymode').onclick=function(){closeAdminPanel();openStoryMode();};
+    if(!hasOverride)loadBundledStoryTextForAdmin();
     return;
   }
   if(adminActiveTab==='players'){
