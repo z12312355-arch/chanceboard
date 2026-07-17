@@ -24,6 +24,13 @@
 3. Variable name 必須填入 `PLAYER_DB`。
 4. 選剛建立的 `chanceboard-player-data`，儲存後重新部署。
 
+## 3.5【2026-07 數值大改】既有資料庫要跑一次升星改制 migration
+
+如果你的 D1 是在 2026-07 數值大改「之前」建立的，需在 D1 Console 執行一次
+`database/migration-2026-07-star-rework.sql`（新增 wish_crystals／move_levels／stars_version 三個欄位）。
+玩家星級資料不用手動改：每位玩家下次連線時，API 會自動做「全部+1星、舊滿星溢出換願望結晶」的
+一次性遷移。全新建立的資料庫直接跑最新的 `player-schema.sql` 即已包含新欄位，不用跑這份 migration。
+
 ## 4. 發布程式
 
 將這些新增檔案與更新後的 `chanceboard.html` 一起 commit、push 到 GitHub 的 `main` 分支。Cloudflare Pages 出現最新 commit 的綠色勾勾後，即代表帳號 API 已部署。

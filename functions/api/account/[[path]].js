@@ -136,6 +136,8 @@ function profileFromRow(row) {
     playerName: row.player_name || '',
     gold: row.gold, diamond: row.diamond,
     ownedCharIds: parseJson(row.owned_chars, []), charStars: parseJson(row.char_stars, {}),
+    // 2026-07 升星改制：願望結晶餘額與（預留的）招式技能等級。
+    wishCrystals: Number(row.wish_crystals) || 0, moveLevels: parseJson(row.move_levels, {}),
     ownedCardCounts: parseJson(row.owned_cards, {}), teams: parseJson(row.teams, []),
     tutorialDone: !!row.tutorial_done, tutorialStep: tutorialStepFromRow(row), tutorialFaction: row.tutorial_faction || 'black',
     lobbyHeroId: row.lobby_hero_id || null, settings: parseJson(row.settings, {}),
@@ -145,11 +147,30 @@ function profileFromRow(row) {
 async function ensureProfile(db, user) {
   // A new account begins with no inventory. Tutorial grants are handled below,
   // one time only, rather than trusting the browser to add characters.
+  // stars_version=1：新帳號直接用新制星級（1..5），不需要遷移。
   await db.prepare(`INSERT OR IGNORE INTO players
-    (uid,email,player_name,gold,diamond,owned_chars,char_stars,owned_cards,teams,tutorial_done,tutorial_faction,lobby_hero_id,settings,daily_bonus_date,created_at,updated_at)
-    VALUES (?1,?2,'',?3,?4,'[]','{}','{}','[]',0,'black',NULL,'{}','',unixepoch(),unixepoch())`)
+    (uid,email,player_name,gold,diamond,owned_chars,char_stars,wish_crystals,move_levels,stars_version,owned_cards,teams,tutorial_done,tutorial_faction,lobby_hero_id,settings,daily_bonus_date,created_at,updated_at)
+    VALUES (?1,?2,'',?3,?4,'[]','{}',0,'{}',1,'{}','[]',0,'black',NULL,'{}','',unixepoch(),unixepoch())`)
     .bind(user.uid, user.email, GOLD_START, DIAMOND_START).run();
   return db.prepare('SELECT * FROM players WHERE uid=?1').bind(user.uid).first();
+}
+// 2026-07 升星改制的一次性資料遷移：舊制（抽到=0星、滿星=5星）→ 新制（抽到=1星、滿星=5星）
+// ＝全部+1星，實際加成不變（舊N星+5%×N ＝ 新N+1星+5%×N，前端倍率公式改為 (星級-1)×5%）；
+// 舊滿星5星多出來的那一星轉成願望結晶。stars_version 欄位擋住重複遷移。
+async function migrateStarsToV2(db, row) {
+  if (Number(row.stars_version) >= 1) return row;
+  const owned = parseJson(row.owned_chars, []);
+  const oldStars = parseJson(row.char_stars, {});
+  let crystals = Number(row.wish_crystals) || 0;
+  const next = {};
+  owned.forEach(id => {
+    const old = intInRange(oldStars[id], 0, 0, 5);
+    next[id] = Math.min(5, old + 1);
+    if (old + 1 > 5) crystals += old + 1 - 5;
+  });
+  await db.prepare('UPDATE players SET char_stars=?2,wish_crystals=?3,stars_version=1,updated_at=unixepoch() WHERE uid=?1')
+    .bind(row.uid, JSON.stringify(next), crystals).run();
+  return db.prepare('SELECT * FROM players WHERE uid=?1').bind(row.uid).first();
 }
 function safeIds(value, allowed) {
   if (!Array.isArray(value)) throw apiError('Invalid inventory data.');
@@ -159,10 +180,13 @@ function safeIds(value, allowed) {
 }
 function safeObject(value) { return value && typeof value === 'object' && !Array.isArray(value) ? value : {}; }
 function safeStars(value, owned) {
+  // 新制：擁有的角色星級一律 1..5（抽到即★1）。
   const out = {};
   for (const [id, level] of Object.entries(safeObject(value))) {
-    if (owned.includes(id)) out[id] = intInRange(level, 0, 0, 5);
+    if (owned.includes(id)) out[id] = intInRange(level, 1, 1, 5);
   }
+  // 後臺編輯若漏填某位已擁有角色的星級，補回最低的★1，避免寫進 0/undefined。
+  owned.forEach(id => { if (!(id in out)) out[id] = 1; });
   return out;
 }
 function safeCards(value) {
@@ -219,6 +243,7 @@ export async function onRequest(context) {
     const user = await requireUser(request);
     const db = env.PLAYER_DB;
     let row = await ensureProfile(db, user);
+    row = await migrateStarsToV2(db, row); // 舊制星級一次性遷移（見函式說明）
     const action = Array.isArray(params.path) ? params.path.join('/') : String(params.path || '');
     const body = request.method === 'POST' ? await request.json().catch(() => ({})) : {};
     const admin = isAdminUser(env, user);
@@ -267,8 +292,8 @@ export async function onRequest(context) {
       const dailyDate = typeof input.dailyBonusDate === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(input.dailyBonusDate) ? input.dailyBonusDate : '';
       const tutorialDone = !!input.tutorialDone;
       const tutorialStep = tutorialDone ? 'completed' : (target.tutorial_done ? 'intro' : safeTutorialStep(input.tutorialStep, tutorialStepFromRow(target)));
-      await db.prepare('UPDATE players SET gold=?2,diamond=?3,owned_chars=?4,char_stars=?5,owned_cards=?6,teams=?7,tutorial_done=?8,tutorial_step=?9,tutorial_faction=?10,lobby_hero_id=?11,settings=?12,daily_bonus_date=?13,updated_at=unixepoch() WHERE uid=?1')
-        .bind(uid, intInRange(input.gold, target.gold), intInRange(input.diamond, target.diamond), JSON.stringify(owned), JSON.stringify(stars), JSON.stringify(cards), JSON.stringify(teams), tutorialDone ? 1 : 0, tutorialStep, faction, hero, JSON.stringify(settings), dailyDate).run();
+      await db.prepare('UPDATE players SET gold=?2,diamond=?3,owned_chars=?4,char_stars=?5,owned_cards=?6,teams=?7,tutorial_done=?8,tutorial_step=?9,tutorial_faction=?10,lobby_hero_id=?11,settings=?12,daily_bonus_date=?13,wish_crystals=?14,updated_at=unixepoch() WHERE uid=?1')
+        .bind(uid, intInRange(input.gold, target.gold), intInRange(input.diamond, target.diamond), JSON.stringify(owned), JSON.stringify(stars), JSON.stringify(cards), JSON.stringify(teams), tutorialDone ? 1 : 0, tutorialStep, faction, hero, JSON.stringify(settings), dailyDate, intInRange(input.wishCrystals, Number(target.wish_crystals) || 0)).run();
       const updated = await db.prepare('SELECT * FROM players WHERE uid=?1').bind(uid).first();
       return json({ player: { uid: updated.uid, email: updated.email, state: profileFromRow(updated) } });
     }
@@ -285,7 +310,9 @@ export async function onRequest(context) {
       if (step === 'battle' && owned.includes(id)) return json({ state: profileFromRow(row) });
       if (row.tutorial_done || step !== 'starter' || owned.length !== 0 || !['001', '004', '006'].includes(id)) throw apiError('The starter selection is no longer available.');
       owned.push(id);
-      await db.prepare("UPDATE players SET owned_chars=?2,tutorial_step='battle',updated_at=unixepoch() WHERE uid=?1").bind(user.uid, JSON.stringify(owned)).run();
+      const starterStars = parseJson(row.char_stars, {});
+      starterStars[id] = 1; // 新制：起始角色也是★1
+      await db.prepare("UPDATE players SET owned_chars=?2,char_stars=?3,tutorial_step='battle',updated_at=unixepoch() WHERE uid=?1").bind(user.uid, JSON.stringify(owned), JSON.stringify(starterStars)).run();
     } else if (action === 'tutorial-gacha') {
       const currency = body.currency === 'diamond' ? 'diamond' : 'gold';
       const owned = parseJson(row.owned_chars, []), stars = parseJson(row.char_stars, {});
@@ -294,14 +321,15 @@ export async function onRequest(context) {
       const step = tutorialStepFromRow(row);
       if (tutorialStepAtLeast(step, nextStep) && owned.length) {
         const id = owned[owned.length - 1];
-        return json({ state: profileFromRow(row), results: [{ id, isNew: false, starLevel: Number(stars[id] || 0) }] });
+        return json({ state: profileFromRow(row), results: [{ id, isNew: false, starLevel: Number(stars[id] || 1) }] });
       }
       if (row.tutorial_done || step !== expected || owned.length < 1) throw apiError('This tutorial reward is no longer available.');
       const id = configuredGachaPick(config, currency, owned);
       owned.push(id);
+      stars[id] = 1; // 新制：剛抽到＝★1
       await db.prepare('UPDATE players SET owned_chars=?2,char_stars=?3,tutorial_step=?4,updated_at=unixepoch() WHERE uid=?1').bind(user.uid, JSON.stringify(owned), JSON.stringify(stars), nextStep).run();
       row = await db.prepare('SELECT * FROM players WHERE uid=?1').bind(user.uid).first();
-      return json({ state: profileFromRow(row), results: [{ id, isNew: true, starLevel: 0 }] });
+      return json({ state: profileFromRow(row), results: [{ id, isNew: true, starLevel: 1 }] });
     } else if (action === 'tutorial-progress') {
       if (!TUTORIAL_STEPS.includes(body.step)) throw apiError('Invalid tutorial step.');
       const requested = body.step;
@@ -358,15 +386,34 @@ export async function onRequest(context) {
       const cost = currency === 'gold' ? (count === 10 ? config.settings.goldGachaTenCost : config.settings.goldGachaOneCost) : (count === 10 ? config.settings.diamondGachaTenCost : config.settings.diamondGachaOneCost);
       if (row[currency] < cost) throw apiError('Not enough currency.');
       const owned = parseJson(row.owned_chars, []), stars = parseJson(row.char_stars, {});
+      let crystals = Number(row.wish_crystals) || 0;
       const results = [];
       for (let i = 0; i < count; i++) {
         const id = configuredGachaPick(config, currency), isNew = !owned.includes(id);
-        if (isNew) owned.push(id); else stars[id] = Math.min(5, (stars[id] || 0) + 1);
-        results.push({ id, isNew, starLevel: stars[id] || 0 });
+        let gotCrystal = false;
+        if (isNew) { owned.push(id); stars[id] = 1; } // 新制：剛抽到＝★1
+        else if ((stars[id] || 1) < 5) stars[id] = (stars[id] || 1) + 1;
+        else { crystals += 1; gotCrystal = true; } // 已滿星：重複轉願望結晶
+        results.push({ id, isNew, starLevel: stars[id] || 1, gotCrystal });
       }
-      await db.prepare('UPDATE players SET ' + currency + '=' + currency + '-?2,owned_chars=?3,char_stars=?4,updated_at=unixepoch() WHERE uid=?1').bind(user.uid, cost, JSON.stringify(owned), JSON.stringify(stars)).run();
+      await db.prepare('UPDATE players SET ' + currency + '=' + currency + '-?2,owned_chars=?3,char_stars=?4,wish_crystals=?5,updated_at=unixepoch() WHERE uid=?1').bind(user.uid, cost, JSON.stringify(owned), JSON.stringify(stars), crystals).run();
       row = await db.prepare('SELECT * FROM players WHERE uid=?1').bind(user.uid).first();
       return json({ state: profileFromRow(row), results });
+    } else if (action === 'starup') {
+      // 用願望結晶幫角色升一星（2026-07升星改制）。消耗依目標星級遞增：升到 N+1 星要 N 顆
+      // （★1→★2=1顆…★4→★5=4顆），跟前端 crystalCostForNextStar() 同一套規則，由伺服器驗證。
+      const charId = String(body.charId || '');
+      const owned = parseJson(row.owned_chars, []);
+      if (!owned.includes(charId)) throw apiError('你尚未擁有這位角色。');
+      const stars = parseJson(row.char_stars, {});
+      const current = intInRange(stars[charId], 1, 1, 5);
+      if (current >= 5) throw apiError('這位角色已經滿星。');
+      const cost = current;
+      const crystals = Number(row.wish_crystals) || 0;
+      if (crystals < cost) throw apiError('願望結晶不足（需要 ' + cost + ' 顆）。');
+      stars[charId] = current + 1;
+      await db.prepare('UPDATE players SET char_stars=?2,wish_crystals=?3,updated_at=unixepoch() WHERE uid=?1')
+        .bind(user.uid, JSON.stringify(stars), crystals - cost).run();
     } else if (action === 'shop-buy') {
       const cardId = String(body.cardId || '');
       if (!FLOWER_CARD_IDS.includes(cardId)) throw apiError('Invalid card.');
