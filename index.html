@@ -1550,8 +1550,14 @@
   .admin-head{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--line);gap:10px;flex-wrap:wrap;}
   .admin-head .title{font-weight:bold;font-size:15px;}
   .admin-head .btns{display:flex;gap:8px;flex-wrap:wrap;}
+  .admin-tabs{display:flex;gap:6px;padding:8px 12px;border-bottom:1px solid var(--line);overflow-x:auto;flex-shrink:0;background:rgba(0,0,0,.12);}
+  .admin-tab{white-space:nowrap;border:1px solid var(--line);background:transparent;color:var(--muted);border-radius:7px;padding:7px 11px;font-size:12px;cursor:pointer;}
+  .admin-tab:hover{color:var(--text);background:var(--panel2);}
+  .admin-tab.active{color:var(--gold);border-color:var(--gold);background:rgba(242,193,78,.08);font-weight:bold;}
   .admin-body{flex:1;display:flex;min-height:0;overflow:hidden;}
+  .admin-body:not(.characters-tab) .admin-form{max-width:900px;margin:0 auto;width:100%;}
   .admin-charlist{width:190px;flex-shrink:0;overflow-y:auto;border-right:1px solid var(--line);padding:8px;}
+  .admin-charlist.hidden{display:none;}
   .admin-charlist .ac-item{padding:7px 8px;border-radius:6px;cursor:pointer;font-size:12.5px;margin-bottom:2px;color:var(--muted);}
   .admin-charlist .ac-item:hover{background:var(--panel2);color:var(--text);}
   .admin-charlist .ac-item.active{background:var(--panel2);color:var(--gold);font-weight:bold;}
@@ -2315,7 +2321,7 @@
 <div id="adminBackdrop" class="hidden">
   <div class="admin-panel">
     <div class="admin-head">
-      <div class="title">⚙️ 後臺：角色 / 招式資料編輯</div>
+      <div class="title">⚙️ 遊戲後臺</div>
       <div class="btns">
         <button class="btn small primary" id="adminSaveDbFileBtn" title="將目前後臺載入的完整遊戲資料另存為 chanceboard_db.js">💾 儲存 chanceboard_db.js</button>
         <button class="btn small" id="adminCardShopBtn">🛒 卡牌商店定價</button>
@@ -2324,6 +2330,12 @@
         <button class="btn small" id="admin1v1BattleBtn">🗡️ 1v1 對戰</button>
         <button class="btn small" id="adminCloseBtn">✕ 關閉</button>
       </div>
+    </div>
+    <div class="admin-tabs" id="admin-tabs" role="tablist" aria-label="後臺功能分類">
+      <button type="button" class="admin-tab" data-admin-tab="characters">🎭 角色與招式</button>
+      <button type="button" class="admin-tab" data-admin-tab="global">☁️ 全域設定</button>
+      <button type="button" class="admin-tab" data-admin-tab="story">📜 新手劇情</button>
+      <button type="button" class="admin-tab" data-admin-tab="players">👤 玩家帳號</button>
     </div>
     <div class="admin-body">
       <div class="admin-charlist" id="admin-charlist"></div>
@@ -8607,15 +8619,37 @@ document.getElementById('moveInfoBackdrop').onclick = function(e){ if(e.target==
 // 不用重建整個 DB 索引；下一場新開的戰鬥就會用到新數值（進行中的戰鬥不受影響）。
 // ORIGINAL_DB_SNAPSHOT 定義在檔案前段，供 D1 同步與還原使用。
 let adminSelectedCharId = null;
+let adminActiveTab = 'characters';
 
 function openAdminPanel(){
   if(!window.__isAdmin){ alert('只有已登入的管理者可以操作後臺。'); return; }
   document.getElementById('adminBackdrop').classList.remove('hidden');
   if(!adminSelectedCharId && DB.characters.length) adminSelectedCharId = DB.characters[0].id;
-  renderAdminCharList();
-  renderAdminForm();
-  renderAdminAccountManager();
+  renderAdminActiveTab();
   renderAdminDbSourceInfo();
+}
+function renderAdminTabs(){
+  document.querySelectorAll('#admin-tabs .admin-tab').forEach(function(button){
+    const active=button.getAttribute('data-admin-tab')===adminActiveTab;
+    button.classList.toggle('active',active);
+    button.setAttribute('aria-selected',active?'true':'false');
+    button.onclick=function(){
+      const next=this.getAttribute('data-admin-tab');
+      if(!next||next===adminActiveTab) return;
+      adminActiveTab=next;
+      renderAdminActiveTab();
+    };
+  });
+}
+function renderAdminActiveTab(){
+  const body=document.querySelector('#adminBackdrop .admin-body');
+  const charList=document.getElementById('admin-charlist');
+  const showCharacters=adminActiveTab==='characters';
+  if(body) body.classList.toggle('characters-tab',showCharacters);
+  if(charList) charList.classList.toggle('hidden',!showCharacters);
+  renderAdminTabs();
+  if(showCharacters){ renderAdminCharList(); renderAdminForm(); }
+  else renderAdminAccountManager();
 }
 // 卡牌商店定價：使用者要求「新增商店：可以課金或用金幣購買卡片」。跟角色/招式的表單不同，
 // 卡牌沒有「選一張、逐張套用」的左側清單，直接一次列出全部FLOWER_CARD_IDS的價格輸入框，
@@ -8731,13 +8765,9 @@ function renderAdminMoveSection(m){
 
 function renderAdminForm(){
   const form = document.getElementById('admin-form');
-  // 帳號管理器與角色編輯器共用同一條可捲動欄位；重畫角色表單時暫存並放回，
-  // 避免選角色後管理器被 innerHTML 清掉。
-  const accountManager = document.getElementById('admin-account-manager');
   const c = CHAR_BY_ID[adminSelectedCharId];
   if(!c){
     form.innerHTML = '<div style="color:var(--muted);">請先從左側選一位角色</div>';
-    if(accountManager) form.insertBefore(accountManager,form.firstChild);
     return;
   }
   const moves = (MOVES_BY_OWNER[c.id]||[]).slice().sort((a,b)=>{
@@ -8761,16 +8791,24 @@ function renderAdminForm(){
       // 就是1（等機率，跟原本行為一樣），數字越大在卡池裡越容易抽到，設0就等於直接從
       // 這個卡池裡拿掉（但已擁有的角色不受影響，只影響「還沒抽到」的機率）。
       adminNumField('char-gachaWeight','召喚權重(gachaWeight，預設1，可設0=移出卡池)',c.gachaWeight==null?1:c.gachaWeight)+
+    '</div></div>'+ 
+    '<div class="admin-section">'+
+    '<div class="as-title">📖 角色故事與人物設定</div>'+
+    '<div class="admin-grid">'+
+      adminTextField('char-wish','願望 wish',c.wish)+
+      adminTextField('char-outer','外在設定 outer',c.outer)+
+      adminTextField('char-inner','內在設定 inner',c.inner)+
     '</div>'+
+    '<div class="admin-field"><label>角色故事 story</label>'+
+      '<textarea id="admin-char-story" rows="12" placeholder="輸入角色完整故事內容">'+escHtml(c.story||'')+'</textarea></div>'+
     '<div class="admin-move-actions">'+
-      '<button class="btn small" id="admin-apply-char">套用角色數值</button>'+
-      '<button class="btn small" id="admin-reset-char">還原角色數值</button>'+
-      '<span class="admin-msg" id="admin-char-msg"></span>'+
-    '</div>'+
-  '</div>';
+      '<button class="btn small primary" id="admin-apply-char">儲存角色資料</button>'+ 
+      '<button class="btn small" id="admin-reset-char">還原角色資料</button>'+ 
+      '<span class="admin-msg" id="admin-char-msg"></span>'+ 
+    '</div>'+ 
+    '</div>';
   moves.forEach(m=>{ html += renderAdminMoveSection(m); });
   form.innerHTML = html;
-  if(accountManager) form.insertBefore(accountManager,form.firstChild);
 
   document.getElementById('admin-apply-char').onclick = function(){ applyAdminChar(c.id); };
   document.getElementById('admin-reset-char').onclick = function(){ resetAdminChar(c.id); };
@@ -8846,7 +8884,7 @@ async function syncBundledGameConfigToD1(){
   try{
     const result=await window.__adminAccountApi('admin-config',{config:bundledGameConfigPayload()});
     applyGlobalGameConfig(result.config);
-    renderAdminCharList(); renderAdminForm(); renderAdminDbSourceInfo();
+    renderAdminDbSourceInfo();
     msg.textContent='✅ 同步完成。D1 已改為目前 Git 內建數值，所有玩家重新載入後生效。';
   }catch(e){
     msg.textContent='❌ 同步失敗：'+e.message; msg.className='admin-msg err';
@@ -8883,15 +8921,10 @@ function adminTutorialSideFieldsHtml(){
 function renderAdminAccountManager(){
   const form=document.getElementById('admin-form');
   if(!form) return;
-  let box=document.getElementById('admin-account-manager');
-  if(!box){
-    box=document.createElement('section');
-    box.id='admin-account-manager';
-    box.className='admin-section';
-    box.style.cssText='margin:12px 0;padding:12px;border:1px solid var(--line);border-radius:10px;background:rgba(0,0,0,.16)';
-    form.insertBefore(box,form.firstChild);
-  }
-  box.innerHTML='<h3 style="margin:0 0 8px">☁️ 全域帳號與經濟管理</h3>'
+  form.innerHTML='<section id="admin-account-manager" class="admin-section"></section>';
+  const box=document.getElementById('admin-account-manager');
+  if(adminActiveTab==='global'){
+    box.innerHTML='<h3 style="margin:0 0 8px">☁️ 全域資料與經濟設定</h3>'
     +'<p style="margin:0 0 9px;font-size:12px;color:var(--muted)">角色、招式、卡牌價格、抽卡成本與每日獎勵會儲存在 D1，所有玩家重新載入後都會收到相同設定。</p>'
     +'<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:12px"><button type="button" class="btn primary small" id="adminSyncBundledToD1Btn">將 Git 內建資料同步到 D1</button><span id="admin-d1-sync-msg" class="admin-msg"></span></div>'
     +'<p style="margin:-5px 0 12px;font-size:11px;color:var(--muted)">注意：這裡同步的是部署網站目前已載入的 <code>chanceboard_db.js</code>。另存或修改本機檔案後，必須先放回 Git 並完成部署，才會同步到新內容。</p>'
@@ -8903,7 +8936,22 @@ function renderAdminAccountManager(){
     +adminManagerField('鑽石單抽','global-diamond-one','number',globalEconomySettings.diamondGachaOneCost)
     +adminManagerField('鑽石十抽','global-diamond-ten','number',globalEconomySettings.diamondGachaTenCost)
     +'</div><button type="button" class="btn primary small" id="admin-save-economy">儲存全域抽卡／每日設定</button><div id="admin-economy-msg" class="admin-msg" style="display:block;margin:7px 0"></div>'
-    +'<hr style="border:0;border-top:1px solid var(--line);margin:14px 0"><h3 style="margin:0 0 8px">📜 完整新手劇情文本</h3>'
+    +'<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px"><button type="button" class="btn small" id="admin-open-card-shop">🛒 編輯卡牌商店價格</button></div>';
+    document.getElementById('adminSyncBundledToD1Btn').onclick=syncBundledGameConfigToD1;
+    document.getElementById('admin-open-card-shop').onclick=openAdminCardShop;
+    document.getElementById('admin-save-economy').onclick=async function(){
+      const read=id=>Number(document.getElementById(id).value);
+      const next={dailyGold:read('global-daily-gold'),dailyDiamond:read('global-daily-diamond'),goldGachaOneCost:read('global-gold-one'),goldGachaTenCost:read('global-gold-ten'),diamondGachaOneCost:read('global-diamond-one'),diamondGachaTenCost:read('global-diamond-ten')};
+      const msg=document.getElementById('admin-economy-msg');
+      if(Object.values(next).some(n=>!Number.isInteger(n)||n<0)){msg.textContent='❌ 請輸入有效的非負整數。';msg.className='admin-msg err';return;}
+      globalEconomySettings=Object.assign({},globalEconomySettings,next);
+      msg.textContent='⏳ 儲存中…';msg.className='admin-msg';
+      try{await saveGlobalAdminConfig();msg.textContent='✅ 全域抽卡與每日獎勵設定已儲存。';msg.className='admin-msg';}catch(e){msg.textContent='❌ 儲存失敗：'+e.message+(String(e.message).includes('game_config')?'（請先在 D1 Console 建立 game_config 資料表）':'');msg.className='admin-msg err';}
+    };
+    return;
+  }
+  if(adminActiveTab==='story'){
+    box.innerHTML='<h3 style="margin:0 0 8px">📜 完整新手劇情文本</h3>'
     +'<p style="font-size:12px;color:var(--muted)">可編輯目前新手流程會顯示的全部台詞。序章與問名台詞每行一句；其他欄位是一個教學步驟。用 <code>{name}</code> 代表玩家名字。</p>'
     +adminStoryTextarea('共同序章（每行一句）','admin-story-prologue',TUTORIAL_LINES.prologue.join('\n'),9)
     +'<div style="padding:9px;border:1px solid var(--line);border-radius:8px;margin:8px 0"><b style="font-size:13px">陣營問名劇情（每行一句）</b><p style="font-size:11px;color:var(--muted);margin:5px 0 8px">小黑前 2 行、小白前 2 行會在輸入名字前顯示，其餘行在輸入後顯示。</p><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:10px">'
@@ -8912,48 +8960,43 @@ function renderAdminAccountManager(){
     +'</div></div>'
     +adminTutorialSideFieldsHtml()
     +adminStoryTextarea('共同結尾提示','admin-story-endingNote',TUTORIAL_LINES.endingNote,3)
-    +'<button type="button" class="btn primary small" id="admin-save-story">儲存完整新手劇情</button><div id="admin-story-msg" class="admin-msg" style="display:block;margin:7px 0"></div>'
-    +'<hr style="border:0;border-top:1px solid var(--line);margin:14px 0"><h3 style="margin:0 0 8px">👤 玩家帳號資料</h3>'
-    +'<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><select id="admin-player-select" style="min-width:260px;max-width:100%;flex:1"><option value="">載入玩家清單後選擇帳號</option></select><button type="button" class="btn small" id="admin-refresh-players">重新整理玩家</button></div>'
-    +'<div id="admin-manager-msg" class="admin-msg" style="display:block;margin:7px 0"></div><div id="admin-player-editor" style="margin-top:8px;color:var(--muted);font-size:12px">請先選擇玩家。</div>';
-  document.getElementById('adminSyncBundledToD1Btn').onclick=syncBundledGameConfigToD1;
-  document.getElementById('admin-save-economy').onclick=async function(){
-    const read=id=>Number(document.getElementById(id).value);
-    const next={dailyGold:read('global-daily-gold'),dailyDiamond:read('global-daily-diamond'),goldGachaOneCost:read('global-gold-one'),goldGachaTenCost:read('global-gold-ten'),diamondGachaOneCost:read('global-diamond-one'),diamondGachaTenCost:read('global-diamond-ten')};
-    const msg=document.getElementById('admin-economy-msg');
-    if(Object.values(next).some(n=>!Number.isInteger(n)||n<0)){msg.textContent='❌ 請輸入有效的非負整數。';msg.className='admin-msg err';return;}
-    globalEconomySettings=Object.assign({},globalEconomySettings,next);
-    msg.textContent='⏳ 儲存中…';msg.className='admin-msg';
-    try{await saveGlobalAdminConfig();msg.textContent='✅ 全域抽卡與每日獎勵設定已儲存。';msg.className='admin-msg';}catch(e){msg.textContent='❌ 儲存失敗：'+e.message+(String(e.message).includes('game_config')?'（請先在 D1 Console 建立 game_config 資料表）':'');msg.className='admin-msg err';}
-  };
-  document.getElementById('admin-refresh-players').onclick=refreshAdminManagedPlayers;
-  document.getElementById('admin-save-story').onclick=async function(){
-    const lines=id=>document.getElementById(id).value.split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
-    const prologue=lines('admin-story-prologue');
-    const greeting={black:lines('admin-story-greeting-black'),white:lines('admin-story-greeting-white')};
-    const endingNote=document.getElementById('admin-story-endingNote').value.trim();
-    const msg=document.getElementById('admin-story-msg');
-    if(!prologue.length){msg.textContent='❌ 共同序章至少需要一句。';msg.className='admin-msg err';return;}
-    if(greeting.black.length<3||greeting.white.length<3){msg.textContent='❌ 問名劇情必須包含輸入名字前與輸入名字後的台詞（黑白雙方都至少 3 行）。';msg.className='admin-msg err';return;}
-    let missing='';
-    const nextPairs={};
-    ADMIN_TUTORIAL_STORY_FIELDS.forEach(function(field){
-      const key=field[0];nextPairs[key]={};
-      ['black','white'].forEach(function(side){
-        const value=document.getElementById('admin-story-'+key+'-'+side).value.trim();
-        nextPairs[key][side]=value;if(!value && !missing) missing=field[1]+'／'+(side==='black'?'小黑':'小白');
-      });
+    +'<button type="button" class="btn primary small" id="admin-save-story">儲存完整新手劇情</button><div id="admin-story-msg" class="admin-msg" style="display:block;margin:7px 0"></div>';
+    document.getElementById('admin-save-story').onclick=saveAdminTutorialStory;
+    return;
+  }
+  if(adminActiveTab==='players'){
+    box.innerHTML='<h3 style="margin:0 0 8px">👤 玩家帳號資料</h3>'
+      +'<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><select id="admin-player-select" style="min-width:260px;max-width:100%;flex:1"><option value="">載入玩家清單後選擇帳號</option></select><button type="button" class="btn small" id="admin-refresh-players">重新整理玩家</button></div>'
+      +'<div id="admin-manager-msg" class="admin-msg" style="display:block;margin:7px 0"></div><div id="admin-player-editor" style="margin-top:8px;color:var(--muted);font-size:12px">請先選擇玩家。</div>';
+    document.getElementById('admin-refresh-players').onclick=refreshAdminManagedPlayers;
+    document.getElementById('admin-player-select').onchange=function(){if(this.value) loadAdminManagedPlayer(this.value);};
+    if(adminManagedPlayers.length) populateAdminPlayerSelect();
+  }
+}
+async function saveAdminTutorialStory(){
+  const lines=id=>document.getElementById(id).value.split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
+  const prologue=lines('admin-story-prologue');
+  const greeting={black:lines('admin-story-greeting-black'),white:lines('admin-story-greeting-white')};
+  const endingNote=document.getElementById('admin-story-endingNote').value.trim();
+  const msg=document.getElementById('admin-story-msg');
+  if(!prologue.length){msg.textContent='❌ 共同序章至少需要一句。';msg.className='admin-msg err';return;}
+  if(greeting.black.length<3||greeting.white.length<3){msg.textContent='❌ 問名劇情必須包含輸入名字前與輸入名字後的台詞（黑白雙方都至少 3 行）。';msg.className='admin-msg err';return;}
+  let missing='';
+  const nextPairs={};
+  ADMIN_TUTORIAL_STORY_FIELDS.forEach(function(field){
+    const key=field[0];nextPairs[key]={};
+    ['black','white'].forEach(function(side){
+      const value=document.getElementById('admin-story-'+key+'-'+side).value.trim();
+      nextPairs[key][side]=value;if(!value && !missing) missing=field[1]+'／'+(side==='black'?'小黑':'小白');
     });
-    if(missing||!endingNote){msg.textContent='❌ 文本不能留白：'+(missing||'共同結尾提示');msg.className='admin-msg err';return;}
-    TUTORIAL_LINES.prologue=prologue;
-    ['black','white'].forEach(function(side){TUTORIAL_LINES.greeting[side]=greeting[side];globalIntroStory[side]=greeting[side];});
-    ADMIN_TUTORIAL_STORY_FIELDS.forEach(function(field){TUTORIAL_LINES[field[0]]=nextPairs[field[0]];});
-    TUTORIAL_LINES.endingNote=endingNote;
-    msg.textContent='⏳ 儲存中…';msg.className='admin-msg';
-    try{ await saveGlobalAdminConfig();msg.textContent='✅ 完整新手劇情已全域儲存。';msg.className='admin-msg'; }catch(e){msg.textContent='❌ 儲存失敗：'+e.message;msg.className='admin-msg err';}
-  };
-  document.getElementById('admin-player-select').onchange=function(){if(this.value) loadAdminManagedPlayer(this.value);};
-  if(adminManagedPlayers.length) populateAdminPlayerSelect();
+  });
+  if(missing||!endingNote){msg.textContent='❌ 文本不能留白：'+(missing||'共同結尾提示');msg.className='admin-msg err';return;}
+  TUTORIAL_LINES.prologue=prologue;
+  ['black','white'].forEach(function(side){TUTORIAL_LINES.greeting[side]=greeting[side];globalIntroStory[side]=greeting[side];});
+  ADMIN_TUTORIAL_STORY_FIELDS.forEach(function(field){TUTORIAL_LINES[field[0]]=nextPairs[field[0]];});
+  TUTORIAL_LINES.endingNote=endingNote;
+  msg.textContent='⏳ 儲存中…';msg.className='admin-msg';
+  try{ await saveGlobalAdminConfig();msg.textContent='✅ 完整新手劇情已全域儲存。';msg.className='admin-msg'; }catch(e){msg.textContent='❌ 儲存失敗：'+e.message;msg.className='admin-msg err';}
 }
 function adminManagerMessage(text,error){const el=document.getElementById('admin-manager-msg');if(el){el.textContent=text;el.className=error?'admin-msg err':'admin-msg';}}
 function populateAdminPlayerSelect(){
@@ -9037,6 +9080,10 @@ async function applyAdminChar(charId){
   c.hp = hp; c.atk = atk; c.def = def; c.spd = spd;
   c.element = document.getElementById('admin-char-element').value;
   c.gachaWeight = gachaWeight;
+  c.wish = (readText('char-wish')||'').trim();
+  c.outer = (readText('char-outer')||'').trim();
+  c.inner = (readText('char-inner')||'').trim();
+  c.story = (readText('char-story')||'').trim();
   msg.textContent = '⏳ 套用中…'; msg.className = 'admin-msg';
   try{ await saveGlobalAdminConfig(); msg.textContent='✅ 已儲存為全域設定，所有帳號下次載入會套用。'; msg.className='admin-msg'; }
   catch(e){ msg.textContent='❌ 全域儲存失敗：'+e.message; msg.className='admin-msg err'; return; }
