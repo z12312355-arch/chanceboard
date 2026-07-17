@@ -6829,8 +6829,10 @@ function updateGachaCostDisplay(){
   const btn10 = document.getElementById('gachaPull10Btn');
   const label1 = btn1 ? btn1.querySelector('.gacha-pull-label') : null;
   if(window.__tutorialFreeSinglePull){
-    if(label1) label1.textContent='✨ 免費召喚 x1';
-    c1.textContent='🎁 教學免費（不消耗'+(isGold?'金幣':'鑽石')+'）';
+    // 教學對話已經說明這次不消耗貨幣；按鈕只保留短版「免費」提示，避免長文字
+    // 把召喚按鈕撐得比一般狀態更寬、更高。
+    if(label1) label1.textContent='✨ 召喚 x1';
+    c1.textContent='🎁 免費';
   }else{
     if(label1) label1.textContent='✨ 召喚 x1';
     c1.textContent = icon+' '+cost1;
