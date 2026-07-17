@@ -402,6 +402,21 @@ export async function onRequest(context) {
       const owned = parseJson(row.owned_chars, []);
       if (owned.length < 3) throw apiError('Finish the starter and two tutorial summons first.');
       await db.prepare("UPDATE players SET tutorial_done=1,tutorial_step='completed',updated_at=unixepoch() WHERE uid=?1").bind(user.uid).run();
+    } else if (action === 'story-reward') {
+      // 第一章的角色加入事件：黑方線為圖卡勒絲(005)，白方線為梅朵(009)。
+      // 領取紀錄放在既有 settings JSON，不需要 D1 schema migration；同一路線只能領一次，
+      // 已經擁有角色時只標記完成，不會藉由重播故事反覆升星或取得結晶。
+      const route = body.route === 'white' ? 'white' : body.route === 'black' ? 'black' : '';
+      if (!route) throw apiError('Invalid story route.');
+      const rewardId = route === 'white' ? '009' : '005';
+      const settings = parseJson(row.settings, {}), claims = safeObject(settings.storyRewards);
+      if (!claims[route]) {
+        const owned = parseJson(row.owned_chars, []), stars = parseJson(row.char_stars, {});
+        if (!owned.includes(rewardId)) { owned.push(rewardId); stars[rewardId] = 1; }
+        claims[route] = true; settings.storyRewards = claims;
+        await db.prepare('UPDATE players SET owned_chars=?2,char_stars=?3,settings=?4,updated_at=unixepoch() WHERE uid=?1')
+          .bind(user.uid, JSON.stringify(owned), JSON.stringify(stars), JSON.stringify(settings)).run();
+      }
     } else if (action === 'teams') {
       const teams = safeTeams(body.teams, parseJson(row.owned_chars, []));
       const nextStep = tutorialStepFromRow(row) === 'team' && teams.length ? 'ending' : tutorialStepFromRow(row);
@@ -432,7 +447,8 @@ export async function onRequest(context) {
       await db.prepare('DELETE FROM friendships WHERE user_a=?1 AND user_b=?2').bind(a, b).run();
       return json({ friends: await friendList(db, user.uid) });
     } else if (action === 'preferences') {
-      const settings = body.settings && typeof body.settings === 'object' ? body.settings : {};
+      // 保留伺服器寫入的 storyRewards 等進度鍵；一般音效設定同步不能把它們整包覆蓋掉。
+      const settings = Object.assign({}, parseJson(row.settings, {}), body.settings && typeof body.settings === 'object' ? body.settings : {});
       const faction = body.tutorialFaction === 'white' ? 'white' : 'black';
       const hero = typeof body.lobbyHeroId === 'string' && ALL_CHARACTER_IDS.includes(body.lobbyHeroId) ? body.lobbyHeroId : null;
       await db.prepare('UPDATE players SET settings=?2,tutorial_faction=?3,lobby_hero_id=?4,updated_at=unixepoch() WHERE uid=?1').bind(user.uid, JSON.stringify(settings), faction, hero).run();
