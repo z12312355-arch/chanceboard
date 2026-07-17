@@ -2309,6 +2309,7 @@
     <div class="admin-head">
       <div class="title">⚙️ 後臺：角色 / 招式資料編輯</div>
       <div class="btns">
+        <button class="btn small primary" id="adminSyncBundledToD1Btn">☁️ 將 Git 資料同步到 D1</button>
         <button class="btn small" id="adminLinkDbBtn">🔗 連結資料庫檔案</button>
         <button class="btn small hidden" id="adminUnlinkDbBtn">🔓 取消連結</button>
         <button class="btn small" id="adminExportHtmlBtn">💾 下載完整遊戲檔案</button>
@@ -2358,6 +2359,7 @@
       <div class="admin-form" id="admin-form"></div>
     </div>
     <div class="admin-foot">
+      <div id="admin-d1-sync-msg" class="admin-msg" style="margin-bottom:5px;"></div>
       <div id="admin-db-source" style="font-size:11px;margin-bottom:4px;"></div>
       <span style="font-size:11px;color:var(--muted);">按「🔗 連結資料庫檔案」選一次 chanceboard_db.js（僅 Chrome／Edge 支援），之後「套用」會直接寫回那個檔案本身——真正的「寫回資料庫」，換電腦、換瀏覽器都帶著走，不用手動下載覆蓋。沒有連結的話，「套用」還是會照舊永久保存在這個瀏覽器裡（重新整理／關掉分頁都不會消失，但換瀏覽器、換電腦不會帶著走），可以之後再按「下載資料庫檔案」手動覆蓋，或直接用文字編輯器打開 chanceboard_db.js 手動改（不透過這個後臺介面也可以）。「下載完整遊戲檔案」則是另外匯出一份單一檔案、內建目前資料，適合分享給別人（不需要另外帶 chanceboard_db.js）。</span>
     </div>
@@ -2498,6 +2500,20 @@ function applyGlobalGameConfig(config){
 }
 function globalGameConfigPayload(){
   return {balanceVersion:CURRENT_BALANCE_VERSION,characters:DB.characters,moves:DB.moves,cards:DB.cards,settings:globalEconomySettings,introStory:globalIntroStory,tutorialStory:JSON.parse(JSON.stringify(TUTORIAL_LINES))};
+}
+// Captured before account bootstrap applies D1, so this remains the exact
+// Git/chanceboard_db.js data even when the current in-memory DB was overlaid by
+// an older D1 live row.
+function bundledGameConfigPayload(){
+  return {
+    balanceVersion:CURRENT_BALANCE_VERSION,
+    characters:JSON.parse(JSON.stringify(ORIGINAL_DB_SNAPSHOT.characters||[])),
+    moves:JSON.parse(JSON.stringify(ORIGINAL_DB_SNAPSHOT.moves||[])),
+    cards:JSON.parse(JSON.stringify(ORIGINAL_DB_SNAPSHOT.cards||[])),
+    settings:Object.assign({},globalEconomySettings),
+    introStory:JSON.parse(JSON.stringify(globalIntroStory)),
+    tutorialStory:JSON.parse(JSON.stringify(TUTORIAL_LINES))
+  };
 }
 const SUIT_CARD_IDS = DB.cards.filter(c=>c.isSuitCard).map(c=>c.id); // ['001'..'004']
 const FLOWER_CARD_IDS = DB.cards.filter(c=>!c.isSuitCard).map(c=>c.id);
@@ -8905,6 +8921,23 @@ async function saveGlobalAdminConfig(){
   applyGlobalGameConfig(result.config);
   return result.config;
 }
+async function syncBundledGameConfigToD1(){
+  const btn=document.getElementById('adminSyncBundledToD1Btn');
+  const msg=document.getElementById('admin-d1-sync-msg');
+  if(typeof window.__adminAccountApi!=='function'){
+    msg.textContent='❌ 請先以管理者帳號登入。'; msg.className='admin-msg err'; return;
+  }
+  if(!confirm('確定要用目前 Git／chanceboard_db.js 內建的角色、招式與花牌資料覆蓋 D1 全域設定嗎？所有玩家下次載入都會使用這份資料。')) return;
+  btn.disabled=true; msg.textContent='⏳ 正在將 Git 內建資料同步到 D1…'; msg.className='admin-msg';
+  try{
+    const result=await window.__adminAccountApi('admin-config',{config:bundledGameConfigPayload()});
+    applyGlobalGameConfig(result.config);
+    renderAdminCharList(); renderAdminForm(); renderAdminDbSourceInfo();
+    msg.textContent='✅ 同步完成。D1 已改為目前 Git 內建數值，所有玩家重新載入後生效。';
+  }catch(e){
+    msg.textContent='❌ 同步失敗：'+e.message; msg.className='admin-msg err';
+  }finally{ btn.disabled=false; }
+}
 let adminManagedPlayers=[];
 let adminManagedPlayer=null;
 function adminManagerField(label,id,type,value){
@@ -9270,6 +9303,7 @@ function exportDbJsonFile(){
 
 document.getElementById('adminCloseBtn').onclick = closeAdminPanel;
 document.getElementById('adminBackdrop').onclick = function(e){ if(e.target===this) closeAdminPanel(); };
+document.getElementById('adminSyncBundledToD1Btn').onclick = syncBundledGameConfigToD1;
 document.getElementById('adminExportHtmlBtn').onclick = exportFullGameFile;
 document.getElementById('adminExportJsonBtn').onclick = exportDbJsonFile;
 document.getElementById('adminResetAllBtn').onclick = function(){
