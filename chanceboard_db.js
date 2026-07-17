@@ -3883,7 +3883,7 @@ window.CHANCEBOARD_DB = {
       "id": "011",
       "name": "回復(Recovery)",
       "color": "花牌",
-      "description": "角色解除全部狀態，並依照解除的狀態數量回復HP",
+      "description": "解除角色全部狀態，每解除1個狀態回復100HP",
       "isSuitCard": false,
       "effectOps": [
         {
