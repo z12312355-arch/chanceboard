@@ -179,7 +179,8 @@ async function runBatch(file, n, concurrency, teamPool, idxOf) {
         if (!winner && endText.includes('黑方獲勝')) winner = 'A';
         else if (!winner && endText.includes('白方獲勝')) winner = 'B';
         else if (!winner && endText.includes('平手')) winner = 'draw';
-        logText = document.getElementById('log') ? document.getElementById('log').innerText : '';
+        // 新版高速入口直接回傳引擎內的完整紀錄；舊版檔案才退回讀畫面 DOM。
+        logText = battleResult.logText || (document.getElementById('log') ? document.getElementById('log').innerText : '');
       }
       return { battleResult, winner, endText, logText };
     });

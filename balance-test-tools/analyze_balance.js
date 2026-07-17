@@ -3,8 +3,10 @@
 // 用法： node analyze_balance.js [balance_results.jsonl路徑]
 
 const fs = require('fs');
+const path = require('path');
+const vm = require('vm');
 
-const ROSTER = [
+const FALLBACK_ROSTER = [
   '詹姆士．弗烈德(James Frida)',
   '羅迪(Rodiy)',
   '緋村 一郎(Himura Ichirou)',
@@ -27,17 +29,37 @@ const ROSTER = [
   '尼多',
   'R',
 ];
+function loadCurrentRoster(){
+  const dbPath = path.join(__dirname, '..', 'chanceboard_db.js');
+  try{
+    const sandbox = {window:{}};
+    vm.createContext(sandbox);
+    vm.runInContext(fs.readFileSync(dbPath,'utf8'), sandbox, {filename:dbPath});
+    const chars = sandbox.window.CHANCEBOARD_DB && sandbox.window.CHANCEBOARD_DB.characters;
+    if(Array.isArray(chars) && chars.length) return chars.map(c=>c.name);
+  }catch(e){ /* 舊工具包或單獨搬移分析器時，退回內建名單。 */ }
+  return FALLBACK_ROSTER;
+}
+// 名單與索引必須跟目前資料庫順序一致；角色改名後不再需要手動同步分析器。
+const ROSTER = loadCurrentRoster();
 const IDX2NAME = {}; ROSTER.forEach((n,i)=> IDX2NAME[i+1]=n);
 
 function matchName(raw){
   raw = raw.trim();
-  for(const n of ROSTER){ if(raw.includes(n)) return n; }
+  for(const n of ROSTER){
+    // 戰鬥紀錄顯示的是去掉英文括號別名後的短名（例如「海瑟」），報表名單則保留
+    // 「海瑟(Hesher)」。舊版只拿完整字串比對，導致所有有英文別名的角色都認不出來。
+    const shortName = n.replace(/\([^)]*\)/g,'').trim();
+    if(raw.includes(n) || (shortName && raw.includes(shortName))) return n;
+  }
   return null;
 }
 
-const ATTACK_RE = /【(黑方|白方)】(.+?) 攻擊 【(黑方|白方)】(.+?)(?:　💥爆擊)?(?:　🔺屬性相剋)?，造成 (\d+) 點傷害/;
+const SIDE_LABEL = '(?:黑方|白方|我方|對方|A方|B方)';
+const ATTACK_RE = new RegExp('【'+SIDE_LABEL+'】(.+?) 攻擊 【'+SIDE_LABEL+'】(.+?)(?:　💥爆擊)?(?:　🔺屬性相剋)?，造成 (\\d+) 點傷害');
+const COUNTER_RE = new RegExp('【'+SIDE_LABEL+'】(.+?) 觸發「還手」，反擊 【'+SIDE_LABEL+'】(.+?)(?:　🔺屬性相剋)?，造成 (\\d+) 點傷害');
 const PASSIVE_RE = /(.+?) 的效果對 (.+?) 造成 (\d+) 點傷害/;
-const CONFUSE_RE = /【(黑方|白方)】(.+?) 陷入混亂，攻擊了自己，造成 (\d+) 點傷害/;
+const CONFUSE_RE = new RegExp('【'+SIDE_LABEL+'】(.+?) 陷入混亂，攻擊了自己，造成 (\\d+) 點傷害');
 // 回血相關的log格式，依「比對優先順序」排列：越具體（能認出施術者）的規則要放前面，
 // 不然比較籠統的規則會先比對到同一行的一部分，把施術者的名字誤判成受術者。
 // 注意：logText是從畫面元素的.innerText抓出來的，瀏覽器會把<span>之類的HTML標籤全部
@@ -85,16 +107,24 @@ function analyze(rows){
     for(const line of log.split('\n')){
       let m = ATTACK_RE.exec(line);
       if(m){
-        const atkRaw = m[2], defRaw = m[4], dmg = parseInt(m[5],10);
+        const atkRaw = m[1], defRaw = m[2], dmg = parseInt(m[3],10);
         const died = line.includes('陣亡');
         const atkN = matchName(atkRaw), defN = matchName(defRaw);
         if(atkN){ stats[atkN].dmgDealt += dmg; if(died) stats[atkN].kills++; }
         if(defN){ stats[defN].dmgTaken += dmg; if(died) stats[defN].deaths++; }
         continue;
       }
+      m = COUNTER_RE.exec(line);
+      if(m){
+        const atkN = matchName(m[1]), defN = matchName(m[2]), dmg = parseInt(m[3],10);
+        const died = line.includes('陣亡');
+        if(atkN){ stats[atkN].dmgDealt += dmg; if(died) stats[atkN].kills++; }
+        if(defN){ stats[defN].dmgTaken += dmg; if(died) stats[defN].deaths++; }
+        continue;
+      }
       m = CONFUSE_RE.exec(line);
       if(m){
-        const whoRaw = m[2], dmg = parseInt(m[3],10);
+        const whoRaw = m[1], dmg = parseInt(m[2],10);
         const died = line.includes('陣亡');
         const whoN = matchName(whoRaw);
         if(whoN){ stats[whoN].dmgTaken += dmg; if(died) stats[whoN].deaths++; }
@@ -102,9 +132,11 @@ function analyze(rows){
       }
       m = PASSIVE_RE.exec(line);
       if(m){
-        const moverRaw = m[1], dmg = parseInt(m[3],10);
-        const moverN = matchName(moverRaw);
-        if(moverN) stats[moverN].dmgDealt += dmg;
+        const moverRaw = m[1], targetRaw = m[2], dmg = parseInt(m[3],10);
+        const moverN = matchName(moverRaw), targetN = matchName(targetRaw);
+        const died = line.includes('陣亡');
+        if(moverN){ stats[moverN].dmgDealt += dmg; if(died) stats[moverN].kills++; }
+        if(targetN){ stats[targetN].dmgTaken += dmg; if(died) stats[targetN].deaths++; }
         continue;
       }
       // 回血：依優先順序比對（有標明施術者的先比對，避免被籠統版本搶先吃掉）
@@ -234,7 +266,6 @@ const htmlOut = `<!DOCTYPE html>
 ${htmlRows}
 </table>
 </body></html>`;
-const path = require('path');
 const outHtmlPath = path.join(path.dirname(filePath), 'balance_report.html');
 fs.writeFileSync(outHtmlPath, htmlOut);
 console.log();

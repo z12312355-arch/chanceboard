@@ -9377,7 +9377,12 @@ window.__runFastBattle = function(maxIters){
     iters++;
   }
   window.__fastBattleMode = false;
-  return {iters, phase: state.phase, ended: state.phase==='end', winner: state.winner};
+  // 高速模式不會逐回合 render()，因此不能讓外部工具再從 #log.innerText 讀紀錄；直接把
+  // 引擎內 state.log 的完整內容轉成純文字回傳，輸出／承傷／回血／KO 才不會大量漏記。
+  const logText = state.log.map(function(entry){
+    return String(entry.html||'').replace(/<[^>]*>/g,'');
+  }).join('\n');
+  return {iters, phase: state.phase, ended: state.phase==='end', winner: state.winner, logText};
 };
 window.__isEnded = function(){ return state.phase==='end'; };
 
