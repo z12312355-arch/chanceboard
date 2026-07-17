@@ -117,7 +117,7 @@ function normalizeGlobalConfig(input) {
       routeDescriptions: routeObject('routeDescriptions'),
       portraits,
       typewriterMs: intInRange(storyModeSource.typewriterMs, 24, 8, 120),
-      cinematicIntervalMs: intInRange(storyModeSource.cinematicIntervalMs, 560, 150, 3000)
+      cinematicIntervalMs: intInRange(storyModeSource.cinematicIntervalMs, 850, 150, 3000)
     };
   }
   return {
