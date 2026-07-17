@@ -20,11 +20,12 @@ window.CHANCEBOARD_DB = {
       "outer": "他很高傲",
       "inner": "他只是寂寞",
       "hp": 8,
-      "atk": 5,
+      "atk": 6,
       "def": 8,
       "spd": 12,
       "statStrength": 0.4625,
-      "moveStrength": 0.537638888888888
+      "moveStrength": 0.537638888888888,
+      "gachaWeight": 1
     },
     {
       "id": "002",
@@ -466,7 +467,7 @@ window.CHANCEBOARD_DB = {
       "def": 6,
       "spd": 11,
       "statStrength": 0.45,
-      "moveStrength": 1.0
+      "moveStrength": 1
     },
     {
       "id": "003",
@@ -574,7 +575,7 @@ window.CHANCEBOARD_DB = {
         }
       ],
       "effectTrigger": "onCrit",
-      "effectChance": 1.0
+      "effectChance": 1
     },
     {
       "id": "002",
@@ -600,7 +601,7 @@ window.CHANCEBOARD_DB = {
         }
       ],
       "effectTrigger": "onCrit",
-      "effectChance": 1.0
+      "effectChance": 1
     },
     {
       "id": "003",
@@ -625,7 +626,7 @@ window.CHANCEBOARD_DB = {
         }
       ],
       "effectTrigger": "onCrit",
-      "effectChance": 1.0
+      "effectChance": 1
     },
     {
       "id": "004",
@@ -650,12 +651,12 @@ window.CHANCEBOARD_DB = {
           "key": "封招",
           "mode": "value",
           "target": "target",
-          "chance": 1.0,
+          "chance": 1,
           "durSec": 10
         }
       ],
       "effectTrigger": "onCrit",
-      "effectChance": 1.0
+      "effectChance": 1
     },
     {
       "id": "005",
@@ -707,7 +708,7 @@ window.CHANCEBOARD_DB = {
           "key": "禁足",
           "mode": "value",
           "target": "target",
-          "chance": 1.0,
+          "chance": 1,
           "durSec": 10
         }
       ],
@@ -739,7 +740,7 @@ window.CHANCEBOARD_DB = {
         }
       ],
       "effectTrigger": "postAction",
-      "effectChance": 1.0
+      "effectChance": 1
     },
     {
       "id": "008",
@@ -764,13 +765,13 @@ window.CHANCEBOARD_DB = {
           "key": "迴避%",
           "mode": "value",
           "target": "self",
-          "chance": 1.0,
+          "chance": 1,
           "value": 0.3,
           "durSec": 20
         }
       ],
       "effectTrigger": "postAction",
-      "effectChance": 1.0
+      "effectChance": 1
     },
     {
       "id": "009",
@@ -779,7 +780,7 @@ window.CHANCEBOARD_DB = {
       "condition": 1,
       "rangeType": "槍",
       "scope": "單",
-      "powerRatio": 2.0,
+      "powerRatio": 2,
       "hitRate": 1,
       "critRate": null,
       "cooldown": null,
@@ -797,7 +798,7 @@ window.CHANCEBOARD_DB = {
         }
       ],
       "effectTrigger": "postAction",
-      "effectChance": 1.0
+      "effectChance": 1
     },
     {
       "id": "010",
@@ -848,7 +849,7 @@ window.CHANCEBOARD_DB = {
         }
       ],
       "effectTrigger": "onCrit",
-      "effectChance": 1.0
+      "effectChance": 1
     },
     {
       "id": "017",
@@ -873,13 +874,13 @@ window.CHANCEBOARD_DB = {
           "key": "SPD+",
           "mode": "pct",
           "target": "self",
-          "chance": 1.0,
+          "chance": 1,
           "value": 0.25,
           "durSec": 20
         }
       ],
       "effectTrigger": "postAction",
-      "effectChance": 1.0
+      "effectChance": 1
     },
     {
       "id": "018",
@@ -904,13 +905,13 @@ window.CHANCEBOARD_DB = {
           "key": "SPD-",
           "mode": "pct",
           "target": "target",
-          "chance": 1.0,
+          "chance": 1,
           "value": 0.3,
           "durSec": 30
         }
       ],
       "effectTrigger": "onHit",
-      "effectChance": 1.0
+      "effectChance": 1
     },
     {
       "id": "019",
@@ -935,12 +936,12 @@ window.CHANCEBOARD_DB = {
           "key": "魅影模式",
           "mode": "value",
           "target": "self",
-          "chance": 1.0,
+          "chance": 1,
           "durSec": 999999
         }
       ],
       "effectTrigger": "postAction",
-      "effectChance": 1.0
+      "effectChance": 1
     },
     {
       "id": "020",
@@ -967,7 +968,7 @@ window.CHANCEBOARD_DB = {
         }
       ],
       "effectTrigger": "roundEnd",
-      "effectChance": 1.0
+      "effectChance": 1
     },
     {
       "id": "021",
@@ -992,11 +993,11 @@ window.CHANCEBOARD_DB = {
           "percent": 0.3,
           "of": "max",
           "target": "self",
-          "chance": 1.0
+          "chance": 1
         }
       ],
       "effectTrigger": "postAction",
-      "effectChance": 1.0
+      "effectChance": 1
     },
     {
       "id": "022",
@@ -1005,7 +1006,7 @@ window.CHANCEBOARD_DB = {
       "condition": 1,
       "rangeType": "槍",
       "scope": "單",
-      "powerRatio": 2.0,
+      "powerRatio": 2,
       "hitRate": 1,
       "critRate": null,
       "cooldown": null,
@@ -1021,13 +1022,13 @@ window.CHANCEBOARD_DB = {
           "key": "迴避%",
           "mode": "value",
           "target": "self",
-          "chance": 1.0,
+          "chance": 1,
           "value": 0.6,
           "durSec": 40
         }
       ],
       "effectTrigger": "postAction",
-      "effectChance": 1.0
+      "effectChance": 1
     },
     {
       "id": "023",
@@ -1037,11 +1038,11 @@ window.CHANCEBOARD_DB = {
       "rangeType": "法",
       "scope": "單",
       "powerRatio": 2.5,
-      "hitRate": 1.0,
+      "hitRate": 1,
       "critRate": null,
       "cooldown": 1,
       "coefficient": 1,
-      "description": "攻擊後令自己所在格隊友回復最大HP的15%",
+      "description": "攻擊後令自己所在格友方回復最大HP的15%",
       "expectedValue": 0.9,
       "strength": 1.5,
       "ownerName": "圖卡勒絲(Twocolors)",
@@ -1052,11 +1053,11 @@ window.CHANCEBOARD_DB = {
           "percent": 0.15,
           "of": "max",
           "target": "ownCell",
-          "chance": 1.0
+          "chance": 1
         }
       ],
       "effectTrigger": "postAction",
-      "effectChance": 1.0
+      "effectChance": 1
     },
     {
       "id": "024",
@@ -1081,12 +1082,12 @@ window.CHANCEBOARD_DB = {
           "key": "必中",
           "mode": "value",
           "target": "self",
-          "chance": 1.0,
+          "chance": 1,
           "durSec": 50
         }
       ],
       "effectTrigger": "postAction",
-      "effectChance": 1.0
+      "effectChance": 1
     },
     {
       "id": "025",
@@ -1112,7 +1113,7 @@ window.CHANCEBOARD_DB = {
         }
       ],
       "effectTrigger": "battleStart",
-      "effectChance": 1.0
+      "effectChance": 1
     },
     {
       "id": "026",
@@ -1137,11 +1138,11 @@ window.CHANCEBOARD_DB = {
           "percent": 0.15,
           "of": "max",
           "target": "lowestHpAlly",
-          "chance": 1.0
+          "chance": 1
         }
       ],
       "effectTrigger": "postAction",
-      "effectChance": 1.0
+      "effectChance": 1
     },
     {
       "id": "027",
@@ -1166,7 +1167,7 @@ window.CHANCEBOARD_DB = {
         }
       ],
       "effectTrigger": "postAction",
-      "effectChance": 1.0
+      "effectChance": 1
     },
     {
       "id": "028",
@@ -1175,7 +1176,7 @@ window.CHANCEBOARD_DB = {
       "condition": 3,
       "rangeType": "法",
       "scope": "單",
-      "powerRatio": 3.0,
+      "powerRatio": 3,
       "hitRate": 0.9,
       "critRate": null,
       "cooldown": 2,
@@ -1192,7 +1193,7 @@ window.CHANCEBOARD_DB = {
         }
       ],
       "effectTrigger": "preHit",
-      "effectChance": 1.0
+      "effectChance": 1
     },
     {
       "id": "029",
@@ -1217,11 +1218,11 @@ window.CHANCEBOARD_DB = {
           "percent": 0.15,
           "of": "max",
           "target": "ownCell",
-          "chance": 1.0
+          "chance": 1
         }
       ],
       "effectTrigger": "postAction",
-      "effectChance": 1.0
+      "effectChance": 1
     },
     {
       "id": "030",
@@ -1246,11 +1247,11 @@ window.CHANCEBOARD_DB = {
           "percent": 0.1,
           "of": "max",
           "target": "self",
-          "chance": 1.0
+          "chance": 1
         }
       ],
       "effectTrigger": "onPass",
-      "effectChance": 1.0
+      "effectChance": 1
     },
     {
       "id": "031",
@@ -1275,7 +1276,7 @@ window.CHANCEBOARD_DB = {
           "key": "混亂",
           "mode": "value",
           "target": "target",
-          "chance": 1.0,
+          "chance": 1,
           "durSec": 20
         }
       ],
@@ -1305,13 +1306,13 @@ window.CHANCEBOARD_DB = {
           "key": "SPD-",
           "mode": "pct",
           "target": "target",
-          "chance": 1.0,
+          "chance": 1,
           "value": 0.75,
           "durSec": 40
         }
       ],
       "effectTrigger": "onHit",
-      "effectChance": 1.0
+      "effectChance": 1
     },
     {
       "id": "033",
@@ -1320,8 +1321,8 @@ window.CHANCEBOARD_DB = {
       "condition": 3,
       "rangeType": "法",
       "scope": "群",
-      "powerRatio": 4.0,
-      "hitRate": 1.0,
+      "powerRatio": 4,
+      "hitRate": 1,
       "critRate": null,
       "cooldown": 1,
       "coefficient": 0.7,
@@ -1336,11 +1337,11 @@ window.CHANCEBOARD_DB = {
           "percent": 0.3,
           "of": "max",
           "target": "target",
-          "chance": 1.0
+          "chance": 1
         }
       ],
       "effectTrigger": "onHit",
-      "effectChance": 1.0
+      "effectChance": 1
     },
     {
       "id": "034",
@@ -1365,12 +1366,12 @@ window.CHANCEBOARD_DB = {
           "key": "隱身",
           "mode": "value",
           "target": "self",
-          "chance": 1.0,
+          "chance": 1,
           "durSec": 40
         }
       ],
       "effectTrigger": "postAction",
-      "effectChance": 1.0
+      "effectChance": 1
     },
     {
       "id": "035",
@@ -1397,7 +1398,7 @@ window.CHANCEBOARD_DB = {
         }
       ],
       "effectTrigger": "battleStart",
-      "effectChance": 1.0
+      "effectChance": 1
     },
     {
       "id": "036",
@@ -1422,7 +1423,7 @@ window.CHANCEBOARD_DB = {
           "key": "燃燒",
           "mode": "value",
           "target": "target",
-          "chance": 1.0,
+          "chance": 1,
           "durSec": 20
         }
       ],
@@ -1452,7 +1453,7 @@ window.CHANCEBOARD_DB = {
           "key": "SPD+",
           "mode": "pct",
           "target": "self",
-          "chance": 1.0,
+          "chance": 1,
           "value": 0.5,
           "durSec": 20
         },
@@ -1461,13 +1462,13 @@ window.CHANCEBOARD_DB = {
           "key": "ATK+",
           "mode": "pct",
           "target": "self",
-          "chance": 1.0,
+          "chance": 1,
           "value": 0.5,
           "durSec": 20
         }
       ],
       "effectTrigger": "postAction",
-      "effectChance": 1.0
+      "effectChance": 1
     },
     {
       "id": "038",
@@ -1477,7 +1478,7 @@ window.CHANCEBOARD_DB = {
       "rangeType": "法",
       "scope": "群",
       "powerRatio": 2,
-      "hitRate": 1.0,
+      "hitRate": 1,
       "critRate": null,
       "cooldown": 3,
       "coefficient": 0.7,
@@ -1492,7 +1493,7 @@ window.CHANCEBOARD_DB = {
           "key": "結冰",
           "mode": "value",
           "target": "target",
-          "chance": 1.0,
+          "chance": 1,
           "durSec": 20
         }
       ],
@@ -1524,7 +1525,7 @@ window.CHANCEBOARD_DB = {
         }
       ],
       "effectTrigger": "onHit",
-      "effectChance": 1.0
+      "effectChance": 1
     },
     {
       "id": "040",
@@ -1551,7 +1552,7 @@ window.CHANCEBOARD_DB = {
         }
       ],
       "effectTrigger": "roundStart",
-      "effectChance": 1.0
+      "effectChance": 1
     },
     {
       "id": "041",
@@ -1577,7 +1578,7 @@ window.CHANCEBOARD_DB = {
         }
       ],
       "effectTrigger": "postAction",
-      "effectChance": 1.0
+      "effectChance": 1
     },
     {
       "id": "042",
@@ -1603,7 +1604,7 @@ window.CHANCEBOARD_DB = {
         }
       ],
       "effectTrigger": "postAction",
-      "effectChance": 1.0
+      "effectChance": 1
     },
     {
       "id": "043",
@@ -1629,7 +1630,7 @@ window.CHANCEBOARD_DB = {
         }
       ],
       "effectTrigger": "postAction",
-      "effectChance": 1.0
+      "effectChance": 1
     },
     {
       "id": "044",
@@ -1654,13 +1655,13 @@ window.CHANCEBOARD_DB = {
           "key": "減傷%",
           "mode": "pct",
           "target": "self",
-          "chance": 1.0,
-          "value": 1.0,
+          "chance": 1,
+          "value": 1,
           "durSec": 20
         }
       ],
       "effectTrigger": "postAction",
-      "effectChance": 1.0
+      "effectChance": 1
     },
     {
       "id": "045",
@@ -1686,7 +1687,7 @@ window.CHANCEBOARD_DB = {
         }
       ],
       "effectTrigger": "battleStart",
-      "effectChance": 1.0
+      "effectChance": 1
     },
     {
       "id": "046",
@@ -1713,7 +1714,7 @@ window.CHANCEBOARD_DB = {
         }
       ],
       "effectTrigger": "onHit",
-      "effectChance": 1.0
+      "effectChance": 1
     },
     {
       "id": "047",
@@ -1738,13 +1739,13 @@ window.CHANCEBOARD_DB = {
           "key": "迴避%",
           "mode": "value",
           "target": "self",
-          "chance": 1.0,
+          "chance": 1,
           "value": 0.3,
           "durSec": 10
         }
       ],
       "effectTrigger": "postAction",
-      "effectChance": 1.0
+      "effectChance": 1
     },
     {
       "id": "048",
@@ -1774,13 +1775,13 @@ window.CHANCEBOARD_DB = {
           "key": "ATK+",
           "mode": "pct",
           "target": "self",
-          "chance": 1.0,
+          "chance": 1,
           "value": 0.5,
           "durSec": 20
         }
       ],
       "effectTrigger": "postAction",
-      "effectChance": 1.0
+      "effectChance": 1
     },
     {
       "id": "049",
@@ -1807,7 +1808,7 @@ window.CHANCEBOARD_DB = {
         }
       ],
       "effectTrigger": "postAction",
-      "effectChance": 1.0
+      "effectChance": 1
     },
     {
       "id": "050",
@@ -1843,7 +1844,7 @@ window.CHANCEBOARD_DB = {
       "condition": 2,
       "rangeType": "劍",
       "scope": "群",
-      "powerRatio": 4.0,
+      "powerRatio": 4,
       "hitRate": 1,
       "critRate": 0.1,
       "cooldown": null,
@@ -1859,8 +1860,8 @@ window.CHANCEBOARD_DB = {
           "key": "ATK+",
           "mode": "pct",
           "target": "target",
-          "chance": 1.0,
-          "value": 1.0,
+          "chance": 1,
+          "value": 1,
           "durSec": 10
         },
         {
@@ -1868,12 +1869,12 @@ window.CHANCEBOARD_DB = {
           "key": "混亂",
           "mode": "value",
           "target": "target",
-          "chance": 1.0,
+          "chance": 1,
           "durSec": 10
         }
       ],
       "effectTrigger": "onCrit",
-      "effectChance": 1.0
+      "effectChance": 1
     },
     {
       "id": "052",
@@ -1901,7 +1902,7 @@ window.CHANCEBOARD_DB = {
         }
       ],
       "effectTrigger": "onHit",
-      "effectChance": 1.0
+      "effectChance": 1
     },
     {
       "id": "053",
@@ -1911,7 +1912,7 @@ window.CHANCEBOARD_DB = {
       "rangeType": "法",
       "scope": "單",
       "powerRatio": 2.2,
-      "hitRate": 1.0,
+      "hitRate": 1,
       "critRate": null,
       "cooldown": 2,
       "coefficient": 0.7,
@@ -1926,12 +1927,12 @@ window.CHANCEBOARD_DB = {
           "key": "強運",
           "mode": "value",
           "target": "self",
-          "chance": 1.0,
+          "chance": 1,
           "durSec": 50
         }
       ],
       "effectTrigger": "onKill",
-      "effectChance": 1.0
+      "effectChance": 1
     },
     {
       "id": "054",
@@ -1956,11 +1957,11 @@ window.CHANCEBOARD_DB = {
           "percent": 0.2,
           "of": "max",
           "target": "enemyTeam",
-          "chance": 1.0
+          "chance": 1
         }
       ],
       "effectTrigger": "postAction",
-      "effectChance": 1.0
+      "effectChance": 1
     },
     {
       "id": "055",
@@ -1987,7 +1988,7 @@ window.CHANCEBOARD_DB = {
         }
       ],
       "effectTrigger": "roundStart",
-      "effectChance": 1.0
+      "effectChance": 1
     },
     {
       "id": "056",
@@ -1996,7 +1997,7 @@ window.CHANCEBOARD_DB = {
       "condition": 1,
       "rangeType": "劍",
       "scope": "單",
-      "powerRatio": 4.0,
+      "powerRatio": 4,
       "hitRate": 1,
       "critRate": 0.1,
       "cooldown": null,
@@ -2012,7 +2013,7 @@ window.CHANCEBOARD_DB = {
           "key": "封招",
           "mode": "value",
           "target": "target",
-          "chance": 1.0,
+          "chance": 1,
           "durSec": 10
         }
       ],
@@ -2042,11 +2043,11 @@ window.CHANCEBOARD_DB = {
           "percent": 0.1,
           "of": "max",
           "target": "target",
-          "chance": 1.0
+          "chance": 1
         }
       ],
       "effectTrigger": "onHit",
-      "effectChance": 1.0
+      "effectChance": 1
     },
     {
       "id": "058",
@@ -2071,11 +2072,11 @@ window.CHANCEBOARD_DB = {
           "percent": 0.15,
           "of": "current",
           "target": "target",
-          "chance": 1.0
+          "chance": 1
         }
       ],
       "effectTrigger": "preHit",
-      "effectChance": 1.0
+      "effectChance": 1
     },
     {
       "id": "059",
@@ -2100,11 +2101,11 @@ window.CHANCEBOARD_DB = {
           "percent": 0.2,
           "of": "max",
           "target": "self",
-          "chance": 1.0
+          "chance": 1
         }
       ],
       "effectTrigger": "postAction",
-      "effectChance": 1.0
+      "effectChance": 1
     },
     {
       "id": "060",
@@ -2130,7 +2131,7 @@ window.CHANCEBOARD_DB = {
         }
       ],
       "effectTrigger": "battleStart",
-      "effectChance": 1.0
+      "effectChance": 1
     },
     {
       "id": "061",
@@ -2155,7 +2156,7 @@ window.CHANCEBOARD_DB = {
           "key": "禁足",
           "mode": "value",
           "target": "target",
-          "chance": 1.0,
+          "chance": 1,
           "durSec": 10
         }
       ],
@@ -2185,7 +2186,7 @@ window.CHANCEBOARD_DB = {
           "key": "混亂",
           "mode": "value",
           "target": "target",
-          "chance": 1.0,
+          "chance": 1,
           "durSec": 20
         }
       ],
@@ -2199,7 +2200,7 @@ window.CHANCEBOARD_DB = {
       "condition": 3,
       "rangeType": "法",
       "scope": "群",
-      "powerRatio": 3.0,
+      "powerRatio": 3,
       "hitRate": 0.9,
       "critRate": null,
       "cooldown": 1,
@@ -2215,7 +2216,7 @@ window.CHANCEBOARD_DB = {
         }
       ],
       "effectTrigger": "onHit",
-      "effectChance": 1.0
+      "effectChance": 1
     },
     {
       "id": "064",
@@ -2242,7 +2243,7 @@ window.CHANCEBOARD_DB = {
         }
       ],
       "effectTrigger": "postAction",
-      "effectChance": 1.0
+      "effectChance": 1
     },
     {
       "id": "065",
@@ -2267,13 +2268,13 @@ window.CHANCEBOARD_DB = {
           "key": "迴避%",
           "mode": "value",
           "target": "self",
-          "chance": 1.0,
+          "chance": 1,
           "value": 0.3,
           "durSec": 999999
         }
       ],
       "effectTrigger": "battleStart",
-      "effectChance": 1.0
+      "effectChance": 1
     },
     {
       "id": "066",
@@ -2298,7 +2299,7 @@ window.CHANCEBOARD_DB = {
           "key": "隱身",
           "mode": "value",
           "target": "self",
-          "chance": 1.0,
+          "chance": 1,
           "durSecRange": [
             10,
             20
@@ -2306,7 +2307,7 @@ window.CHANCEBOARD_DB = {
         }
       ],
       "effectTrigger": "postAction",
-      "effectChance": 1.0
+      "effectChance": 1
     },
     {
       "id": "067",
@@ -2331,7 +2332,7 @@ window.CHANCEBOARD_DB = {
           "key": "禁足",
           "mode": "value",
           "target": "target",
-          "chance": 1.0,
+          "chance": 1,
           "durSec": 10
         }
       ],
@@ -2362,7 +2363,7 @@ window.CHANCEBOARD_DB = {
         }
       ],
       "effectTrigger": "preHit",
-      "effectChance": 1.0
+      "effectChance": 1
     },
     {
       "id": "069",
@@ -2387,12 +2388,12 @@ window.CHANCEBOARD_DB = {
           "key": "連動",
           "mode": "value",
           "target": "self",
-          "chance": 1.0,
+          "chance": 1,
           "durSec": 20
         }
       ],
       "effectTrigger": "postAction",
-      "effectChance": 1.0
+      "effectChance": 1
     },
     {
       "id": "070",
@@ -2418,7 +2419,7 @@ window.CHANCEBOARD_DB = {
         }
       ],
       "effectTrigger": "battleStart",
-      "effectChance": 1.0
+      "effectChance": 1
     },
     {
       "id": "071",
@@ -2445,7 +2446,7 @@ window.CHANCEBOARD_DB = {
         }
       ],
       "effectTrigger": "onHit",
-      "effectChance": 1.0
+      "effectChance": 1
     },
     {
       "id": "072",
@@ -2472,7 +2473,7 @@ window.CHANCEBOARD_DB = {
         }
       ],
       "effectTrigger": "onHit",
-      "effectChance": 1.0
+      "effectChance": 1
     },
     {
       "id": "073",
@@ -2499,7 +2500,7 @@ window.CHANCEBOARD_DB = {
         }
       ],
       "effectTrigger": "onHit",
-      "effectChance": 1.0
+      "effectChance": 1
     },
     {
       "id": "074",
@@ -2524,12 +2525,12 @@ window.CHANCEBOARD_DB = {
           "key": "解放",
           "mode": "value",
           "target": "self",
-          "chance": 1.0,
+          "chance": 1,
           "durSec": 50
         }
       ],
       "effectTrigger": "postAction",
-      "effectChance": 1.0
+      "effectChance": 1
     },
     {
       "id": "075",
@@ -2554,13 +2555,13 @@ window.CHANCEBOARD_DB = {
           "key": "ATK+",
           "mode": "pct",
           "target": "self",
-          "chance": 1.0,
+          "chance": 1,
           "value": 0.3,
           "durSec": 999999
         }
       ],
       "effectTrigger": "battleStart",
-      "effectChance": 1.0
+      "effectChance": 1
     },
     {
       "id": "076",
@@ -2585,7 +2586,7 @@ window.CHANCEBOARD_DB = {
         }
       ],
       "effectTrigger": "onHit",
-      "effectChance": 1.0
+      "effectChance": 1
     },
     {
       "id": "077",
@@ -2610,7 +2611,7 @@ window.CHANCEBOARD_DB = {
           "key": "HP-",
           "mode": "flat",
           "target": "target",
-          "chance": 1.0,
+          "chance": 1,
           "value": 1,
           "durSec": 1
         },
@@ -2619,13 +2620,13 @@ window.CHANCEBOARD_DB = {
           "key": "HP+",
           "mode": "flat",
           "target": "self",
-          "chance": 1.0,
+          "chance": 1,
           "value": 1,
           "durSec": 1
         }
       ],
       "effectTrigger": "onHit",
-      "effectChance": 1.0
+      "effectChance": 1
     },
     {
       "id": "078",
@@ -2650,7 +2651,7 @@ window.CHANCEBOARD_DB = {
           "key": "禁足",
           "mode": "value",
           "target": "target",
-          "chance": 1.0,
+          "chance": 1,
           "durSecRange": [
             10,
             20
@@ -2683,13 +2684,13 @@ window.CHANCEBOARD_DB = {
           "key": "DEF+",
           "mode": "pct",
           "target": "ownTeam",
-          "chance": 1.0,
+          "chance": 1,
           "value": 0.5,
           "durSec": 20
         }
       ],
       "effectTrigger": "postAction",
-      "effectChance": 1.0
+      "effectChance": 1
     },
     {
       "id": "080",
@@ -2715,7 +2716,7 @@ window.CHANCEBOARD_DB = {
         }
       ],
       "effectTrigger": "roundEnd",
-      "effectChance": 1.0
+      "effectChance": 1
     },
     {
       "id": "081",
@@ -2740,7 +2741,7 @@ window.CHANCEBOARD_DB = {
           "key": "麻痺",
           "mode": "value",
           "target": "target",
-          "chance": 1.0,
+          "chance": 1,
           "durSec": 20
         }
       ],
@@ -2770,13 +2771,13 @@ window.CHANCEBOARD_DB = {
           "key": "SPD-",
           "mode": "pct",
           "target": "target",
-          "chance": 1.0,
+          "chance": 1,
           "value": 0.5,
           "durSec": 30
         }
       ],
       "effectTrigger": "onHit",
-      "effectChance": 1.0
+      "effectChance": 1
     },
     {
       "id": "083",
@@ -2785,7 +2786,7 @@ window.CHANCEBOARD_DB = {
       "condition": 2,
       "rangeType": "法",
       "scope": "群",
-      "powerRatio": 3.0,
+      "powerRatio": 3,
       "hitRate": 0.85,
       "critRate": null,
       "cooldown": 2,
@@ -2801,7 +2802,7 @@ window.CHANCEBOARD_DB = {
           "key": "禁足",
           "mode": "value",
           "target": "target",
-          "chance": 1.0,
+          "chance": 1,
           "durSec": 40
         }
       ],
@@ -2831,12 +2832,12 @@ window.CHANCEBOARD_DB = {
           "key": "威能",
           "mode": "value",
           "target": "self",
-          "chance": 1.0,
+          "chance": 1,
           "durSec": 40
         }
       ],
       "effectTrigger": "postAction",
-      "effectChance": 1.0
+      "effectChance": 1
     },
     {
       "id": "085",
@@ -2862,7 +2863,7 @@ window.CHANCEBOARD_DB = {
         }
       ],
       "effectTrigger": "battleStart",
-      "effectChance": 1.0
+      "effectChance": 1
     },
     {
       "id": "086",
@@ -2887,7 +2888,7 @@ window.CHANCEBOARD_DB = {
           "key": "反擊",
           "mode": "value",
           "target": "ownTeam",
-          "chance": 1.0,
+          "chance": 1,
           "durByDist": [
             30,
             20,
@@ -2896,7 +2897,7 @@ window.CHANCEBOARD_DB = {
         }
       ],
       "effectTrigger": "postAction",
-      "effectChance": 1.0
+      "effectChance": 1
     },
     {
       "id": "087",
@@ -2921,7 +2922,7 @@ window.CHANCEBOARD_DB = {
           "key": "ATK+",
           "mode": "pct",
           "target": "ownTeam",
-          "chance": 1.0,
+          "chance": 1,
           "value": 0.5,
           "durByDist": [
             30,
@@ -2934,7 +2935,7 @@ window.CHANCEBOARD_DB = {
           "key": "DEF+",
           "mode": "pct",
           "target": "ownTeam",
-          "chance": 1.0,
+          "chance": 1,
           "value": 0.5,
           "durByDist": [
             30,
@@ -2944,7 +2945,7 @@ window.CHANCEBOARD_DB = {
         }
       ],
       "effectTrigger": "postAction",
-      "effectChance": 1.0
+      "effectChance": 1
     },
     {
       "id": "088",
@@ -2969,7 +2970,7 @@ window.CHANCEBOARD_DB = {
           "key": "覺醒",
           "mode": "value",
           "target": "ownTeam",
-          "chance": 1.0,
+          "chance": 1,
           "durByDist": [
             30,
             20,
@@ -2978,7 +2979,7 @@ window.CHANCEBOARD_DB = {
         }
       ],
       "effectTrigger": "postAction",
-      "effectChance": 1.0
+      "effectChance": 1
     },
     {
       "id": "089",
@@ -3005,7 +3006,7 @@ window.CHANCEBOARD_DB = {
         }
       ],
       "effectTrigger": "postAction",
-      "effectChance": 1.0
+      "effectChance": 1
     },
     {
       "id": "090",
@@ -3026,7 +3027,7 @@ window.CHANCEBOARD_DB = {
       "ownerId": "018",
       "effectOps": [],
       "effectTrigger": "battleStart",
-      "effectChance": 1.0
+      "effectChance": 1
     },
     {
       "id": "096",
@@ -3042,7 +3043,7 @@ window.CHANCEBOARD_DB = {
       "coefficient": 0.2,
       "description": "命中時將對象擊至遠距離",
       "expectedValue": null,
-      "strength": 1.0,
+      "strength": 1,
       "ownerName": "絲妲兒(Stael)",
       "ownerId": "021",
       "effectOps": [
@@ -3053,7 +3054,7 @@ window.CHANCEBOARD_DB = {
         }
       ],
       "effectTrigger": "onHit",
-      "effectChance": 1.0
+      "effectChance": 1
     },
     {
       "id": "097",
@@ -3075,11 +3076,11 @@ window.CHANCEBOARD_DB = {
       "effectOps": [
         {
           "op": "chargeSplash",
-          "chance": 1.0
+          "chance": 1
         }
       ],
       "effectTrigger": "onHit",
-      "effectChance": 1.0
+      "effectChance": 1
     },
     {
       "id": "098",
@@ -3095,7 +3096,7 @@ window.CHANCEBOARD_DB = {
       "coefficient": 0.3,
       "description": "命中時令對象陷入麻痺狀態(2回合)，速度/2",
       "expectedValue": null,
-      "strength": 1.0,
+      "strength": 1,
       "ownerName": "絲妲兒(Stael)",
       "ownerId": "021",
       "effectOps": [
@@ -3104,12 +3105,12 @@ window.CHANCEBOARD_DB = {
           "key": "麻痺",
           "mode": "value",
           "target": "target",
-          "chance": 1.0,
+          "chance": 1,
           "durSec": 20
         }
       ],
       "effectTrigger": "onHit",
-      "effectChance": 1.0
+      "effectChance": 1
     },
     {
       "id": "099",
@@ -3125,7 +3126,7 @@ window.CHANCEBOARD_DB = {
       "coefficient": -1,
       "description": "出招後引爆場上所有帶電狀態的角色，每層帶電造成其最大HP 10%的傷害，帶電層數滿3層時傷害再提高一倍，並解除其帶電狀態",
       "expectedValue": null,
-      "strength": 1.0,
+      "strength": 1,
       "ownerName": "絲妲兒(Stael)",
       "ownerId": "021",
       "effectOps": [
@@ -3134,7 +3135,7 @@ window.CHANCEBOARD_DB = {
         }
       ],
       "effectTrigger": "postAction",
-      "effectChance": 1.0
+      "effectChance": 1
     },
     {
       "id": "100",
@@ -3162,7 +3163,7 @@ window.CHANCEBOARD_DB = {
         }
       ],
       "effectTrigger": "onHit",
-      "effectChance": 1.0
+      "effectChance": 1
     },
     {
       "id": "011",
@@ -3178,7 +3179,7 @@ window.CHANCEBOARD_DB = {
       "coefficient": 0.2,
       "description": "命中不高但他喊得很用力的一擊；爆擊時自己進入強運狀態(1回合)，下次攻擊必定爆擊（他深信這一擊「真的」發動了）",
       "expectedValue": null,
-      "strength": 1.0,
+      "strength": 1,
       "ownerName": "法斯特．伊艾克斯．卡薩巴(First Ex Kasaba)",
       "ownerId": "003",
       "effectOps": [
@@ -3187,12 +3188,12 @@ window.CHANCEBOARD_DB = {
           "key": "強運",
           "mode": "value",
           "target": "self",
-          "chance": 1.0,
+          "chance": 1,
           "durSec": 10
         }
       ],
       "effectTrigger": "onCrit",
-      "effectChance": 1.0
+      "effectChance": 1
     },
     {
       "id": "012",
@@ -3222,7 +3223,7 @@ window.CHANCEBOARD_DB = {
         }
       ],
       "effectTrigger": "onHit",
-      "effectChance": 1.0
+      "effectChance": 1
     },
     {
       "id": "013",
@@ -3238,7 +3239,7 @@ window.CHANCEBOARD_DB = {
       "coefficient": 0.3,
       "description": "命中時50%令對象陷入燃燒狀態(2回合)，持續受到灼燒傷害（其實是他藏在袖口裡的手榴彈，不是魔法）",
       "expectedValue": null,
-      "strength": 1.0,
+      "strength": 1,
       "ownerName": "法斯特．伊艾克斯．卡薩巴(First Ex Kasaba)",
       "ownerId": "003",
       "effectOps": [
@@ -3252,7 +3253,7 @@ window.CHANCEBOARD_DB = {
         }
       ],
       "effectTrigger": "onHit",
-      "effectChance": 1.0
+      "effectChance": 1
     },
     {
       "id": "014",
@@ -3261,7 +3262,7 @@ window.CHANCEBOARD_DB = {
       "condition": 2,
       "rangeType": "法",
       "scope": "單",
-      "powerRatio": 4.0,
+      "powerRatio": 4,
       "hitRate": 0.85,
       "critRate": null,
       "cooldown": 4,
@@ -3282,7 +3283,7 @@ window.CHANCEBOARD_DB = {
         }
       ],
       "effectTrigger": "onHit",
-      "effectChance": 1.0
+      "effectChance": 1
     },
     {
       "id": "015",
@@ -3311,7 +3312,7 @@ window.CHANCEBOARD_DB = {
         }
       ],
       "effectTrigger": "onHit",
-      "effectChance": 1.0
+      "effectChance": 1
     },
     {
       "id": "091",
@@ -3327,7 +3328,7 @@ window.CHANCEBOARD_DB = {
       "coefficient": 0.2,
       "description": "命中時15%令對象陷入封招狀態(1回合)，無法攻擊（劍中封印的劍氣快要將對方的招式一併吞噬）",
       "expectedValue": null,
-      "strength": 1.0,
+      "strength": 1,
       "ownerName": "尼多",
       "ownerId": "020",
       "effectOps": [
@@ -3341,7 +3342,7 @@ window.CHANCEBOARD_DB = {
         }
       ],
       "effectTrigger": "onHit",
-      "effectChance": 1.0
+      "effectChance": 1
     },
     {
       "id": "092",
@@ -3350,7 +3351,7 @@ window.CHANCEBOARD_DB = {
       "condition": 1,
       "rangeType": "槍",
       "scope": "單",
-      "powerRatio": 1.0,
+      "powerRatio": 1,
       "hitRate": 0.9,
       "critRate": null,
       "cooldown": null,
@@ -3372,7 +3373,7 @@ window.CHANCEBOARD_DB = {
         }
       ],
       "effectTrigger": "onHit",
-      "effectChance": 1.0
+      "effectChance": 1
     },
     {
       "id": "093",
@@ -3388,7 +3389,7 @@ window.CHANCEBOARD_DB = {
       "coefficient": 3,
       "description": "命中時30%令對象陷入混亂狀態(2回合)，攻擊時50%以100%威力比(以自己ATK計算)攻擊自己（幻術規模浩大到連自己人都會被唬住）",
       "expectedValue": null,
-      "strength": 1.0,
+      "strength": 1,
       "ownerName": "尼多",
       "ownerId": "020",
       "effectOps": [
@@ -3402,7 +3403,7 @@ window.CHANCEBOARD_DB = {
         }
       ],
       "effectTrigger": "onHit",
-      "effectChance": 1.0
+      "effectChance": 1
     },
     {
       "id": "094",
@@ -3418,7 +3419,7 @@ window.CHANCEBOARD_DB = {
       "coefficient": 3,
       "description": "出招後借用神技的力量，讓一位陣亡的隊友以偽物之身歸隊，回復最大HP的15%",
       "expectedValue": null,
-      "strength": 1.0,
+      "strength": 1,
       "ownerName": "尼多",
       "ownerId": "020",
       "effectOps": [
@@ -3429,7 +3430,7 @@ window.CHANCEBOARD_DB = {
         }
       ],
       "effectTrigger": "postAction",
-      "effectChance": 1.0
+      "effectChance": 1
     },
     {
       "id": "095",
@@ -3454,13 +3455,13 @@ window.CHANCEBOARD_DB = {
           "key": "迴避%",
           "mode": "value",
           "target": "self",
-          "chance": 1.0,
+          "chance": 1,
           "value": 0.3,
           "durSec": 999999
         }
       ],
       "effectTrigger": "battleStart",
-      "effectChance": 1.0
+      "effectChance": 1
     },
     {
       "id": "101",
@@ -3476,7 +3477,7 @@ window.CHANCEBOARD_DB = {
       "coefficient": 0.2,
       "description": "命中時25%令對象陷入麻痺狀態(2回合)，速度/2（通電的鋼爪劃過，神經瞬間短路）",
       "expectedValue": null,
-      "strength": 1.0,
+      "strength": 1,
       "ownerName": "R",
       "ownerId": "019",
       "effectOps": [
@@ -3490,7 +3491,7 @@ window.CHANCEBOARD_DB = {
         }
       ],
       "effectTrigger": "onHit",
-      "effectChance": 1.0
+      "effectChance": 1
     },
     {
       "id": "102",
@@ -3499,8 +3500,8 @@ window.CHANCEBOARD_DB = {
       "condition": 1,
       "rangeType": "槍",
       "scope": "單",
-      "powerRatio": 1.0,
-      "hitRate": 1.0,
+      "powerRatio": 1,
+      "hitRate": 1,
       "critRate": null,
       "cooldown": null,
       "coefficient": 0.3,
@@ -3515,13 +3516,13 @@ window.CHANCEBOARD_DB = {
           "key": "SPD+",
           "mode": "pct",
           "target": "self",
-          "chance": 1.0,
+          "chance": 1,
           "value": 0.2,
           "durSec": 10
         }
       ],
       "effectTrigger": "onHit",
-      "effectChance": 1.0
+      "effectChance": 1
     },
     {
       "id": "103",
@@ -3537,7 +3538,7 @@ window.CHANCEBOARD_DB = {
       "coefficient": 1.25,
       "description": "命中時40%令對象陷入禁足狀態(2回合)，無法移動（鋼絲纏住了對方的四肢）",
       "expectedValue": null,
-      "strength": 1.0,
+      "strength": 1,
       "ownerName": "R",
       "ownerId": "019",
       "effectOps": [
@@ -3551,7 +3552,7 @@ window.CHANCEBOARD_DB = {
         }
       ],
       "effectTrigger": "onHit",
-      "effectChance": 1.0
+      "effectChance": 1
     },
     {
       "id": "104",
@@ -3560,7 +3561,7 @@ window.CHANCEBOARD_DB = {
       "condition": 2,
       "rangeType": "法",
       "scope": "單",
-      "powerRatio": 2.0,
+      "powerRatio": 2,
       "hitRate": 0.85,
       "critRate": null,
       "cooldown": 3,
@@ -3576,7 +3577,7 @@ window.CHANCEBOARD_DB = {
           "target": "self",
           "of": "max",
           "percent": 0.15,
-          "chance": 1.0
+          "chance": 1
         },
         {
           "op": "deadAllyScaling",
@@ -3584,7 +3585,7 @@ window.CHANCEBOARD_DB = {
         }
       ],
       "effectTrigger": "onHit",
-      "effectChance": 1.0
+      "effectChance": 1
     },
     {
       "id": "105",
@@ -3609,13 +3610,13 @@ window.CHANCEBOARD_DB = {
           "key": "ATK+",
           "mode": "pct",
           "target": "self",
-          "chance": 1.0,
+          "chance": 1,
           "value": 0.08,
           "durSec": 20
         }
       ],
       "effectTrigger": "onHit",
-      "effectChance": 1.0
+      "effectChance": 1
     }
   ],
   "statuses": [
@@ -3791,7 +3792,7 @@ window.CHANCEBOARD_DB = {
         }
       ],
       "effectTrigger": "onPlay",
-      "effectChance": 1.0
+      "effectChance": 1
     },
     {
       "id": "006",
@@ -3805,7 +3806,7 @@ window.CHANCEBOARD_DB = {
         }
       ],
       "effectTrigger": "onPlay",
-      "effectChance": 1.0
+      "effectChance": 1
     },
     {
       "id": "007",
@@ -3821,7 +3822,7 @@ window.CHANCEBOARD_DB = {
         }
       ],
       "effectTrigger": "onPlay",
-      "effectChance": 1.0
+      "effectChance": 1
     },
     {
       "id": "008",
@@ -3838,7 +3839,7 @@ window.CHANCEBOARD_DB = {
         }
       ],
       "effectTrigger": "onPlay",
-      "effectChance": 1.0
+      "effectChance": 1
     },
     {
       "id": "009",
@@ -3852,11 +3853,11 @@ window.CHANCEBOARD_DB = {
           "percent": 0.35,
           "of": "max",
           "target": "chosen",
-          "chance": 1.0
+          "chance": 1
         }
       ],
       "effectTrigger": "onPlay",
-      "effectChance": 1.0
+      "effectChance": 1
     },
     {
       "id": "010",
@@ -3870,13 +3871,13 @@ window.CHANCEBOARD_DB = {
           "key": "護盾+",
           "mode": "value",
           "target": "chosen",
-          "chance": 1.0,
+          "chance": 1,
           "value": 5,
           "durSec": 20
         }
       ],
       "effectTrigger": "onPlay",
-      "effectChance": 1.0
+      "effectChance": 1
     },
     {
       "id": "011",
@@ -3892,7 +3893,7 @@ window.CHANCEBOARD_DB = {
         }
       ],
       "effectTrigger": "onPlay",
-      "effectChance": 1.0
+      "effectChance": 1
     },
     {
       "id": "012",
@@ -3906,13 +3907,13 @@ window.CHANCEBOARD_DB = {
           "key": "HP+",
           "mode": "flat",
           "target": "chosen",
-          "chance": 1.0,
+          "chance": 1,
           "value": 1,
           "durSec": 10
         }
       ],
       "effectTrigger": "onPlay",
-      "effectChance": 1.0
+      "effectChance": 1
     },
     {
       "id": "013",
@@ -3926,13 +3927,13 @@ window.CHANCEBOARD_DB = {
           "key": "ATK+",
           "mode": "flat",
           "target": "chosen",
-          "chance": 1.0,
+          "chance": 1,
           "value": 5,
           "durSec": 20
         }
       ],
       "effectTrigger": "onPlay",
-      "effectChance": 1.0
+      "effectChance": 1
     },
     {
       "id": "014",
@@ -3946,13 +3947,13 @@ window.CHANCEBOARD_DB = {
           "key": "BAT-",
           "mode": "value",
           "target": "chosen",
-          "chance": 1.0,
+          "chance": 1,
           "value": 5,
           "durSec": 20
         }
       ],
       "effectTrigger": "onPlay",
-      "effectChance": 1.0
+      "effectChance": 1
     },
     {
       "id": "015",
@@ -3966,12 +3967,12 @@ window.CHANCEBOARD_DB = {
           "key": "強運",
           "mode": "value",
           "target": "chosen",
-          "chance": 1.0,
+          "chance": 1,
           "durSec": 10
         }
       ],
       "effectTrigger": "onPlay",
-      "effectChance": 1.0
+      "effectChance": 1
     },
     {
       "id": "016",
@@ -3985,12 +3986,12 @@ window.CHANCEBOARD_DB = {
           "key": "覺醒",
           "mode": "value",
           "target": "chosen",
-          "chance": 1.0,
+          "chance": 1,
           "durSec": 10
         }
       ],
       "effectTrigger": "onPlay",
-      "effectChance": 1.0
+      "effectChance": 1
     },
     {
       "id": "017",
@@ -4004,13 +4005,13 @@ window.CHANCEBOARD_DB = {
           "key": "迴避%",
           "mode": "value",
           "target": "chosen",
-          "chance": 1.0,
+          "chance": 1,
           "value": 0.5,
           "durSec": 20
         }
       ],
       "effectTrigger": "onPlay",
-      "effectChance": 1.0
+      "effectChance": 1
     },
     {
       "id": "018",
@@ -4024,12 +4025,12 @@ window.CHANCEBOARD_DB = {
           "key": "必中",
           "mode": "value",
           "target": "chosen",
-          "chance": 1.0,
+          "chance": 1,
           "durSec": 40
         }
       ],
       "effectTrigger": "onPlay",
-      "effectChance": 1.0
+      "effectChance": 1
     },
     {
       "id": "019",
@@ -4043,12 +4044,12 @@ window.CHANCEBOARD_DB = {
           "key": "解放",
           "mode": "value",
           "target": "chosen",
-          "chance": 1.0,
+          "chance": 1,
           "durSec": 20
         }
       ],
       "effectTrigger": "onPlay",
-      "effectChance": 1.0
+      "effectChance": 1
     },
     {
       "id": "020",
@@ -4062,12 +4063,12 @@ window.CHANCEBOARD_DB = {
           "key": "瞬步",
           "mode": "value",
           "target": "chosen",
-          "chance": 1.0,
+          "chance": 1,
           "durSec": 20
         }
       ],
       "effectTrigger": "onPlay",
-      "effectChance": 1.0
+      "effectChance": 1
     },
     {
       "id": "021",
@@ -4081,12 +4082,12 @@ window.CHANCEBOARD_DB = {
           "key": "反擊",
           "mode": "value",
           "target": "chosen",
-          "chance": 1.0,
+          "chance": 1,
           "durSec": 20
         }
       ],
       "effectTrigger": "onPlay",
-      "effectChance": 1.0
+      "effectChance": 1
     },
     {
       "id": "022",
@@ -4100,12 +4101,12 @@ window.CHANCEBOARD_DB = {
           "key": "威能",
           "mode": "value",
           "target": "chosen",
-          "chance": 1.0,
+          "chance": 1,
           "durSec": 10
         }
       ],
       "effectTrigger": "onPlay",
-      "effectChance": 1.0
+      "effectChance": 1
     },
     {
       "id": "023",
@@ -4119,13 +4120,13 @@ window.CHANCEBOARD_DB = {
           "key": "減傷%",
           "mode": "value",
           "target": "chosen",
-          "chance": 1.0,
+          "chance": 1,
           "value": 0.5,
           "durSec": 20
         }
       ],
       "effectTrigger": "onPlay",
-      "effectChance": 1.0
+      "effectChance": 1
     },
     {
       "id": "024",
@@ -4141,7 +4142,7 @@ window.CHANCEBOARD_DB = {
         }
       ],
       "effectTrigger": "onPlay",
-      "effectChance": 1.0
+      "effectChance": 1
     },
     {
       "id": "025",
@@ -4155,12 +4156,12 @@ window.CHANCEBOARD_DB = {
           "key": "連動",
           "mode": "value",
           "target": "chosen",
-          "chance": 1.0,
+          "chance": 1,
           "durSec": 20
         }
       ],
       "effectTrigger": "onPlay",
-      "effectChance": 1.0
+      "effectChance": 1
     },
     {
       "id": "026",
@@ -4174,12 +4175,12 @@ window.CHANCEBOARD_DB = {
           "key": "隱身",
           "mode": "value",
           "target": "chosen",
-          "chance": 1.0,
+          "chance": 1,
           "durSec": 10
         }
       ],
       "effectTrigger": "onPlay",
-      "effectChance": 1.0
+      "effectChance": 1
     }
   ],
   "pieceTypes": [
