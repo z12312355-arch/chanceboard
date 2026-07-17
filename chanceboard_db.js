@@ -1413,7 +1413,7 @@ window.CHANCEBOARD_DB = {
       "critRate": 0.1,
       "cooldown": null,
       "coefficient": 0.2,
-      "description": "命中時50%令對象陷入燃燒狀態(2回合)，每次行動結束減去5%HP",
+      "description": "命中時50%令對象陷入燃燒狀態20秒，每次行動結束損失最大HP的5%，最低100HP",
       "expectedValue": 6.38,
       "strength": 1.0118518518518518,
       "ownerName": "阿京(Okyo)",
@@ -3229,7 +3229,7 @@ window.CHANCEBOARD_DB = {
       "critRate": null,
       "cooldown": 2,
       "coefficient": 0.3,
-      "description": "終焉之環於天空展開，黑炎自法陣傾瀉而下。命中時45%令目標陷入燃燒狀態20秒，每次行動後受到持續傷害。",
+      "description": "終焉之環於天空展開，黑炎自法陣傾瀉而下。命中時45%令目標陷入燃燒狀態20秒，每次行動結束損失最大HP的5%，最低100HP。",
       "expectedValue": null,
       "strength": 1,
       "ownerName": "黑炎．芙蕾雅(Blackflame Freya)",
@@ -3683,7 +3683,7 @@ window.CHANCEBOARD_DB = {
     {
       "id": "014",
       "name": "燃燒",
-      "description": "每次行動結束減去5HP"
+      "description": "持續20秒，每次行動結束損失最大HP的5%，最低100HP"
     },
     {
       "id": "015",
