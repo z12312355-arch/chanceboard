@@ -8,6 +8,7 @@ const FLOWER_CARD_IDS = Array.from({ length: 22 }, (_, i) => String(i + 5).padSt
 const ALL_CHARACTER_IDS = Array.from({ length: 21 }, (_, i) => String(i + 1).padStart(3, '0'));
 const DIAMOND_EXCLUSIVE_IDS = new Set(['016', '014', '003', '021', '018', '020']);
 const TUTORIAL_STEPS = ['intro', 'starter', 'battle', 'gold_summon', 'diamond_summon', 'team', 'ending', 'completed'];
+const TUTORIAL_STARTER_IDS = ['003', '004', '006'];
 const SKILL_SLOTS = ['劍', '槍', '法', '願'];
 const HUNT_DURATION_MS = 30 * 60 * 1000;
 function skillMaxLevel(slot) { return slot === '願' ? 2 : 5; }
@@ -367,7 +368,7 @@ export async function onRequest(context) {
       const owned = parseJson(row.owned_chars, []);
       const step = tutorialStepFromRow(row);
       if (step === 'battle' && owned.includes(id)) return json({ state: profileFromRow(row) });
-      if (row.tutorial_done || step !== 'starter' || owned.length !== 0 || !['001', '004', '006'].includes(id)) throw apiError('The starter selection is no longer available.');
+      if (row.tutorial_done || step !== 'starter' || owned.length !== 0 || !TUTORIAL_STARTER_IDS.includes(id)) throw apiError('The starter selection is no longer available.');
       owned.push(id);
       const starterStars = parseJson(row.char_stars, {});
       starterStars[id] = 1; // 新制：起始角色也是★1
