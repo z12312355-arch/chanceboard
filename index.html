@@ -2317,6 +2317,7 @@
     <div class="admin-head">
       <div class="title">⚙️ 後臺：角色 / 招式資料編輯</div>
       <div class="btns">
+        <button class="btn small primary" id="adminSaveDbFileBtn" title="將目前後臺載入的完整遊戲資料另存為 chanceboard_db.js">💾 儲存 chanceboard_db.js</button>
         <button class="btn small" id="adminCardShopBtn">🛒 卡牌商店定價</button>
         <button class="btn small" id="adminSoloBattleBtn">⚔️ 單人對戰</button>
         <button class="btn small" id="adminTwoBattleBtn">🤝 雙人對戰</button>
@@ -8771,6 +8772,40 @@ async function saveGlobalAdminConfig(){
   applyGlobalGameConfig(result.config);
   return result.config;
 }
+
+// 新後臺仍需要把目前的完整遊戲資料保存成可放回 Git 的 chanceboard_db.js。
+// 優先使用瀏覽器的「另存新檔」介面；不支援 File System Access API 的瀏覽器則退回一般下載。
+function chanceboardDbFileContent(){
+  return 'window.CHANCEBOARD_DB = ' + JSON.stringify(DB, null, 2) + ';\n';
+}
+function downloadChanceboardDbFile(content){
+  const blob=new Blob([content],{type:'text/javascript;charset=utf-8'});
+  const url=URL.createObjectURL(blob);
+  const link=document.createElement('a');
+  link.href=url; link.download='chanceboard_db.js';
+  document.body.appendChild(link); link.click(); link.remove();
+  setTimeout(function(){URL.revokeObjectURL(url);},2000);
+}
+async function saveChanceboardDbFile(){
+  const content=chanceboardDbFileContent();
+  if(typeof window.showSaveFilePicker==='function'){
+    try{
+      const handle=await window.showSaveFilePicker({
+        suggestedName:'chanceboard_db.js',
+        types:[{description:'Chanceboard 遊戲資料庫',accept:{'text/javascript':['.js']}}]
+      });
+      const writable=await handle.createWritable();
+      await writable.write(content);
+      await writable.close();
+      alert('chanceboard_db.js 已儲存。');
+      return;
+    }catch(e){
+      if(e && e.name==='AbortError') return;
+      console.warn('另存 chanceboard_db.js 失敗，改用瀏覽器下載。',e);
+    }
+  }
+  downloadChanceboardDbFile(content);
+}
 async function syncBundledGameConfigToD1(){
   const btn=document.getElementById('adminSyncBundledToD1Btn');
   const msg=document.getElementById('admin-d1-sync-msg');
@@ -9096,6 +9131,7 @@ async function resetAdminMove(moveId){
 
 document.getElementById('adminCloseBtn').onclick = closeAdminPanel;
 document.getElementById('adminBackdrop').onclick = function(e){ if(e.target===this) closeAdminPanel(); };
+document.getElementById('adminSaveDbFileBtn').onclick = saveChanceboardDbFile;
 // 卡牌商店：見 openAdminCardShop()／applyAdminCardShopPrices() 的說明。
 document.getElementById('adminCardShopBtn').onclick = openAdminCardShop;
 document.getElementById('adminCardShopCloseBtn').onclick = closeAdminCardShop;
