@@ -6817,12 +6817,19 @@ function updateGachaCostDisplay(){
   const cost1 = isGold ? globalEconomySettings.goldGachaOneCost : globalEconomySettings.diamondGachaOneCost;
   const cost10 = isGold ? globalEconomySettings.goldGachaTenCost : globalEconomySettings.diamondGachaTenCost;
   const icon = isGold ? '💰' : '💎';
-  c1.textContent = icon+' '+cost1;
-  c10.textContent = icon+' '+cost10;
-  const balance = isGold ? goldAmount : diamondAmount;
   const btn1 = document.getElementById('gachaPull1Btn');
   const btn10 = document.getElementById('gachaPull10Btn');
-  if(btn1) btn1.classList.toggle('disabled', balance < cost1);
+  const label1 = btn1 ? btn1.querySelector('.gacha-pull-label') : null;
+  if(window.__tutorialFreeSinglePull){
+    if(label1) label1.textContent='✨ 免費召喚 x1';
+    c1.textContent='🎁 教學免費（不消耗'+(isGold?'金幣':'鑽石')+'）';
+  }else{
+    if(label1) label1.textContent='✨ 召喚 x1';
+    c1.textContent = icon+' '+cost1;
+  }
+  c10.textContent = icon+' '+cost10;
+  const balance = isGold ? goldAmount : diamondAmount;
+  if(btn1) btn1.classList.toggle('disabled', !window.__tutorialFreeSinglePull && balance < cost1);
   if(btn10) btn10.classList.toggle('disabled', balance < cost10);
 }
 function setGachaCurrency(currency){
@@ -9198,14 +9205,17 @@ function saveTutorialFaction(f){
 let tutorialFaction = loadTutorialFaction();
 let tutorialReplayMode = false;
 window.__tutorialGachaLocked = false;
+window.__tutorialFreeSinglePull = false;
 function tutorialSetGachaLock(active, allowSinglePull){
   window.__tutorialGachaLocked = !!active;
+  window.__tutorialFreeSinglePull = !!active && !!allowSinglePull;
   const pull1=document.getElementById('gachaPull1Btn');
   const pull10=document.getElementById('gachaPull10Btn');
   const back=document.getElementById('gachaBackBtn');
   if(pull1) pull1.disabled=!!active && !allowSinglePull;
   if(pull10) pull10.disabled=!!active;
   if(back) back.disabled=!!active;
+  updateGachaCostDisplay();
 }
 
 const TUTORIAL_LINES = {
@@ -9242,8 +9252,8 @@ const TUTORIAL_LINES = {
     white:'鑽石召喚可以抽到更高級的棋子，越稀有的棋子，出現的機率越低。',
   },
   diamondOffer: {
-    black:'點上面的【鑽石召喚】分頁，來試試你的運氣吧。',
-    white:'點上面的【鑽石召喚】分頁試試看吧。不過，真正決定勝負的，從來不是運氣，而是你的判斷。',
+    black:'再送你一次免費的鑽石召喚。點上面的【鑽石召喚】分頁，來試試你的運氣吧。',
+    white:'我再送你一次免費的鑽石召喚。點上面的【鑽石召喚】分頁試試看吧。不過，真正決定勝負的，從來不是運氣，而是你的判斷。',
   },
   afterDiamond: {
     black:'很好。新的夥伴加入了你的隊伍。',
