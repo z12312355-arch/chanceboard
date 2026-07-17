@@ -2333,6 +2333,7 @@
     </div>
     <div class="admin-tabs" id="admin-tabs" role="tablist" aria-label="後臺功能分類">
       <button type="button" class="admin-tab" data-admin-tab="characters">🎭 角色與招式</button>
+      <button type="button" class="admin-tab" data-admin-tab="flowers">🌸 花牌設定</button>
       <button type="button" class="admin-tab" data-admin-tab="global">☁️ 全域設定</button>
       <button type="button" class="admin-tab" data-admin-tab="story">📜 新手劇情</button>
       <button type="button" class="admin-tab" data-admin-tab="players">👤 玩家帳號</button>
@@ -8619,6 +8620,7 @@ document.getElementById('moveInfoBackdrop').onclick = function(e){ if(e.target==
 // 不用重建整個 DB 索引；下一場新開的戰鬥就會用到新數值（進行中的戰鬥不受影響）。
 // ORIGINAL_DB_SNAPSHOT 定義在檔案前段，供 D1 同步與還原使用。
 let adminSelectedCharId = null;
+let adminSelectedFlowerCardId = null;
 let adminActiveTab = 'characters';
 
 function openAdminPanel(){
@@ -8645,10 +8647,13 @@ function renderAdminActiveTab(){
   const body=document.querySelector('#adminBackdrop .admin-body');
   const charList=document.getElementById('admin-charlist');
   const showCharacters=adminActiveTab==='characters';
-  if(body) body.classList.toggle('characters-tab',showCharacters);
-  if(charList) charList.classList.toggle('hidden',!showCharacters);
+  const showFlowers=adminActiveTab==='flowers';
+  const showSideList=showCharacters||showFlowers;
+  if(body) body.classList.toggle('characters-tab',showSideList);
+  if(charList) charList.classList.toggle('hidden',!showSideList);
   renderAdminTabs();
   if(showCharacters){ renderAdminCharList(); renderAdminForm(); }
+  else if(showFlowers){ renderAdminFlowerCardList(); renderAdminFlowerCardForm(); }
   else renderAdminAccountManager();
 }
 // 卡牌商店定價：使用者要求「新增商店：可以課金或用金幣購買卡片」。跟角色/招式的表單不同，
@@ -8723,6 +8728,39 @@ function renderAdminCharList(){
   wrap.querySelectorAll('.ac-item').forEach(el=>{
     el.onclick = function(){ adminSelectedCharId = this.getAttribute('data-id'); renderAdminCharList(); renderAdminForm(); };
   });
+}
+
+function renderAdminFlowerCardList(){
+  const wrap=document.getElementById('admin-charlist');
+  const cards=FLOWER_CARD_IDS.map(id=>CARD_BY_ID[id]).filter(Boolean);
+  if(!adminSelectedFlowerCardId || !CARD_BY_ID[adminSelectedFlowerCardId]) adminSelectedFlowerCardId=cards.length?cards[0].id:null;
+  wrap.innerHTML=cards.map(card=>
+    '<div class="ac-item'+(card.id===adminSelectedFlowerCardId?' active':'')+'" data-id="'+card.id+'">'+cardIcon(card)+' '+escHtml(card.name)+'</div>'
+  ).join('');
+  wrap.querySelectorAll('.ac-item').forEach(function(el){
+    el.onclick=function(){adminSelectedFlowerCardId=this.getAttribute('data-id');renderAdminFlowerCardList();renderAdminFlowerCardForm();};
+  });
+}
+
+function renderAdminFlowerCardForm(){
+  const form=document.getElementById('admin-form');
+  const card=CARD_BY_ID[adminSelectedFlowerCardId];
+  if(!card){form.innerHTML='<div style="color:var(--muted);">目前沒有可編輯的花牌</div>';return;}
+  form.innerHTML='<div class="admin-section">'
+    +'<div class="as-title" id="admin-flower-title-display">'+cardIcon(card)+' '+escHtml(card.name)+'　花牌設定</div>'
+    +'<div class="admin-grid">'
+      +adminTextField('flower-name','花牌名稱',card.name)
+      +adminNumField('flower-shopPrice','商店價格',cardShopPrice(card))
+      +adminTextField('flower-effectTrigger','觸發時機 effectTrigger',card.effectTrigger||'onPlay')
+      +adminNumField('flower-effectChance','整體效果機率（0～1）',card.effectChance==null?1:card.effectChance)
+    +'</div>'
+    +'<div class="admin-field"><label>卡牌描述 description</label><textarea id="admin-flower-description" rows="3">'+escHtml(card.description||'')+'</textarea></div>'
+    +'<div class="admin-field"><label>effectOps（JSON 陣列；控制實際卡牌效果）</label><textarea id="admin-flower-effectOps" rows="12">'+escHtml(JSON.stringify(card.effectOps||[],null,2))+'</textarea></div>'
+    +'<p style="font-size:11px;color:var(--muted);margin:7px 0 0">修改描述不會自動改變效果；實際功能由 effectOps 決定。儲存後會寫入 D1，所有玩家重新載入後生效。</p>'
+    +'<div class="admin-move-actions"><button type="button" class="btn small primary" id="admin-apply-flower">儲存花牌設定</button><button type="button" class="btn small" id="admin-reset-flower">還原這張花牌</button><span class="admin-msg" id="admin-flower-msg"></span></div>'
+    +'</div>';
+  document.getElementById('admin-apply-flower').onclick=function(){applyAdminFlowerCard(card.id);};
+  document.getElementById('admin-reset-flower').onclick=function(){resetAdminFlowerCard(card.id);};
 }
 
 function adminNumField(id, label, value){
@@ -9060,6 +9098,50 @@ async function saveAdminManagedPlayer(){
   catch(e){adminManagerMessage('❌ JSON 格式錯誤：'+e.message,true);return;}
   try{const result=await window.__adminAccountApi('admin-player-update',{uid:adminManagedPlayer.uid,state:state});adminManagedPlayer=result.player;renderAdminManagedPlayerEditor();adminManagerMessage('✅ 帳號資料已更新。');await refreshAdminManagedPlayers();}
   catch(e){adminManagerMessage('❌ 儲存帳號資料失敗：'+e.message,true);}
+}
+async function applyAdminFlowerCard(cardId){
+  const card=CARD_BY_ID[cardId];
+  const msg=document.getElementById('admin-flower-msg');
+  if(!card||!msg) return;
+  const name=readText('flower-name');
+  const shopPrice=readNum('flower-shopPrice');
+  const effectChance=readNum('flower-effectChance');
+  const effectTrigger=(readText('flower-effectTrigger')||'').trim();
+  let effectOps;
+  try{
+    const raw=document.getElementById('admin-flower-effectOps').value.trim();
+    effectOps=raw?JSON.parse(raw):[];
+    if(!Array.isArray(effectOps)) throw new Error('effectOps 必須是陣列 [...]');
+  }catch(e){msg.textContent='❌ effectOps JSON 格式錯誤：'+e.message;msg.className='admin-msg err';return;}
+  if(!name||!name.trim()){msg.textContent='❌ 花牌名稱不能是空白';msg.className='admin-msg err';return;}
+  if(shopPrice===undefined||shopPrice===null||shopPrice<0){msg.textContent='❌ 商店價格必須是有效的非負數字';msg.className='admin-msg err';return;}
+  if(effectChance===undefined||effectChance===null||effectChance<0||effectChance>1){msg.textContent='❌ 整體效果機率必須介於 0～1';msg.className='admin-msg err';return;}
+  if(!effectTrigger){msg.textContent='❌ 觸發時機不能是空白（一般花牌使用 onPlay）';msg.className='admin-msg err';return;}
+  card.name=name.trim();
+  card.shopPrice=shopPrice;
+  card.effectTrigger=effectTrigger;
+  card.effectChance=effectChance;
+  card.description=document.getElementById('admin-flower-description').value.trim();
+  card.effectOps=effectOps;
+  msg.textContent='⏳ 儲存中…';msg.className='admin-msg';
+  try{await saveGlobalAdminConfig();msg.textContent='✅ 花牌設定已儲存到 D1，所有玩家重新載入後生效。';msg.className='admin-msg';}
+  catch(e){msg.textContent='❌ 全域儲存失敗：'+e.message;msg.className='admin-msg err';return;}
+  renderAdminFlowerCardList();
+  const title=document.getElementById('admin-flower-title-display');
+  if(title) title.textContent=cardIcon(card)+' '+card.name+'　花牌設定';
+  renderAdminDbSourceInfo();
+  if(typeof renderShopGrid==='function') renderShopGrid();
+}
+async function resetAdminFlowerCard(cardId){
+  if(!confirm('確定要把這張花牌還原成 Git 內建設定嗎？')) return;
+  const original=ORIGINAL_DB_SNAPSHOT.cards.find(card=>String(card.id)===String(cardId));
+  const live=CARD_BY_ID[cardId];
+  if(!original||!live) return;
+  Object.keys(live).forEach(key=>delete live[key]);
+  Object.assign(live,JSON.parse(JSON.stringify(original)));
+  try{await saveGlobalAdminConfig();}catch(e){alert('全域還原失敗：'+e.message);return;}
+  renderAdminFlowerCardList();renderAdminFlowerCardForm();renderAdminDbSourceInfo();
+  if(typeof renderShopGrid==='function') renderShopGrid();
 }
 async function applyAdminChar(charId){
   const c = CHAR_BY_ID[charId];
