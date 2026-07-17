@@ -2730,15 +2730,22 @@ function renderCardFace(card, opts){
   }
   return div;
 }
+function moveForCurrentSkillLevel(charId, move){
+  if(!move || normalizeMoveSlot(move.slot)!=='願' || moveSkillLevel(charId,'願')!==1 || !move.lv1 || typeof move.lv1!=='object') return move;
+  // 招式 id／持有人／欄位種類是共用識別資料，不允許等級設定覆蓋；其餘戰鬥與文字欄位
+  // 都由 Lv1 的完整資料取代，讓 Lv1、Lv2 可以是兩套真正不同的技能，而不是單純乘倍率。
+  return Object.assign({}, move, move.lv1, {id:move.id, ownerId:move.ownerId, slot:move.slot});
+}
 function movesFor(charId){
   const arr = MOVES_BY_OWNER[charId]||[];
   const out = {};
   arr.forEach(m=>{
-    if(m.slot==='劍') out.sword=m;
-    else if(m.slot==='槍') out.gun=m;
-    else if(m.slot==='法') out.magic=m;
-    else if(m.slot==='願') out.wish=m;
-    else if(m.slot==='被') out.passive=m;
+    const activeMove=moveForCurrentSkillLevel(charId,m);
+    if(m.slot==='劍') out.sword=activeMove;
+    else if(m.slot==='槍') out.gun=activeMove;
+    else if(m.slot==='法') out.magic=activeMove;
+    else if(m.slot==='願') out.wish=activeMove;
+    else if(m.slot==='被') out.passive=activeMove;
   });
   return out;
 }
@@ -3594,7 +3601,7 @@ function moveSkillLevel(charId, slot){
 function moveSkillPowerMultiplier(charId, slot){
   const zh = normalizeMoveSlot(slot);
   if(!LEVELED_MOVE_SLOTS.includes(zh)) return 1;
-  if(zh==='願') return moveSkillLevel(charId,zh)>=MAX_WISH_MOVE_LEVEL ? 1 : 0.95;
+  if(zh==='願') return 1;
   return 1 + (moveSkillLevel(charId, zh) - MIN_MOVE_LEVEL) * MOVE_POWER_BONUS_PER_LEVEL;
 }
 function upgradeMoveSkillLocal(charId, slot){
@@ -3609,7 +3616,7 @@ function upgradeMoveSkillLocal(charId, slot){
   return true;
 }
 function moveSkillEffectMultiplier(charId,slot){
-  return normalizeMoveSlot(slot)==='願' ? (moveSkillLevel(charId,'願')>=MAX_WISH_MOVE_LEVEL?1:0.95) : 1;
+  return 1;
 }
 // 戰鬥實際使用的威力＝招式基礎威力 × 技能等級倍率（四捨五入成整數，跟其他數值的呈現慣例一致）。
 function effectiveMovePower(charId, move){
@@ -7143,9 +7150,9 @@ function renderPieceDetail(charId){
   const starCost=star<MAX_CHAR_STARS?crystalCostForNextStar(star):0,starButton=star<MAX_CHAR_STARS?'<button type="button" class="btn small" id="pieceStarUpBtn"'+(wishCrystals>=starCost?'':' disabled')+'>升至 ★'+(star+1)+'（💠'+starCost+'）</button>':'<span style="color:var(--good)">已滿星（HP／ATK／DEF +20%）</span>';
   const skillHtml=moves.map(move=>{
     if(move.slot==='被')return '<div class="piece-skill-row piece-passive"><div><div class="piece-skill-name">🔸 '+escHtml(stripParenAlias(move.name))+'</div><div class="piece-skill-meta">被動技能</div></div><div class="piece-skill-desc">'+escHtml(move.description||'無描述')+'</div><div></div></div>';
-    const lv=moveSkillLevel(charId,move.slot),maxLv=moveSkillMaxLevel(move.slot),bonus=(lv-1)*5,cost=lv<maxLv?moveLevelUpCost(lv):0,have=skillFragmentAmount(move.slot),effectText=move.slot==='願'?(lv===1?'願效果為原效果的 95%':'願效果為原效果'):'威力 +'+bonus+'%';
+    const shownMove=moveForCurrentSkillLevel(charId,move),lv=moveSkillLevel(charId,move.slot),maxLv=moveSkillMaxLevel(move.slot),bonus=(lv-1)*5,cost=lv<maxLv?moveLevelUpCost(lv):0,have=skillFragmentAmount(move.slot),effectText=move.slot==='願'?('目前使用 Lv'+lv+' 獨立設定'):'威力 +'+bonus+'%';
     const action=lv<maxLv?'<span class="piece-skill-cost">持有 '+SKILL_FRAGMENT_ICON[move.slot]+have+'／需要 '+cost+'</span><button type="button" class="btn small piece-skill-up" data-slot="'+move.slot+'"'+(have>=cost?'':' disabled')+'>提升至 LV'+(lv+1)+'</button>':'<span style="color:var(--good)">技能已滿級</span>';
-    return '<div class="piece-skill-row"><div><div class="piece-skill-name">'+(CLASS_ICON[move.slot]||'🔹')+' '+escHtml(stripParenAlias(move.name))+'</div><div class="piece-skill-meta">LV'+lv+'/'+maxLv+'　'+effectText+'</div></div><div class="piece-skill-desc">'+escHtml(move.description||'無描述')+'<br><span style="color:var(--muted)">'+pieceMoveSummary(c,move)+'</span></div><div class="piece-skill-action">'+action+'</div></div>';
+    return '<div class="piece-skill-row"><div><div class="piece-skill-name">'+(CLASS_ICON[move.slot]||'🔹')+' '+escHtml(stripParenAlias(shownMove.name))+'</div><div class="piece-skill-meta">LV'+lv+'/'+maxLv+'　'+effectText+'</div></div><div class="piece-skill-desc">'+escHtml(shownMove.description||'無描述')+'<br><span style="color:var(--muted)">'+pieceMoveSummary(c,shownMove)+'</span></div><div class="piece-skill-action">'+action+'</div></div>';
   }).join('');
   document.getElementById('pieceDetailContent').innerHTML='<div class="piece-detail-top"><img class="piece-detail-art" src="images/'+charId+'_full.png" alt=""><div><h2 style="margin:0">'+escHtml(stripParenAlias(c.name))+'</h2><div style="color:var(--muted);font-size:12px">'+escHtml(c.title||'')+'　'+(ELEMENT_ICON[c.element]||'')+' '+c.element+'</div><div class="piece-stat-grid"><div class="piece-stat-cell">HP<b>'+Math.round(c.hp*statMul)+'</b></div><div class="piece-stat-cell">ATK<b>'+Math.round(c.atk*statMul)+'</b></div><div class="piece-stat-cell">DEF<b>'+Math.round(c.def*statMul)+'</b></div><div class="piece-stat-cell">SPD<b>'+c.spd+'</b></div></div><div style="font-size:10px;color:var(--muted)">基礎：HP '+c.hp+'／ATK '+c.atk+'／DEF '+c.def+'／SPD '+c.spd+'</div><div class="piece-star-row"><b style="color:var(--gold)">'+('★'.repeat(star))+'<span style="opacity:.28">'+('★'.repeat(MAX_CHAR_STARS-star))+'</span></b><span>💠 '+wishCrystals+'</span>'+starButton+'</div></div></div><div class="piece-skill-list">'+skillHtml+'</div>';
   const starBtn=document.getElementById('pieceStarUpBtn');if(starBtn)starBtn.onclick=()=>upgradePieceStar(charId);document.querySelectorAll('#pieceDetailContent .piece-skill-up').forEach(btn=>btn.onclick=()=>upgradePieceSkill(charId,btn.dataset.slot));
@@ -9021,8 +9028,11 @@ function escHtml(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/
 
 function renderAdminMoveSection(m){
   const isPassive = m.slot==='被';
+  const isWish = m.slot==='願';
+  const lv1 = isWish && m.lv1 && typeof m.lv1==='object' ? m.lv1 : m;
   let html = '<div class="admin-section">'+
     '<div class="as-title" id="admin-move-'+m.id+'-title-display">'+(CLASS_ICON[m.slot]||'🔹')+' '+m.name+'（'+m.slot+'招）</div>'+
+    (isWish?'<div class="as-title" style="margin-top:8px">Lv2 設定</div>':'')+
     '<div class="admin-grid">'+
       adminTextField('move-'+m.id+'-name','招式名稱',m.name);
   if(!isPassive){
@@ -9038,7 +9048,23 @@ function renderAdminMoveSection(m){
     '<div class="admin-field"><label>描述文字 description</label>'+
       '<textarea id="admin-move-'+m.id+'-description" rows="2">'+escHtml(m.description)+'</textarea></div>'+
     '<div class="admin-field"><label>effectOps（進階：JSON 陣列格式，看不懂建議不要動）</label>'+
-      '<textarea id="admin-move-'+m.id+'-effectOps" rows="6">'+escHtml(JSON.stringify(m.effectOps||[], null, 2))+'</textarea></div>'+
+      '<textarea id="admin-move-'+m.id+'-effectOps" rows="6">'+escHtml(JSON.stringify(m.effectOps||[], null, 2))+'</textarea></div>';
+  if(isWish){
+    html += '<div class="as-title" style="margin-top:16px">Lv1 設定</div><div class="admin-grid">'+
+      adminTextField('move-'+m.id+'-lv1-name','招式名稱',lv1.name)+
+      adminNumField('move-'+m.id+'-lv1-condition','成本(condition)',lv1.condition)+
+      adminNumField('move-'+m.id+'-lv1-powerRatio','威力（最低100）',lv1.powerRatio)+
+      adminNumField('move-'+m.id+'-lv1-hitRate','命中率',lv1.hitRate)+
+      adminNumField('move-'+m.id+'-lv1-critRate','爆擊率',lv1.critRate)+
+      adminNumField('move-'+m.id+'-lv1-cooldown','冷卻(回合)',lv1.cooldown)+
+      adminNumField('move-'+m.id+'-lv1-effectChance','效果機率',lv1.effectChance)+
+      adminTextField('move-'+m.id+'-lv1-effectTrigger','觸發時機(effectTrigger)',lv1.effectTrigger)+
+      '</div><div class="admin-field"><label>Lv1 描述文字 description</label>'+
+      '<textarea id="admin-move-'+m.id+'-lv1-description" rows="2">'+escHtml(lv1.description)+'</textarea></div>'+
+      '<div class="admin-field"><label>Lv1 effectOps（進階：JSON 陣列格式）</label>'+
+      '<textarea id="admin-move-'+m.id+'-lv1-effectOps" rows="6">'+escHtml(JSON.stringify(lv1.effectOps||[], null, 2))+'</textarea></div>';
+  }
+  html +=
     '<div class="admin-move-actions">'+
       '<button class="btn small" id="admin-apply-move-'+m.id+'">套用這個招式</button>'+
       '<button class="btn small" id="admin-reset-move-'+m.id+'">還原這個招式</button>'+
@@ -9430,16 +9456,49 @@ async function applyAdminMove(moveId){
   const msg = document.getElementById('admin-move-'+moveId+'-msg');
   const isPassive = m.slot==='被';
   let effectOpsParsed;
+  let lv1Data=null;
   try{
     const raw = document.getElementById('admin-move-'+moveId+'-effectOps').value;
     effectOpsParsed = raw.trim()==='' ? [] : JSON.parse(raw);
     if(!Array.isArray(effectOpsParsed)) throw new Error('effectOps 必須是陣列 [...]');
+    if(m.slot==='願'){
+      const lv1Raw=document.getElementById('admin-move-'+moveId+'-lv1-effectOps').value;
+      const lv1Ops=lv1Raw.trim()==='' ? [] : JSON.parse(lv1Raw);
+      if(!Array.isArray(lv1Ops)) throw new Error('Lv1 effectOps 必須是陣列 [...]');
+      lv1Data={effectOps:lv1Ops};
+    }
   } catch(e){
     msg.textContent = '❌ effectOps JSON 格式錯誤：'+e.message; msg.className = 'admin-msg err'; return;
   }
   const moveName = readText('move-'+moveId+'-name');
   if(!moveName || !moveName.trim()){
     msg.textContent = '❌ 招式名稱不能是空白'; msg.className = 'admin-msg err'; return;
+  }
+  if(m.slot==='願'){
+    lv1Data.name=readText('move-'+moveId+'-lv1-name');
+    lv1Data.condition=readNum('move-'+moveId+'-lv1-condition');
+    lv1Data.powerRatio=readNum('move-'+moveId+'-lv1-powerRatio');
+    lv1Data.hitRate=readNum('move-'+moveId+'-lv1-hitRate');
+    lv1Data.critRate=readNum('move-'+moveId+'-lv1-critRate');
+    lv1Data.cooldown=readNum('move-'+moveId+'-lv1-cooldown');
+    lv1Data.effectChance=readNum('move-'+moveId+'-lv1-effectChance');
+    lv1Data.effectTrigger=readText('move-'+moveId+'-lv1-effectTrigger')||null;
+    lv1Data.description=document.getElementById('admin-move-'+moveId+'-lv1-description').value;
+    if(!lv1Data.name || !lv1Data.name.trim()){
+      msg.textContent='❌ Lv1 招式名稱不能是空白'; msg.className='admin-msg err'; return;
+    }
+    if(lv1Data.condition===undefined || lv1Data.condition===null){
+      msg.textContent='❌ Lv1 成本(condition)不能是空白或非數字'; msg.className='admin-msg err'; return;
+    }
+    if(lv1Data.powerRatio===undefined || lv1Data.hitRate===undefined || lv1Data.critRate===undefined || lv1Data.cooldown===undefined){
+      msg.textContent='❌ Lv1 威力／命中率／爆擊率／冷卻不是有效數字'; msg.className='admin-msg err'; return;
+    }
+    if(lv1Data.powerRatio!==null && lv1Data.powerRatio<100){
+      msg.textContent='❌ Lv1 威力最低是100（支援型招式可留白）'; msg.className='admin-msg err'; return;
+    }
+    if(lv1Data.effectChance===undefined || lv1Data.effectChance===null){
+      msg.textContent='❌ Lv1 效果機率不能是空白或非數字'; msg.className='admin-msg err'; return;
+    }
   }
   if(!isPassive){
     const condition = readNum('move-'+moveId+'-condition');
@@ -9469,6 +9528,7 @@ async function applyAdminMove(moveId){
   m.description = document.getElementById('admin-move-'+moveId+'-description').value;
   m.effectOps = effectOpsParsed;
   m.name = moveName;
+  if(m.slot==='願') m.lv1=lv1Data;
   msg.textContent = '⏳ 套用中…'; msg.className = 'admin-msg';
   try{ await saveGlobalAdminConfig(); msg.textContent='✅ 已儲存為全域設定，所有帳號下次載入會套用。'; msg.className='admin-msg'; }
   catch(e){ msg.textContent='❌ 全域儲存失敗：'+e.message; msg.className='admin-msg err'; return; }
