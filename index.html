@@ -1934,7 +1934,7 @@
 </head>
 <body>
 <!-- 發布版本唯一維護位置：每次正式同步／部署時更新日期與當日版次。 -->
-<div id="appVersionBadge" data-version="v2026.07.18-04" aria-label="目前版本">讀取版本…</div>
+<div id="appVersionBadge" data-version="v2026.07.18-05" aria-label="目前版本">讀取版本…</div>
 <script>
 (function showOnlineBuildVersion(){
   const badge=document.getElementById('appVersionBadge'),version=badge.dataset.version||'dev';
@@ -7633,7 +7633,7 @@ function storyCancelReveal(){
 function storyCancelAuto(){if(storyAutoTimer){clearTimeout(storyAutoTimer);storyAutoTimer=null;}}
 function storyScheduleAuto(delay){storyCancelAuto();if(!storyAutoMode||!storyRun||!storyRun.active)return;storyAutoTimer=setTimeout(()=>{storyAutoTimer=null;storyAdvance();},Math.max(220,Number(delay)||900));}
 function storyUpdateAutoButton(){const btn=document.getElementById('storyAutoBtn');if(!btn)return;btn.classList.toggle('active',storyAutoMode);btn.textContent=storyAutoMode?'AUTO ×'+storySpeed:'AUTO';}
-function storyCycleAuto(){if(!storyAutoMode){storyAutoMode=true;storySpeed=1;}else if(storySpeed===1)storySpeed=2;else{storyAutoMode=false;storySpeed=1;}storyUpdateAutoButton();storyRenderCurrent();}
+function storyCycleAuto(){if(!storyAutoMode){storyAutoMode=true;storySpeed=1;}else if(storySpeed===1)storySpeed=2;else{storyAutoMode=false;storySpeed=1;}storyUpdateAutoButton();storyCancelAuto();if(!storyAutoMode||!storyRun||!storyRun.active||storyReveal)return;const choices=document.getElementById('storyChoices');if(!choices.classList.contains('hidden'))return;storyScheduleAuto(900/storySpeed);}
 function storyHidePresentation(){
   storyCancelReveal();storyCancelAuto();
   const cinematic=document.getElementById('storyCinematic');cinematic.classList.add('hidden');cinematic.innerHTML='';
@@ -7748,7 +7748,7 @@ function storyRenderCurrent(){
   storyAppendLog(beat,speaker,text);
   if(beat.type==='narration'){storyRun.lastContext={type:'narration',speaker:'',text};const openingMarquee=(storyRun.block===2||storyRun.block===22)&&storyRun.beat===0;if(openingMarquee)storyPlayCinematic(text);else{narration.textContent=text;narration.classList.remove('hidden');storyScheduleAuto(1700/storySpeed);}return;}
   const normalized=storyNormalizeSpeaker(speaker),isPlayer=beat.type==='dialogue'&&(normalized===(playerName||'玩家')||normalized==='玩家');
-  if(isPlayer){if(storyRun.lastNpcLine){dialog.classList.remove('hidden');document.getElementById('storySpeaker').textContent=storyRun.lastNpcLine.speaker;storySetSpeakerAvatar(storyRun.lastNpcLine.speaker);document.getElementById('storyText').textContent=storyRun.lastNpcLine.text;document.getElementById('storyContinueHint').textContent='請選擇回應';}playerLine.classList.remove('hidden');playerLine.innerHTML='<button type="button" class="story-player-line-btn">'+escHtml(text)+'</button>';playerLine.querySelector('button').onclick=function(e){e.stopPropagation();storyAdvance();};return;}
+  if(isPlayer){if(storyRun.lastNpcLine){dialog.classList.remove('hidden');document.getElementById('storySpeaker').textContent=storyRun.lastNpcLine.speaker;storySetSpeakerAvatar(storyRun.lastNpcLine.speaker);document.getElementById('storyText').textContent=storyRun.lastNpcLine.text;document.getElementById('storyContinueHint').textContent='請選擇回應';}playerLine.classList.remove('hidden');playerLine.innerHTML='<button type="button" class="story-player-line-btn">'+escHtml(text)+'</button>';playerLine.querySelector('button').onclick=function(e){e.stopPropagation();storyAdvance();};storyScheduleAuto(1050/storySpeed);return;}
   if(beat.type==='dialogue'){storyRun.lastNpcLine={speaker,text};storyRun.lastContext={type:'dialogue',speaker,text};}
   dialog.classList.remove('hidden');document.getElementById('storySpeaker').textContent=speaker;storySetSpeakerAvatar(speaker);storyTypeText(text,hint);
 }
