@@ -1941,7 +1941,7 @@
 </head>
 <body>
 <!-- 發布版本唯一維護位置：每次正式同步／部署時更新日期與當日版次。 -->
-<div id="appVersionBadge" data-version="v2026.07.18-26" aria-label="目前版本">讀取版本…</div>
+<div id="appVersionBadge" data-version="v2026.07.18-27" aria-label="目前版本">讀取版本…</div>
 <script>
 (function showOnlineBuildVersion(){
   const badge=document.getElementById('appVersionBadge'),version=badge.dataset.version||'dev';
@@ -12624,13 +12624,20 @@ document.getElementById('admin1v1BattleBtn').onclick=function(){ closeAdminPanel
       localStorage.setItem(TUTORIAL_DONE_KEY,p.tutorialDone?'1':'');
       localStorage.setItem(TUTORIAL_FACTION_KEY,tutorialFaction);
       if(p.lobbyHeroId) localStorage.setItem(LOBBY_HERO_KEY,p.lobbyHeroId); else localStorage.removeItem(LOBBY_HERO_KEY);
-      if(p.storyProgress!==null&&p.storyProgress!==undefined)localStorage.setItem(STORY_PROGRESS_KEY,JSON.stringify(p.storyProgress));
-      if(p.storyStageProgress!==null&&p.storyStageProgress!==undefined)localStorage.setItem(STORY_STAGE_PROGRESS_KEY,JSON.stringify(p.storyStageProgress));
-      if(p.storyDiscovery!==null&&p.storyDiscovery!==undefined)localStorage.setItem(STORY_DISCOVERY_KEY,JSON.stringify(p.storyDiscovery));
+      const hasServerStoryData=!!(p.storyProgressStored||p.storyStageProgressStored||p.storyDiscoveryStored);
+      if(hasServerStoryData){
+        if(p.storyProgress==null)localStorage.removeItem(STORY_PROGRESS_KEY);else localStorage.setItem(STORY_PROGRESS_KEY,JSON.stringify(p.storyProgress));
+        if(p.storyStageProgress==null)localStorage.removeItem(STORY_STAGE_PROGRESS_KEY);else localStorage.setItem(STORY_STAGE_PROGRESS_KEY,JSON.stringify(p.storyStageProgress));
+        if(p.storyDiscovery==null)localStorage.removeItem(STORY_DISCOVERY_KEY);else localStorage.setItem(STORY_DISCOVERY_KEY,JSON.stringify(p.storyDiscovery));
+      }else{
+        if(p.storyProgress!==null&&p.storyProgress!==undefined)localStorage.setItem(STORY_PROGRESS_KEY,JSON.stringify(p.storyProgress));
+        if(p.storyStageProgress!==null&&p.storyStageProgress!==undefined)localStorage.setItem(STORY_STAGE_PROGRESS_KEY,JSON.stringify(p.storyStageProgress));
+        if(p.storyDiscovery!==null&&p.storyDiscovery!==undefined)localStorage.setItem(STORY_DISCOVERY_KEY,JSON.stringify(p.storyDiscovery));
+      }
     }catch(e){}
     // First deployment migration: preserve any existing local story save and upload
     // it instead of replacing it with an empty server value.
-    if(p.storyProgress==null&&p.storyStageProgress==null&&p.storyDiscovery==null)setTimeout(function(){if(window.__queueAccountStorySync)window.__queueAccountStorySync();},0);
+    if(!p.storyProgressStored&&!p.storyStageProgressStored&&!p.storyDiscoveryStored&&p.storyProgress==null&&p.storyStageProgress==null&&p.storyDiscovery==null)setTimeout(function(){if(window.__queueAccountStorySync)window.__queueAccountStorySync();},0);
     refreshCurrencyDisplays();
     if(typeof renderGachaCollectionGrid==='function' && document.getElementById('gachaCollectionGrid')) renderGachaCollectionGrid();
     if(typeof renderShopGrid==='function' && document.getElementById('shopCardGrid')) renderShopGrid();

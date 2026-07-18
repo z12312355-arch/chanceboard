@@ -219,7 +219,12 @@ function profileFromRow(row) {
     // erased the first time the account schema is upgraded.
     storyProgress: parseJson(row.story_progress, null),
     storyStageProgress: parseJson(row.story_stage_progress, null),
-    storyDiscovery: parseJson(row.story_discovery, null)
+    storyDiscovery: parseJson(row.story_discovery, null),
+    // SQL NULL means this account has never uploaded the corresponding save.
+    // The JSON text "null" means it was deliberately cleared by an administrator.
+    storyProgressStored: row.story_progress !== null && row.story_progress !== undefined,
+    storyStageProgressStored: row.story_stage_progress !== null && row.story_stage_progress !== undefined,
+    storyDiscoveryStored: row.story_discovery !== null && row.story_discovery !== undefined
   };
 }
 async function ensureProfile(db, user) {
@@ -258,7 +263,9 @@ function safeIds(value, allowed) {
 }
 function safeObject(value) { return value && typeof value === 'object' && !Array.isArray(value) ? value : {}; }
 function safeStoryDocument(value, label) {
-  if (value === null) return null;
+  // Preserve an intentional clear as JSON text instead of SQL NULL. This lets
+  // clients distinguish it from an account that has never synchronized stories.
+  if (value === null) return 'null';
   if (!value || typeof value !== 'object' || Array.isArray(value)) throw apiError(label + ' must be a JSON object or null.');
   let encoded;
   try { encoded = JSON.stringify(value); } catch (_) { throw apiError(label + ' is not valid JSON.'); }
