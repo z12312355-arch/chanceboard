@@ -1935,7 +1935,7 @@
 </head>
 <body>
 <!-- 發布版本唯一維護位置：每次正式同步／部署時更新日期與當日版次。 -->
-<div id="appVersionBadge" data-version="v2026.07.18-14" aria-label="目前版本">讀取版本…</div>
+<div id="appVersionBadge" data-version="v2026.07.18-15" aria-label="目前版本">讀取版本…</div>
 <script>
 (function showOnlineBuildVersion(){
   const badge=document.getElementById('appVersionBadge'),version=badge.dataset.version||'dev';
@@ -3981,6 +3981,8 @@ function newState(){
     clock:0, dealtRound:-1, round:0,
     // 故事模式不受 100 秒（10 回合）上限影響；把規則存進本局 state，避免離開故事後污染其他模式。
     unlimitedTime:false,
+    // 故事Boss專用戰術記憶：不改怪物數值，只記錄召喚次數與第一次死戰的結束時間。
+    bossAi:{summonCount:0,resummonReadyAt:null},
     handA:[], handB:[], handCustomA:[], handCustomB:[],
     lastDiscardedA:null, lastDiscardedB:null, // for 縫合-style "get back last discarded" passives
     actingUnitId:null, actPending:null, actMovePicked:null, actMoveTarget:null, turnDeadlineAt:0,
@@ -4269,7 +4271,13 @@ function startGame(){
 
   state.drawPublic = buildWeightedDeck(sharedPiece); state.discardPublic=[];
 
-  if(!twoPlayerMode){
+  if(window.__storyBattleKind==='boss'){
+    // 極難Boss固定牌組及首輪順序：自由→願→忍耐→願→法→分身→劍→願→法→劍。
+    // 後續仍沿用不限時戰鬥每10回合重新洗牌的規則。
+    const bossDeckIds=['019','004','023','004','003','025','001','004','003','001'];
+    state.customDeckB=bossDeckIds.map(id=>CARD_BY_ID[id]).filter(Boolean);
+    state.customDeckOrderB=state.customDeckB.map((_,i)=>i);
+  } else if(!twoPlayerMode){
     // Single-player: the AI opponent gets its own random 10-card custom deck too (same
     // pool of suit + flower cards the player picks from), so it isn't limited to just
     // the public deck. In two-player mode state.customDeckB/customDeckOrderB were
@@ -4550,6 +4558,8 @@ function applyTauntAndAwaken(cands, attacker){
 function pickFromCandidates(cands, attacker){
   const pool = applyTauntAndAwaken(cands, attacker);
   if(!pool.length) return null;
+  // 故事Boss會集中攻擊目前HP最低的棋子，模擬真正的收頭與減員決策；嘲諷仍優先遵守。
+  if(window.__storyBattleKind==='boss'&&attacker.side==='B'&&(attacker.baseId==='m001'||attacker.baseId==='m002')) return pickLowestHp(pool);
   return hasStatus(attacker,'覺醒') ? pickLowestHp(pool) : pickHighestHp(pool);
 }
 
@@ -4776,6 +4786,10 @@ function runOp(op, ctx){
       ctx.mover.flags[onceFlag]=true;
       if(Number(op.atkPct)>0)addStatus(ctx.mover,'ATK+','pct',Number(op.atkPct),op.durSec||20,ctx.mover);
       if(Number(op.spdPct)>0)addStatus(ctx.mover,'SPD+','pct',Number(op.spdPct),op.durSec||20,ctx.mover);
+      if(window.__storyBattleKind==='boss'&&ctx.mover.baseId==='m001'){
+        state.bossAi=state.bossAi||{summonCount:0,resummonReadyAt:null};
+        state.bossAi.resummonReadyAt=state.clock+(op.durSec||20);
+      }
       addLog('fx',sideTag(ctx.mover)+unitName(ctx.mover)+' 的「'+ctx.moveName+'」發動，進入死戰：ATK+'+Math.round((Number(op.atkPct)||0)*100)+'%、SPD+'+Math.round((Number(op.spdPct)||0)*100)+'%（'+(op.durSec||20)+'秒）');
       break; }
     case 'summonMonster': {
@@ -4796,6 +4810,10 @@ function runOp(op, ctx){
       summoned.nextActionAt=state.clock+10;
       ctx.ownTeam.push(summoned);
       initPassiveFlags(summoned);
+      if(window.__storyBattleKind==='boss'&&ctx.mover.baseId==='m001'){
+        state.bossAi=state.bossAi||{summonCount:0,resummonReadyAt:null};
+        state.bossAi.summonCount++;
+      }
       addLog('fx',sideTag(ctx.mover)+unitName(ctx.mover)+' 召喚了 '+sideTag(summoned)+unitName(summoned)+'！');
       break; }
     case 'status':
@@ -6769,13 +6787,89 @@ function aiPickMove(unit, ownTeam, enemyTeam, canMove){
   return weightedPickRandom(pool, m=>scoreMove(unit, m, ownTeam, enemyTeam));
 }
 
+function isStoryBossAiUnit(unit){
+  return window.__storyBattleKind==='boss'&&unit&&unit.side==='B'&&(unit.baseId==='m001'||unit.baseId==='m002');
+}
+function livingStoryGuardian(ownTeam){return ownTeam.find(u=>u.alive&&u.baseId==='m002')||null;}
+function storyBossMoveAllowed(unit,move,ownTeam){
+  if(!move)return false;
+  const memory=state.bossAi||(state.bossAi={summonCount:0,resummonReadyAt:null});
+  if(unit.baseId==='m001'&&move.id==='m001-wish'){
+    if(livingStoryGuardian(ownTeam)||memory.summonCount>=2)return false;
+    if(memory.summonCount===1&&(memory.resummonReadyAt==null||state.clock<memory.resummonReadyAt))return false;
+  }
+  if(unit.baseId==='m002'&&move.id==='m002-wish'){
+    // 守關戰士只有在施放後仍能替Boss保留3張願牌時才使用全體減傷。
+    if(countSuitInHand(unit.side,'004')<conditionForUnit(unit,move)+3)return false;
+  }
+  return true;
+}
+function storyBossUseCriticalFlower(unit,ownTeam,enemyTeam){
+  const flowers=combinedFlowerHand(unit);
+  if(!flowers.length)return false;
+  const memory=state.bossAi||(state.bossAi={summonCount:0,resummonReadyAt:null});
+  const boss=ownTeam.find(u=>u.alive&&u.baseId==='m001')||unit;
+  const guard=livingStoryGuardian(ownTeam);
+  const inDeadlyOath=memory.resummonReadyAt!=null&&state.clock<memory.resummonReadyAt;
+  let wantedId=null,target=unit;
+  // 死戰期先把分身交給無名戰士；有守衛時用忍耐強化代傷；準備召喚時才使用自由。
+  if(inDeadlyOath&&!hasStatus(boss,'連動')){wantedId='025';target=boss;}
+  else if(guard&&!hasStatus(guard,'減傷%')){wantedId='023';target=guard;}
+  else if(!guard&&memory.summonCount<2&&!hasStatus(boss,'解放')&&
+    (memory.summonCount===0||(memory.resummonReadyAt!=null&&state.clock>=memory.resummonReadyAt))){wantedId='019';target=boss;}
+  if(!wantedId)return false;
+  const entry=flowers.find(f=>f.card&&f.card.id===wantedId);
+  if(!entry)return false;
+  const hand=handOf(unit.side,entry.source),realIdx=hand.indexOf(entry.card);
+  if(realIdx<0)return false;
+  hand.splice(realIdx,1);
+  unit.assignedCardName=entry.card.name;
+  playFlowerCard(unit,entry.card,ownTeam,enemyTeam,target);
+  return true;
+}
+function storyBossBestPlan(unit,ownTeam,enemyTeam,canMove){
+  const moves=['sword','gun','magic','wish'].map(slot=>unit.moves[slot]).filter(move=>
+    move&&moveIsAffordable(unit,move)&&storyBossMoveAllowed(unit,move,ownTeam));
+  if(!moves.length)return {move:null,slot:null};
+  const originalSlot=unit.slot;
+  const reachable=canMove
+    ? (hasFreeMove(unit)?[1,2,3]:[originalSlot].concat(adjacentSlots(originalSlot)))
+    : [originalSlot];
+  let best=null;
+  moves.forEach(move=>{
+    const slots=move.rangeType?reachable:[originalSlot];
+    slots.forEach(slot=>{
+      unit.slot=slot;
+      if(move.rangeType&&!moveWouldHit(move,slot,unit.side,enemyTeam))return;
+      let score=scoreMove(unit,move,ownTeam,enemyTeam);
+      const targets=resolveTargets(unit,move,enemyTeam);
+      const hitTargets=move.scope==='群'?targets.group:(targets.single?[targets.single]:[]);
+      if(move.scope==='群'&&hitTargets.length>=2)score+=hitTargets.length*180;
+      if(move.id==='m001-wish')score+=10000;
+      if(move.id==='m002-magic'){
+        const shield=sumStatus(unit,'護盾+','value');
+        score+=shield<250?700:-150;
+      }
+      if(move.id==='m002-wish'&&!ownTeam.some(ally=>ally.alive&&hasStatus(ally,'減傷%')))score+=650;
+      if(move.id==='m001-magic'&&hitTargets.length&&hitTargets.every(target=>hasStatus(target,'禁足')))score*=0.55;
+      if(!best||score>best.score)best={move,slot,score};
+    });
+  });
+  unit.slot=originalSlot;
+  return best||{move:null,slot:null};
+}
+
 function aiHandleTurn(unit){
   unit._didNotMoveThisTurn = true;
   const canMove = !hasStatus(unit,'禁足');
-  const move = aiPickMove(unit, state.teamB, state.teamA, canMove);
+  const bossControlled=isStoryBossAiUnit(unit);
+  const bossFlowerUsed=bossControlled&&storyBossUseCriticalFlower(unit,state.teamB,state.teamA);
+  // 關鍵花牌（尤其自由）先結算，再重新計算本回合負擔得起的招式。
+  const bossPlan=bossControlled?storyBossBestPlan(unit,state.teamB,state.teamA,canMove):null;
+  const move = bossControlled?bossPlan.move:aiPickMove(unit, state.teamB, state.teamA, canMove);
   let movedForCombat = false;
   if(move && canMove){
-    const targetSlot = bestSelfSlotForMove(unit, move, state.teamA, canMove);
+    const targetSlot = bossControlled?bossPlan.slot:bestSelfSlotForMove(unit, move, state.teamA, canMove);
     if(targetSlot!=null && unit.slot!==targetSlot){
       queueMoveAnimation(unit); // 一定要在 unit.slot 真的被改掉之前呼叫，才量得到舊格子的座標
       unit.slot = targetSlot;
@@ -6796,7 +6890,7 @@ function aiHandleTurn(unit){
   // （buff類）維持原本在出招前就立刻生效，才能套用到這次攻擊。
   let deferredHandSwapCard = null;
   const flowers = combinedFlowerHand(unit);
-  if(flowers.length>0){
+  if(!bossFlowerUsed&&flowers.length>0){
     const scored = flowers.map(f=> estimateOpsValue(unit, state.teamB, state.teamA, f.card.effectOps));
     const bestScore = Math.max.apply(null, scored);
     const playChance = Math.min(0.9, bestScore / AI_FLOWER_VALUE_NORMALIZER);
