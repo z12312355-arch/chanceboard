@@ -47,7 +47,7 @@ function isAdminUser(env, user) {
 function defaultGlobalConfig() {
   return {
     balanceVersion: 3,
-    characters: null, moves: null, cards: null, storyMode: null,
+    characters: null, monsters: null, moves: null, cards: null, storyMode: null,
     introStory: {
       black: ['哈哈，歡迎加入黑方，我是小黑。', '對了，你叫什麼？', '……原來如此。', '從今天開始，我就叫你『{name}』了。', '可別太早死啊。'],
       white: ['歡迎加入白方，我是小白。', '在開始旅程之前。', '請告訴我你的名字。', '{name}。', '我記住了。', '希望有一天，大家都能記住這個名字。']
@@ -122,7 +122,7 @@ function normalizeGlobalConfig(input) {
   }
   return {
     balanceVersion,
-    characters: list('characters', 100), moves: list('moves', 500), cards: list('cards', 200),
+    characters: list('characters', 100), monsters: list('monsters', 100), moves: list('moves', 500), cards: list('cards', 200),
     introStory: { black: storyLines('black'), white: storyLines('white') },
     tutorialStory,
     storyMode,
