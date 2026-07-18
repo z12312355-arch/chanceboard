@@ -119,10 +119,10 @@
   /* 第四節以前把五個第三節分支橫向散落在畫布中間，已通關路徑的綠線會從其他未探索卡片背後穿過，
      看起來像「結局的前置節點仍是 ???」。改成標準分支樹：所有來源同列在左側、結局在右側，
      中間只留連線空間；每條線因此只代表它真正連接的兩個節點，不會再讓無關卡片看似位於路徑上。 */
-  .story-fate-ending-map .story-fate-visual-node.branch{min-height:0;height:70px;padding:7px 10px}
+  .story-fate-ending-map .story-fate-visual-node.branch{box-sizing:border-box;min-height:0;height:70px;padding:7px 10px;display:flex;flex-direction:column;justify-content:center}
   .story-fate-ending-map .story-fate-visual-node.ending{min-height:0;height:96px;display:flex;flex-direction:column;justify-content:center}
   .story-fate-ending-map .story-fate-visual-node.branch .story-fate-replay{margin-top:3px;padding:3px 7px}
-  @media(max-height:500px) and (orientation:landscape){.story-fate-ending-map .story-fate-visual-node.branch{height:38px;padding:3px 7px}.story-fate-ending-map .story-fate-visual-node.branch .story-fate-visual-node-meta{display:none}.story-fate-ending-map .story-fate-visual-node.branch .story-fate-replay{margin-top:1px;padding:1px 5px;font-size:7px}.story-fate-ending-map .story-fate-visual-node.ending{height:58px;padding:5px 8px}}
+  @media(max-height:500px) and (orientation:landscape){.story-fate-ending-map .story-fate-visual-node.branch{height:56px;padding:4px 7px}.story-fate-ending-map .story-fate-visual-node.branch .story-fate-visual-node-meta{display:none}.story-fate-ending-map .story-fate-visual-node.branch .story-fate-replay{margin-top:3px;padding:2px 5px;font-size:7px;line-height:1.2}.story-fate-ending-map .story-fate-visual-node.ending{height:58px;padding:5px 8px}.story-fate-link{stroke-width:1.25}.story-fate-link.seen{stroke-width:1.7;filter:drop-shadow(0 0 2px rgba(117,216,151,.28))}}
   /* 故事選單總體版面：四個入口畫面共用同一個「單螢幕殼」。標題、內容、底部操作各自佔用
      必要高度，中央 panel 吃掉其餘空間；這樣桌機不會四周留一圈大空白，手機也不需要上下捲動。 */
   #storyMenu{padding:clamp(6px,1.4vw,18px)}
@@ -2033,7 +2033,7 @@
 </head>
 <body>
 <!-- 發布版本唯一維護位置：每次正式同步／部署時更新日期與當日版次。 -->
-<div id="appVersionBadge" data-version="v2026.07.19-05" aria-label="目前版本">讀取版本…</div>
+<div id="appVersionBadge" data-version="v2026.07.19-06" aria-label="目前版本">讀取版本…</div>
 <script>
 (function showOnlineBuildVersion(){
   const badge=document.getElementById('appVersionBadge'),version=badge.dataset.version||'dev';
@@ -8156,8 +8156,8 @@ function storyFateVisualHtml(route,data){
   const resultGap=remaining.length>1?usable/(remaining.length-1):0;
   remaining.forEach((block,index)=>nodePos.set(Number(block),{x:xs[3],y:top+index*(outcomeH+resultGap),h:outcomeH}));
   const links=[];defs.forEach(node=>node.choices.forEach(item=>{const from=nodePos.get(Number(node.block)),to=nodePos.get(Number(item[1]));if(from&&to)links.push({from:from,to:to,choice:item[0],seen:storyWasChoiceVisited(route,node.block,item[0],data)});}));
-  const marker='storyArrow'+route;
-  const svg='<svg class="story-fate-svg" viewBox="0 0 '+canvasW+' '+canvasH+'" preserveAspectRatio="none"><defs><marker id="'+marker+'" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="#65718f"/></marker><marker id="'+marker+'Seen" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="#75d897"/></marker></defs>'+links.map(link=>{const x1=link.from.x+nodeW,y1=link.from.y+link.from.h/2,x2=link.to.x,y2=link.to.y+link.to.h/2,mid=(x1+x2)/2;return '<path class="story-fate-link '+(link.seen?'seen':'')+'" marker-end="url(#'+marker+(link.seen?'Seen':'')+')" d="M '+x1+' '+y1+' C '+mid+' '+y1+', '+mid+' '+y2+', '+x2+' '+y2+'"/>';}).join('')+'</svg>';
+  const marker='storyArrow'+route,arrowSize=small?7:9,arrowMid=arrowSize/2;
+  const svg='<svg class="story-fate-svg" viewBox="0 0 '+canvasW+' '+canvasH+'" preserveAspectRatio="none"><defs><marker id="'+marker+'" markerUnits="userSpaceOnUse" markerWidth="'+arrowSize+'" markerHeight="'+arrowSize+'" refX="'+(arrowSize-.5)+'" refY="'+arrowMid+'" orient="auto"><path d="M0,0 L'+arrowSize+','+arrowMid+' L0,'+arrowSize+' z" fill="#65718f"/></marker><marker id="'+marker+'Seen" markerUnits="userSpaceOnUse" markerWidth="'+arrowSize+'" markerHeight="'+arrowSize+'" refX="'+(arrowSize-.5)+'" refY="'+arrowMid+'" orient="auto"><path d="M0,0 L'+arrowSize+','+arrowMid+' L0,'+arrowSize+' z" fill="#75d897"/></marker></defs>'+links.map(link=>{const x1=link.from.x+nodeW,y1=link.from.y+link.from.h/2,x2=link.to.x,y2=link.to.y+link.to.h/2,mid=(x1+x2)/2;return '<path class="story-fate-link '+(link.seen?'seen':'')+'" marker-end="url(#'+marker+(link.seen?'Seen':'')+')" d="M '+x1+' '+y1+' C '+mid+' '+y1+', '+mid+' '+y2+', '+x2+' '+y2+'"/>';}).join('')+'</svg>';
   const labels=links.map(link=>'<span class="story-fate-edge-label '+(link.seen?'seen':'')+'" style="left:'+((link.from.x+nodeW+link.to.x)/2)+'px;top:'+((link.from.y+link.from.h/2+link.to.y+link.to.h/2)/2)+'px">'+(link.seen?escHtml(link.choice):'？？？')+'</span>').join('');
   const choiceNodes=defs.map(node=>{const pos=nodePos.get(Number(node.block)),seen=storyWasBlockVisited(route,node.block,data),incoming=storyFateIncoming(route,node.block);return '<div class="story-fate-visual-node '+(seen?'discovered':'')+'" style="left:'+pos.x+'px;top:'+pos.y+'px"><div class="story-fate-visual-node-title">'+(seen?escHtml(node.title):'？？？')+'</div><div class="story-fate-visual-node-meta">'+(seen?(incoming?'由「'+escHtml(incoming.parent.title)+'」選擇「'+escHtml(incoming.choice)+'」抵達':'第三節分支起點'):'尚未探索此選擇點')+'</div><button type="button" class="story-fate-replay" data-story-replay-block="'+node.block+'" '+(seen?'':'disabled')+'>從此節點回溯</button></div>';}).join('');
   const outcomeNodes=targets.map(block=>{const pos=nodePos.get(Number(block)),seen=storyWasBlockVisited(route,block,data);return '<div class="story-fate-visual-node outcome '+(seen?'discovered':'')+'" style="left:'+pos.x+'px;top:'+pos.y+'px"><div class="story-fate-visual-node-title">'+(seen?escHtml(STORY_OUTCOME_LABELS[block]||'已探索命運'):'？？？')+'</div><div class="story-fate-visual-node-meta">'+(seen?'已探索命運結果':'尚未探索')+'</div></div>';}).join('');
@@ -8169,7 +8169,7 @@ function storyEndingVisualHtml(route,data){
   const endings=(STORY_BRANCH_OUTCOMES[route]&&STORY_BRANCH_OUTCOMES[route][4])||[];
   const compact=window.matchMedia&&window.matchMedia('(max-height:500px) and (orientation:landscape)').matches;
   const narrow=window.matchMedia&&window.matchMedia('(max-width:700px)').matches,small=compact||narrow;
-  const nodeW=small?190:220,branchH=compact?38:70,endingH=compact?58:96;
+  const nodeW=small?190:220,branchH=compact?56:70,endingH=compact?58:96;
   const viewportW=Math.max(320,window.innerWidth||document.documentElement.clientWidth||1280);
   const canvasW=small?1040:Math.max(1150,Math.min(1500,viewportW-70)),viewportH=Math.max(320,window.innerHeight||document.documentElement.clientHeight||720);
   const canvasH=Math.max(compact?280:420,Math.min(compact?520:780,viewportH-(compact?105:(narrow?120:150))));
@@ -8183,8 +8183,8 @@ function storyEndingVisualHtml(route,data){
     const ending=Number(r.endingPaths[id])||null,destination=saved?storyEndingBlockForState(route,saved):null;
     const from=branchPos.get(Number(block)),to=endingPos.get(Number(ending||destination));
     return saved&&to?{from,to,reached:!!ending}:null;
-  }).filter(Boolean),marker='storyEndingArrow'+route;
-  const svg='<svg class="story-fate-svg" viewBox="0 0 '+canvasW+' '+canvasH+'" preserveAspectRatio="none"><defs><marker id="'+marker+'" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="#75d897"/></marker></defs>'+links.map(link=>{
+  }).filter(Boolean),marker='storyEndingArrow'+route,arrowSize=small?7:9,arrowMid=arrowSize/2;
+  const svg='<svg class="story-fate-svg" viewBox="0 0 '+canvasW+' '+canvasH+'" preserveAspectRatio="none"><defs><marker id="'+marker+'" markerUnits="userSpaceOnUse" markerWidth="'+arrowSize+'" markerHeight="'+arrowSize+'" refX="'+(arrowSize-.5)+'" refY="'+arrowMid+'" orient="auto"><path d="M0,0 L'+arrowSize+','+arrowMid+' L0,'+arrowSize+' z" fill="#75d897"/></marker></defs>'+links.map(link=>{
     const x1=link.from.x+nodeW,y1=link.from.y+branchH/2,x2=link.to.x,y2=link.to.y+endingH/2,mid=x1+(x2-x1)*.55;
     return '<path class="story-fate-link seen" marker-end="url(#'+marker+')" d="M '+x1+' '+y1+' C '+mid+' '+y1+', '+mid+' '+y2+', '+x2+' '+y2+'"/>';
   }).join('')+'</svg>';
