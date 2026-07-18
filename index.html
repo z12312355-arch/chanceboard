@@ -123,6 +123,79 @@
   .story-fate-ending-map .story-fate-visual-node.ending{min-height:0;height:96px;display:flex;flex-direction:column;justify-content:center}
   .story-fate-ending-map .story-fate-visual-node.branch .story-fate-replay{margin-top:3px;padding:3px 7px}
   @media(max-height:500px) and (orientation:landscape){.story-fate-ending-map .story-fate-visual-node.branch{height:38px;padding:3px 7px}.story-fate-ending-map .story-fate-visual-node.branch .story-fate-visual-node-meta{display:none}.story-fate-ending-map .story-fate-visual-node.branch .story-fate-replay{margin-top:1px;padding:1px 5px;font-size:7px}.story-fate-ending-map .story-fate-visual-node.ending{height:58px;padding:5px 8px}}
+  /* 故事選單總體版面：四個入口畫面共用同一個「單螢幕殼」。標題、內容、底部操作各自佔用
+     必要高度，中央 panel 吃掉其餘空間；這樣桌機不會四周留一圈大空白，手機也不需要上下捲動。 */
+  #storyMenu{padding:clamp(6px,1.4vw,18px)}
+  .story-menu-card{width:min(1440px,100%);height:min(900px,calc(100dvh - clamp(12px,2.8vw,36px)));max-height:none;overflow:hidden;display:flex;flex-direction:column;padding:clamp(12px,2vw,24px)}
+  .story-menu-head{flex:0 0 auto;align-items:center;margin-bottom:clamp(8px,1.5vh,16px)}
+  .story-menu-card h2{font-size:clamp(20px,2.4vw,28px)}
+  .story-menu-sub{font-size:clamp(10px,1.1vw,13px);line-height:1.4}
+  .story-menu-panel:not(.hidden){flex:1 1 auto;min-height:0;overflow:hidden}
+  #storyChapterPanel:not(.hidden),#storyRoutePanel:not(.hidden){display:flex}
+  .story-chapter-grid,.story-route-grid{flex:1;min-height:0;width:100%;height:100%;gap:clamp(9px,1.4vw,16px)}
+  .story-chapter-card,.story-route-card{height:100%;min-height:0;padding:clamp(14px,2.2vw,24px)}
+  .story-chapter-card.locked{background-image:url('background/pawn.png');background-position:center;background-size:cover}
+  .story-chapter-card-desc{left:clamp(14px,2.2vw,24px);right:clamp(14px,2.2vw,24px);bottom:clamp(14px,2.2vw,24px)}
+  .story-route-name{font-size:clamp(19px,2.1vw,25px)}
+  #storyMenuActions{flex:0 0 auto;margin-top:clamp(7px,1.3vh,14px)}
+  #storyMenuActions .btn{padding:6px 13px;font-size:12px}
+  #storyLoadMessage{flex:0 0 auto;margin-top:3px!important;min-height:0}
+  /* 關卡卡片不再被拉成整個畫面一樣高。卡片維持能完整呈現資訊的高度，整條路線在中央垂直置中；
+     底下只保留真正有用的隊伍控制，重複說明橫向捲動的提示移除。 */
+  .story-menu-card.stage-map-mode{width:min(1500px,100%);height:min(900px,calc(100dvh - clamp(12px,2.8vw,36px)))}
+  .stage-map-mode .story-stage-shell{min-height:0;margin-top:0}
+  .stage-map-mode .story-stage-scroll{display:flex;align-items:center;padding-top:4px;padding-bottom:14px}
+  .stage-map-mode .story-stage-map{height:auto;align-items:center}
+  .stage-map-mode .story-stage-row{height:auto;grid-template-rows:auto auto}
+  .stage-map-mode .story-stage-node{height:clamp(160px,40vh,285px);min-height:0;justify-content:flex-start;background:linear-gradient(145deg,rgba(20,25,40,.9),rgba(8,11,19,.94)),url('background/pawn.png') center/cover no-repeat}
+  .stage-map-mode .story-stage-node.current{background:linear-gradient(145deg,rgba(58,49,27,.82),rgba(11,14,23,.92)),url('background/pawn.png') center/cover no-repeat}
+  .story-stage-scroll-hint{display:none}
+  .stage-map-mode .story-stage-toolbar{margin-top:clamp(5px,1vh,10px);padding-top:clamp(6px,1vh,11px)}
+  /* 命運棋譜同樣把畫布完整交給中央區域。畫布高度由 JS 依視窗計算，外層不再製造一段
+     沒有內容的 100% 高空白；節點尺寸在窄螢幕同步縮小。 */
+  #storyFateOverlay{padding:clamp(3px,1vw,10px)}
+  .story-fate-panel{width:min(1500px,100%);height:min(920px,calc(100dvh - clamp(6px,2vw,20px)))}
+  .story-fate-head{padding:clamp(7px,1.4vw,15px) clamp(9px,1.7vw,18px);align-items:center}
+  .story-fate-title{font-size:clamp(16px,2vw,22px)}
+  .story-fate-summary{margin-top:2px;font-size:clamp(9px,1vw,12px)}
+  .story-fate-graph{padding:clamp(5px,1vw,11px)}
+  .story-fate-visual-scroll{height:100%;padding-bottom:13px}
+  .story-fate-canvas{height:auto;min-height:0}
+  .story-fate-choice-map .story-fate-visual-node:not(.outcome){min-height:0;height:118px}
+  .story-fate-choice-map .story-fate-visual-node.outcome{min-height:0;height:86px;display:flex;flex-direction:column;justify-content:center}
+  @media(max-width:700px){
+    .story-menu-card{height:calc(100dvh - 12px);max-height:none;overflow:hidden;padding:12px}
+    .story-menu-head{margin-bottom:8px}.story-menu-back{padding:5px 8px;font-size:10px}
+    .story-chapter-grid{grid-template-columns:1fr;grid-template-rows:minmax(0,1.45fr) minmax(112px,.55fr)}
+    .story-route-grid{grid-template-columns:1fr;grid-template-rows:1fr 1fr}
+    .story-chapter-card,.story-route-card{min-height:0}
+    .story-chapter-card-title{font-size:clamp(20px,7vw,32px)}
+    .story-chapter-card-desc{font-size:11px;line-height:1.45}
+    .story-route-card{padding:15px}
+    .story-menu-card.stage-map-mode{height:calc(100dvh - 12px)}
+    .stage-map-mode .story-stage-node{height:clamp(190px,44vh,340px)}
+    .story-fate-panel{height:calc(100dvh - 6px);max-height:none;border-radius:12px}
+    .story-fate-head{gap:6px}.story-fate-head .story-top-btn{padding:5px 7px;font-size:9px}
+    .story-fate-visual-node{width:190px}
+    .story-fate-choice-map .story-fate-visual-node:not(.outcome){height:104px}
+    .story-fate-choice-map .story-fate-visual-node.outcome{height:74px}
+  }
+  @media(max-height:500px) and (orientation:landscape){
+    .story-menu-card{width:min(1180px,100%);height:calc(100dvh - 8px);padding:8px 12px}
+    .story-menu-head{margin-bottom:5px}.story-menu-card h2{font-size:18px}.story-menu-sub{font-size:9px}
+    .story-chapter-grid{grid-template-columns:minmax(0,1.55fr) minmax(210px,.65fr);grid-template-rows:1fr}
+    .story-route-grid{grid-template-columns:1fr 1fr;grid-template-rows:1fr}
+    .story-chapter-card,.story-route-card{padding:12px 15px}
+    .story-chapter-card-title{margin-top:4px;font-size:24px}.story-chapter-status{margin-top:6px;padding:3px 7px;font-size:9px}
+    .story-chapter-card-desc{left:15px;right:15px;bottom:12px;font-size:10px;line-height:1.35}
+    .story-route-name{font-size:19px}.story-route-desc{font-size:10px}.story-route-progress{margin-top:5px;font-size:9px}
+    #storyMenuActions{margin-top:4px}#storyMenuActions .btn{padding:4px 9px;font-size:9px}
+    .story-menu-card.stage-map-mode{height:calc(100dvh - 8px)}
+    .stage-map-mode .story-stage-node{height:clamp(132px,43vh,168px);justify-content:center}
+    .stage-map-mode .story-stage-toolbar{margin-top:3px;padding-top:4px}
+    .story-fate-choice-map .story-fate-visual-node.outcome{height:52px}
+    .story-fate-choice-map .story-fate-visual-node:not(.outcome){height:70px}
+  }
   @media(max-width:700px){.story-stage-shell{grid-template-columns:30px minmax(0,1fr) 30px;gap:4px;margin-left:-9px;margin-right:-9px}.story-stage-scroll-btn{height:58px;padding:0;font-size:21px}.story-stage-scroll{padding-bottom:17px}.story-stage-map{padding:0}.story-stage-row{grid-template-columns:225px 54px}.story-stage-row:last-child{grid-template-columns:225px}.story-stage-node{width:225px;min-height:160px;padding:14px}.story-stage-row:not(:last-child)::after{width:54px;font-size:38px}.story-stage-row:not(:last-child)::before{width:39px}.story-stage-index{width:40px;height:40px;font-size:14px}.story-stage-title{font-size:16px}.story-stage-desc{display:block;font-size:10px}.story-stage-state{right:10px;top:11px}}
   @media(max-height:500px) and (orientation:landscape){#storyMenu{padding:6px}.story-menu-card.stage-map-mode{width:100%;height:calc(100vh - 12px);padding:10px 14px;border-radius:13px}.stage-map-mode .story-menu-head{margin-bottom:5px;align-items:center}.stage-map-mode .story-menu-card h2,.stage-map-mode h2{font-size:19px;margin-bottom:1px}.stage-map-mode .story-menu-sub{font-size:10px;line-height:1.25}.stage-map-mode .story-menu-back{padding:5px 8px;font-size:10px}.stage-map-mode .story-stage-shell{min-height:0;margin-top:0}.stage-map-mode .story-stage-scroll{padding-top:3px;padding-bottom:13px}.stage-map-mode .story-stage-row{grid-template-columns:225px 52px}.stage-map-mode .story-stage-row:last-child{grid-template-columns:225px}.stage-map-mode .story-stage-node{width:225px;padding:9px 12px;gap:4px}.stage-map-mode .story-stage-index{width:34px;height:34px;font-size:12px}.stage-map-mode .story-stage-kicker{font-size:8px}.stage-map-mode .story-stage-title{font-size:15px;margin-top:1px}.stage-map-mode .story-stage-desc{display:none}.stage-map-mode .story-stage-explore{margin-top:2px;font-size:9px}.stage-map-mode .story-stage-state{top:8px;right:8px;padding:3px 7px;font-size:8px}.stage-map-mode .story-fate-btn{margin-top:4px;padding:4px 8px;font-size:9px}.stage-map-mode .story-stage-scroll-btn{height:48px}.stage-map-mode .story-stage-scroll-hint{display:none}.stage-map-mode .story-stage-toolbar{margin-top:4px;padding-top:5px;gap:6px}.stage-map-mode .story-stage-toolbar label{font-size:10px!important}.stage-map-mode #storyTeamSelect{min-width:150px;padding:5px 7px;font-size:11px}.stage-map-mode .story-stage-toolbar .btn{padding:6px 10px;font-size:10px}.stage-map-mode #storyMenuActions{margin-top:4px}.stage-map-mode #storyMenuActions .btn{padding:5px 10px;font-size:10px}.stage-map-mode #storyLoadMessage{margin-top:2px!important;min-height:0}}
   #screen-lobby{position:relative;height:100%;width:100%;overflow:hidden;
@@ -1960,7 +2033,7 @@
 </head>
 <body>
 <!-- 發布版本唯一維護位置：每次正式同步／部署時更新日期與當日版次。 -->
-<div id="appVersionBadge" data-version="v2026.07.19-03" aria-label="目前版本">讀取版本…</div>
+<div id="appVersionBadge" data-version="v2026.07.19-04" aria-label="目前版本">讀取版本…</div>
 <script>
 (function showOnlineBuildVersion(){
   const badge=document.getElementById('appVersionBadge'),version=badge.dataset.version||'dev';
@@ -8056,28 +8129,47 @@ function storyFateVisualHtml(route,data){
   const defs=(STORY_FATE_CHOICES[route]&&STORY_FATE_CHOICES[route][3])||[],targets=(STORY_BRANCH_OUTCOMES[route]&&STORY_BRANCH_OUTCOMES[route][3])||[];
   if(defs.length<4)return'';
   const compact=window.matchMedia&&window.matchMedia('(max-height:500px) and (orientation:landscape)').matches;
-  const nodeW=compact?190:220,nodeHalf=compact?35:60,canvasW=compact?990:1100,canvasH=compact?250:480;
-  const nodePos=new Map([[Number(defs[0].block),{x:compact?20:30,y:compact?85:175}],[Number(defs[1].block),{x:compact?250:300,y:compact?45:90}],[Number(defs[2].block),{x:compact?480:570,y:compact?5:10}],[Number(defs[3].block),{x:compact?480:570,y:compact?135:250}]]);
-  const directTerminal=defs[0].choices.find(item=>!defs.some(node=>Number(node.block)===Number(item[1])));if(directTerminal)nodePos.set(Number(directTerminal[1]),{x:compact?250:300,y:compact?165:330});
-  const remaining=targets.filter(block=>!nodePos.has(Number(block)));remaining.forEach((block,index)=>nodePos.set(Number(block),{x:compact?720:850,y:compact?index*58:index*115}));
+  const narrow=window.matchMedia&&window.matchMedia('(max-width:700px)').matches,small=compact||narrow;
+  const nodeW=small?190:220,nodeH=compact?70:(narrow?104:118),outcomeH=compact?52:(narrow?74:86);
+  const viewportW=Math.max(320,window.innerWidth||document.documentElement.clientWidth||1280);
+  const canvasW=small?960:Math.max(1100,Math.min(1500,viewportW-70)),viewportH=Math.max(320,window.innerHeight||document.documentElement.clientHeight||720);
+  // 直接使用目前視窗可供棋譜使用的高度，不再固定 250px。保留標題列與橫向捲軸的預算後，
+  // 畫布吃滿剩餘空間；短螢幕至少 280px，足以讓四個結果節點不重疊。
+  const canvasH=Math.max(compact?280:420,Math.min(compact?520:780,viewportH-(compact?105:(narrow?120:150))));
+  const desktopStart=30,desktopEnd=canvasW-nodeW-30,desktopStep=(desktopEnd-desktopStart)/3;
+  const xs=small?[20,250,480,750]:[desktopStart,desktopStart+desktopStep,desktopStart+desktopStep*2,desktopEnd],top=compact?24:(narrow?38:45);
+  const nodePos=new Map([
+    [Number(defs[0].block),{x:xs[0],y:(canvasH-nodeH)/2,h:nodeH}],
+    [Number(defs[1].block),{x:xs[1],y:top+(canvasH-nodeH-top*2)*.18,h:nodeH}],
+    [Number(defs[2].block),{x:xs[2],y:top,h:nodeH}],
+    [Number(defs[3].block),{x:xs[2],y:canvasH-top-nodeH,h:nodeH}]
+  ]);
+  const directTerminal=defs[0].choices.find(item=>!defs.some(node=>Number(node.block)===Number(item[1])));
+  if(directTerminal)nodePos.set(Number(directTerminal[1]),{x:xs[1],y:canvasH-top-outcomeH,h:outcomeH});
+  const remaining=targets.filter(block=>!nodePos.has(Number(block))),usable=Math.max(0,canvasH-top*2-remaining.length*outcomeH);
+  const resultGap=remaining.length>1?usable/(remaining.length-1):0;
+  remaining.forEach((block,index)=>nodePos.set(Number(block),{x:xs[3],y:top+index*(outcomeH+resultGap),h:outcomeH}));
   const links=[];defs.forEach(node=>node.choices.forEach(item=>{const from=nodePos.get(Number(node.block)),to=nodePos.get(Number(item[1]));if(from&&to)links.push({from:from,to:to,choice:item[0],seen:storyWasChoiceVisited(route,node.block,item[0],data)});}));
   const marker='storyArrow'+route;
-  const svg='<svg class="story-fate-svg" viewBox="0 0 '+canvasW+' '+canvasH+'" preserveAspectRatio="none"><defs><marker id="'+marker+'" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="#65718f"/></marker><marker id="'+marker+'Seen" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="#75d897"/></marker></defs>'+links.map(link=>{const x1=link.from.x+nodeW,y1=link.from.y+nodeHalf,x2=link.to.x,y2=link.to.y+nodeHalf,mid=(x1+x2)/2;return '<path class="story-fate-link '+(link.seen?'seen':'')+'" marker-end="url(#'+marker+(link.seen?'Seen':'')+')" d="M '+x1+' '+y1+' C '+mid+' '+y1+', '+mid+' '+y2+', '+x2+' '+y2+'"/>';}).join('')+'</svg>';
-  const labels=links.map(link=>'<span class="story-fate-edge-label '+(link.seen?'seen':'')+'" style="left:'+((link.from.x+nodeW+link.to.x)/2)+'px;top:'+((link.from.y+link.to.y)/2+nodeHalf)+'px">'+(link.seen?escHtml(link.choice):'？？？')+'</span>').join('');
+  const svg='<svg class="story-fate-svg" viewBox="0 0 '+canvasW+' '+canvasH+'" preserveAspectRatio="none"><defs><marker id="'+marker+'" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="#65718f"/></marker><marker id="'+marker+'Seen" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="#75d897"/></marker></defs>'+links.map(link=>{const x1=link.from.x+nodeW,y1=link.from.y+link.from.h/2,x2=link.to.x,y2=link.to.y+link.to.h/2,mid=(x1+x2)/2;return '<path class="story-fate-link '+(link.seen?'seen':'')+'" marker-end="url(#'+marker+(link.seen?'Seen':'')+')" d="M '+x1+' '+y1+' C '+mid+' '+y1+', '+mid+' '+y2+', '+x2+' '+y2+'"/>';}).join('')+'</svg>';
+  const labels=links.map(link=>'<span class="story-fate-edge-label '+(link.seen?'seen':'')+'" style="left:'+((link.from.x+nodeW+link.to.x)/2)+'px;top:'+((link.from.y+link.from.h/2+link.to.y+link.to.h/2)/2)+'px">'+(link.seen?escHtml(link.choice):'？？？')+'</span>').join('');
   const choiceNodes=defs.map(node=>{const pos=nodePos.get(Number(node.block)),seen=storyWasBlockVisited(route,node.block,data),incoming=storyFateIncoming(route,node.block);return '<div class="story-fate-visual-node '+(seen?'discovered':'')+'" style="left:'+pos.x+'px;top:'+pos.y+'px"><div class="story-fate-visual-node-title">'+(seen?escHtml(node.title):'？？？')+'</div><div class="story-fate-visual-node-meta">'+(seen?(incoming?'由「'+escHtml(incoming.parent.title)+'」選擇「'+escHtml(incoming.choice)+'」抵達':'第三節分支起點'):'尚未探索此選擇點')+'</div><button type="button" class="story-fate-replay" data-story-replay-block="'+node.block+'" '+(seen?'':'disabled')+'>從此節點回溯</button></div>';}).join('');
   const outcomeNodes=targets.map(block=>{const pos=nodePos.get(Number(block)),seen=storyWasBlockVisited(route,block,data);return '<div class="story-fate-visual-node outcome '+(seen?'discovered':'')+'" style="left:'+pos.x+'px;top:'+pos.y+'px"><div class="story-fate-visual-node-title">'+(seen?escHtml(STORY_OUTCOME_LABELS[block]||'已探索命運'):'？？？')+'</div><div class="story-fate-visual-node-meta">'+(seen?'已探索命運結果':'尚未探索')+'</div></div>';}).join('');
-  return '<div class="story-fate-visual-scroll"><div class="story-fate-canvas" style="width:'+canvasW+'px;height:'+canvasH+'px"><span class="story-fate-column-label" style="left:'+(compact?20:30)+'px">起點</span><span class="story-fate-column-label" style="left:'+(compact?250:300)+'px">第一次分歧</span><span class="story-fate-column-label" style="left:'+(compact?480:570)+'px">第二次分歧</span><span class="story-fate-column-label" style="left:'+(compact?720:850)+'px">命運結果</span>'+svg+labels+choiceNodes+outcomeNodes+'</div></div>';
+  return '<div class="story-fate-visual-scroll"><div class="story-fate-canvas story-fate-choice-map" style="width:'+canvasW+'px;height:'+canvasH+'px"><span class="story-fate-column-label" style="left:'+xs[0]+'px">起點</span><span class="story-fate-column-label" style="left:'+xs[1]+'px">第一次分歧</span><span class="story-fate-column-label" style="left:'+xs[2]+'px">第二次分歧</span><span class="story-fate-column-label" style="left:'+xs[3]+'px">命運結果</span>'+svg+labels+choiceNodes+outcomeNodes+'</div></div>';
 }
 function storyEndingVisualHtml(route,data){
   const branches=storySavedBranchStates(route,data),r=data.routes[route];
   const branchTargets=(STORY_BRANCH_OUTCOMES[route]&&STORY_BRANCH_OUTCOMES[route][3])||[];
   const endings=(STORY_BRANCH_OUTCOMES[route]&&STORY_BRANCH_OUTCOMES[route][4])||[];
   const compact=window.matchMedia&&window.matchMedia('(max-height:500px) and (orientation:landscape)').matches;
-  const nodeW=compact?190:220,branchH=compact?38:70,endingH=compact?58:96;
-  const canvasW=compact?1040:1150,canvasH=compact?250:470;
-  const branchX=compact?24:45,endingX=compact?810:875;
-  const branchStartY=compact?25:45,branchStep=compact?43:78;
-  const endingStartY=compact?38:90,endingStep=compact?125:210;
+  const narrow=window.matchMedia&&window.matchMedia('(max-width:700px)').matches,small=compact||narrow;
+  const nodeW=small?190:220,branchH=compact?38:70,endingH=compact?58:96;
+  const viewportW=Math.max(320,window.innerWidth||document.documentElement.clientWidth||1280);
+  const canvasW=small?1040:Math.max(1150,Math.min(1500,viewportW-70)),viewportH=Math.max(320,window.innerHeight||document.documentElement.clientHeight||720);
+  const canvasH=Math.max(compact?280:420,Math.min(compact?520:780,viewportH-(compact?105:(narrow?120:150))));
+  const branchX=small?24:45,endingX=small?810:canvasW-nodeW-55,verticalPad=compact?22:(narrow?38:48);
+  const branchStartY=verticalPad,branchStep=(canvasH-verticalPad*2-branchH)/Math.max(1,branchTargets.length-1);
+  const endingStartY=canvasH*.22-endingH/2,endingStep=canvasH*.56;
   const branchPos=new Map(branchTargets.map((block,index)=>[Number(block),{x:branchX,y:branchStartY+index*branchStep}]));
   const endingPos=new Map(endings.map((block,index)=>[Number(block),{x:endingX,y:endingStartY+index*endingStep}]));
   const links=branchTargets.map(block=>{
@@ -8102,7 +8194,12 @@ function storyEndingVisualHtml(route,data){
   return '<div class="story-fate-visual-scroll"><div class="story-fate-canvas story-fate-ending-map" style="width:'+canvasW+'px;height:'+canvasH+'px"><span class="story-fate-column-label" style="left:'+branchX+'px">第三節命運</span><span class="story-fate-column-label" style="left:'+endingX+'px">第四節結局</span>'+svg+branchNodes+endingNodes+'</div></div>';
 }
 function storyOpenFateMap(route,stageNumber){
-  const overlay=document.getElementById('storyFateOverlay'),graph=document.getElementById('storyFateGraph'),data=loadStoryDiscovery(),explore=storyExploration(route,stageNumber),stage=(STORY_STAGE_DEFS[route]||[]).find(s=>s.number===stageNumber);
+  const overlay=document.getElementById('storyFateOverlay'),graph=document.getElementById('storyFateGraph'),data=loadStoryDiscovery();
+  if(stageNumber>=4)storySavedBranchStates(route,data);
+  const targets=(STORY_BRANCH_OUTCOMES[route]&&STORY_BRANCH_OUTCOMES[route][stageNumber])||[];
+  const explore={seen:targets.filter(block=>storyWasBlockVisited(route,block,data)).length,total:targets.length};
+  const stage=(STORY_STAGE_DEFS[route]||[]).find(s=>s.number===stageNumber);
+  overlay.dataset.route=route;overlay.dataset.stage=stageNumber;
   document.getElementById('storyFateTitle').textContent='命運棋譜｜'+(stage?stage.title:'分支回顧');document.getElementById('storyFateSummary').textContent='探索 '+explore.seen+'／'+explore.total+'　・　綠色連線代表已走過的命運';
   const backBtn=document.getElementById('storyFateBackBtn');backBtn.classList.toggle('hidden',stageNumber===3);backBtn.onclick=()=>storyOpenFateMap(route,3);
   graph.innerHTML=stageNumber===3?storyFateVisualHtml(route,data):storyEndingVisualHtml(route,data);overlay.classList.remove('hidden');
@@ -8112,6 +8209,18 @@ function storyOpenFateMap(route,stageNumber){
   graph.querySelectorAll('[data-story-fourth-branch]').forEach(btn=>btn.onclick=()=>storyStartFourthFromBranch(route,Number(btn.dataset.storyFourthBranch)));
 }
 function storyCloseFateMap(){document.getElementById('storyFateOverlay').classList.add('hidden');}
+let storyFateResizeTimer=null;
+window.addEventListener('resize',function(){
+  const overlay=document.getElementById('storyFateOverlay');
+  if(!overlay||overlay.classList.contains('hidden')||!overlay.dataset.route)return;
+  clearTimeout(storyFateResizeTimer);storyFateResizeTimer=setTimeout(function(){
+    const oldScroll=overlay.querySelector('.story-fate-visual-scroll');
+    const ratio=oldScroll&&oldScroll.scrollWidth>oldScroll.clientWidth?oldScroll.scrollLeft/(oldScroll.scrollWidth-oldScroll.clientWidth):0;
+    storyOpenFateMap(overlay.dataset.route,Number(overlay.dataset.stage)||3);
+    const nextScroll=overlay.querySelector('.story-fate-visual-scroll');
+    if(nextScroll&&ratio>0)nextScroll.scrollLeft=ratio*Math.max(0,nextScroll.scrollWidth-nextScroll.clientWidth);
+  },120);
+});
 function storySetMenuView(view,route){
   storyMenuView=view||'chapters';storyMenuRoute=route||storyMenuRoute;
   const menuCard=document.querySelector('#storyMenu .story-menu-card');if(menuCard){menuCard.scrollTop=0;menuCard.classList.toggle('stage-map-mode',storyMenuView==='stages');}
