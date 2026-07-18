@@ -15,6 +15,8 @@
   *{box-sizing:border-box;}
   html, body{height:100%;}
   body{margin:0;font-family:"Microsoft JhengHei","PingFang TC",-apple-system,sans-serif;background:var(--bg);color:var(--text);}
+  #appVersionBadge{position:fixed;left:10px;bottom:7px;z-index:8999;padding:3px 7px;border:1px solid rgba(255,255,255,.12);border-radius:999px;background:rgba(5,7,12,.46);color:rgba(226,230,241,.68);font-size:10px;line-height:1.2;letter-spacing:.045em;text-shadow:0 1px 3px #000;pointer-events:none;user-select:none;backdrop-filter:blur(3px)}
+  body.battle-mode #appVersionBadge{display:none}
   /* 選角／組卡組畫面（第一步／第二步）也要用到左右兩邊的空間（使用者要求），寬度上限從 1180px
      加大；不像戰鬥畫面整個拿掉上限，是因為這裡還有 h1/副標題/規則說明這些長文字段落，太寬的話
      一行字會拉得很長、反而不好讀，所以保留一個比較寬鬆但還是有限制的上限。 */
@@ -1931,6 +1933,19 @@
 </style>
 </head>
 <body>
+<!-- 發布版本唯一維護位置：每次正式同步／部署時更新日期與當日版次。 -->
+<div id="appVersionBadge" data-version="v2026.07.18-01" aria-label="目前版本">讀取版本…</div>
+<script>
+(function showOnlineBuildVersion(){
+  const badge=document.getElementById('appVersionBadge'),version=badge.dataset.version||'dev';
+  badge.textContent='版本 '+version;
+  fetch(location.pathname+'?version-check='+Date.now(),{method:'HEAD',cache:'no-store'}).then(res=>{
+    const etag=res.headers.get('etag');if(!etag)return;
+    const build=etag.replace(/[^a-zA-Z0-9]/g,'').slice(0,8);if(!build)return;
+    badge.textContent='版本 '+version+' · '+build;badge.title='線上 Build ID：'+etag;
+  }).catch(()=>{});
+})();
+</script>
 <!-- 手機直向拿著玩戰鬥畫面時擋住底下擁擠的橫式排版，請玩家轉橫向——純 CSS 驅動（見上面
      #rotateOverlay 的 media query），不需要 JS 判斷方向。其他畫面（選角/組卡/結束）本來就正常
      直式可捲動，不受這個遮罩影響（CSS 選擇器限定在 body.battle-mode 時才顯示）。 -->
