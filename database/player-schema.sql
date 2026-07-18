@@ -20,6 +20,10 @@ CREATE TABLE IF NOT EXISTS players (
   lobby_hero_id TEXT,
   settings TEXT NOT NULL DEFAULT '{}',
   daily_bonus_date TEXT NOT NULL DEFAULT '',
+  is_admin INTEGER NOT NULL DEFAULT 0 CHECK (is_admin IN (0, 1)),
+  story_progress TEXT,
+  story_stage_progress TEXT,
+  story_discovery TEXT,
   created_at INTEGER NOT NULL,
   updated_at INTEGER NOT NULL
 );
@@ -41,6 +45,7 @@ CREATE INDEX IF NOT EXISTS friendships_user_b_idx ON friendships(user_b);
 
 -- Existing databases need this one-time migration before rerunning the indexes/tables above:
 -- ALTER TABLE players ADD COLUMN player_name TEXT NOT NULL DEFAULT '' COLLATE NOCASE;
+-- See migration-2026-07-admin-story-progress.sql for account-admin and story-progress columns.
 
 -- One shared row for live game balance and economy settings.  Player data remains
 -- per-account in `players`; this table is deliberately global and admin-only.

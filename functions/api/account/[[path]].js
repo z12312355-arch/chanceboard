@@ -40,9 +40,12 @@ function intInRange(value, fallback, min = 0, max = 999999999) {
   const n = Number(value);
   return Number.isInteger(n) && n >= min && n <= max ? n : fallback;
 }
-function isAdminUser(env, user) {
+function isBootstrapAdmin(env, user) {
   const csv = value => String(env[value] || '').split(',').map(v => v.trim()).filter(Boolean);
   return csv('ADMIN_UIDS').includes(user.uid) || csv('ADMIN_EMAILS').map(v => v.toLowerCase()).includes(user.email.toLowerCase());
+}
+function isAdminUser(env, user, row) {
+  return isBootstrapAdmin(env, user) || !!(row && Number(row.is_admin));
 }
 function defaultGlobalConfig() {
   return {
@@ -211,7 +214,12 @@ function profileFromRow(row) {
     ownedCardCounts: parseJson(row.owned_cards, {}), teams: parseJson(row.teams, []),
     tutorialDone: !!row.tutorial_done, tutorialStep: tutorialStepFromRow(row), tutorialFaction: row.tutorial_faction || 'black',
     lobbyHeroId: row.lobby_hero_id || null, settings: parseJson(row.settings, {}),
-    dailyBonusDate: row.daily_bonus_date || ''
+    dailyBonusDate: row.daily_bonus_date || '',
+    // Story progress is nullable so an existing player's browser progress is not
+    // erased the first time the account schema is upgraded.
+    storyProgress: parseJson(row.story_progress, null),
+    storyStageProgress: parseJson(row.story_stage_progress, null),
+    storyDiscovery: parseJson(row.story_discovery, null)
   };
 }
 async function ensureProfile(db, user) {
@@ -249,6 +257,24 @@ function safeIds(value, allowed) {
   return unique;
 }
 function safeObject(value) { return value && typeof value === 'object' && !Array.isArray(value) ? value : {}; }
+function safeStoryDocument(value, label) {
+  if (value === null) return null;
+  if (!value || typeof value !== 'object' || Array.isArray(value)) throw apiError(label + ' must be a JSON object or null.');
+  let encoded;
+  try { encoded = JSON.stringify(value); } catch (_) { throw apiError(label + ' is not valid JSON.'); }
+  if (encoded.length > 200000) throw apiError(label + ' is too large.');
+  return encoded;
+}
+function adminPlayerPayload(env, target) {
+  const targetUser = { uid: target.uid, email: target.email || '' };
+  return {
+    uid: target.uid,
+    email: target.email,
+    isAdmin: isAdminUser(env, targetUser, target),
+    adminManagedByEnv: isBootstrapAdmin(env, targetUser),
+    state: profileFromRow(target)
+  };
+}
 function safeStars(value, owned) {
   // 新制：擁有的角色星級一律 1..5（抽到即★1）。
   const out = {};
@@ -331,7 +357,7 @@ export async function onRequest(context) {
     row = await migrateStarsToV2(db, row); // 舊制星級一次性遷移（見函式說明）
     const action = Array.isArray(params.path) ? params.path.join('/') : String(params.path || '');
     const body = request.method === 'POST' ? await request.json().catch(() => ({})) : {};
-    const admin = isAdminUser(env, user);
+    const admin = isAdminUser(env, user, row);
 
     if (action === 'admin') {
       if (!admin) return json({ admin: false }, 403);
@@ -346,11 +372,12 @@ export async function onRequest(context) {
     if (action === 'admin-players') {
       if (!admin) return json({ error: 'Admin permission required.' }, 403);
       if (request.method !== 'GET') return json({ error: 'Unknown API endpoint.' }, 404);
-      const rows = await db.prepare('SELECT uid,email,gold,diamond,owned_chars,teams,tutorial_done,tutorial_step,updated_at FROM players ORDER BY updated_at DESC LIMIT 100').all();
+      const rows = await db.prepare('SELECT uid,email,gold,diamond,owned_chars,teams,tutorial_done,tutorial_step,is_admin,updated_at FROM players ORDER BY updated_at DESC LIMIT 100').all();
       return json({ players: (rows.results || []).map(p => ({
         uid: p.uid, email: p.email, gold: p.gold, diamond: p.diamond,
         characterCount: parseJson(p.owned_chars, []).length, teamCount: parseJson(p.teams, []).length,
-        tutorialDone: !!p.tutorial_done, tutorialStep: tutorialStepFromRow(p), updatedAt: p.updated_at
+        tutorialDone: !!p.tutorial_done, tutorialStep: tutorialStepFromRow(p),
+        isAdmin: isAdminUser(env, { uid: p.uid, email: p.email || '' }, p), updatedAt: p.updated_at
       })) });
     }
     if (action === 'admin-player') {
@@ -358,7 +385,21 @@ export async function onRequest(context) {
       const uid = String(request.method === 'GET' ? new URL(request.url).searchParams.get('uid') : body.uid || '');
       const target = await db.prepare('SELECT * FROM players WHERE uid=?1').bind(uid).first();
       if (!target) return json({ error: 'Player not found.' }, 404);
-      return json({ player: { uid: target.uid, email: target.email, state: profileFromRow(target) } });
+      return json({ player: adminPlayerPayload(env, target) });
+    }
+    if (action === 'admin-player-admin') {
+      if (!admin) return json({ error: 'Admin permission required.' }, 403);
+      if (request.method !== 'POST') return json({ error: 'Unknown API endpoint.' }, 404);
+      const uid = String(body.uid || '');
+      const target = await db.prepare('SELECT * FROM players WHERE uid=?1').bind(uid).first();
+      if (!target) return json({ error: 'Player not found.' }, 404);
+      const targetUser = { uid: target.uid, email: target.email || '' };
+      if (!body.isAdmin && isBootstrapAdmin(env, targetUser)) {
+        throw apiError('This administrator is configured in Cloudflare environment variables and cannot be removed here.', 409);
+      }
+      await db.prepare('UPDATE players SET is_admin=?2,updated_at=unixepoch() WHERE uid=?1').bind(uid, body.isAdmin ? 1 : 0).run();
+      const updated = await db.prepare('SELECT * FROM players WHERE uid=?1').bind(uid).first();
+      return json({ player: adminPlayerPayload(env, updated) });
     }
     if (action === 'admin-player-update') {
       if (!admin) return json({ error: 'Admin permission required.' }, 403);
@@ -381,16 +422,28 @@ export async function onRequest(context) {
       const dailyDate = typeof input.dailyBonusDate === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(input.dailyBonusDate) ? input.dailyBonusDate : '';
       const tutorialDone = !!input.tutorialDone;
       const tutorialStep = tutorialDone ? 'completed' : (target.tutorial_done ? 'intro' : safeTutorialStep(input.tutorialStep, tutorialStepFromRow(target)));
-      await db.prepare('UPDATE players SET gold=?2,diamond=?3,owned_chars=?4,char_stars=?5,owned_cards=?6,teams=?7,tutorial_done=?8,tutorial_step=?9,tutorial_faction=?10,lobby_hero_id=?11,settings=?12,daily_bonus_date=?13,wish_crystals=?14,move_levels=?15,updated_at=unixepoch() WHERE uid=?1')
-        .bind(uid, intInRange(input.gold, target.gold), intInRange(input.diamond, target.diamond), JSON.stringify(owned), JSON.stringify(stars), JSON.stringify(cards), JSON.stringify(teams), tutorialDone ? 1 : 0, tutorialStep, faction, hero, JSON.stringify(settings), dailyDate, intInRange(input.wishCrystals, Number(target.wish_crystals) || 0), JSON.stringify(progression)).run();
+      const storyProgress = input.storyProgress === undefined ? target.story_progress : safeStoryDocument(input.storyProgress, 'Story progress');
+      const storyStageProgress = input.storyStageProgress === undefined ? target.story_stage_progress : safeStoryDocument(input.storyStageProgress, 'Story stage progress');
+      const storyDiscovery = input.storyDiscovery === undefined ? target.story_discovery : safeStoryDocument(input.storyDiscovery, 'Story discovery');
+      await db.prepare('UPDATE players SET gold=?2,diamond=?3,owned_chars=?4,char_stars=?5,owned_cards=?6,teams=?7,tutorial_done=?8,tutorial_step=?9,tutorial_faction=?10,lobby_hero_id=?11,settings=?12,daily_bonus_date=?13,wish_crystals=?14,move_levels=?15,story_progress=?16,story_stage_progress=?17,story_discovery=?18,updated_at=unixepoch() WHERE uid=?1')
+        .bind(uid, intInRange(input.gold, target.gold), intInRange(input.diamond, target.diamond), JSON.stringify(owned), JSON.stringify(stars), JSON.stringify(cards), JSON.stringify(teams), tutorialDone ? 1 : 0, tutorialStep, faction, hero, JSON.stringify(settings), dailyDate, intInRange(input.wishCrystals, Number(target.wish_crystals) || 0), JSON.stringify(progression), storyProgress, storyStageProgress, storyDiscovery).run();
       const updated = await db.prepare('SELECT * FROM players WHERE uid=?1').bind(uid).first();
-      return json({ player: { uid: updated.uid, email: updated.email, state: profileFromRow(updated) } });
+      return json({ player: adminPlayerPayload(env, updated) });
     }
     const config = await getGlobalConfig(db);
     if (request.method === 'GET' && action === 'state') return json({ state: profileFromRow(row), config });
     if (request.method === 'GET' && action === 'friends') return json({ friends: await friendList(db, user.uid) });
     if (request.method !== 'POST') return json({ error: 'Unknown API endpoint.' }, 404);
     if (action === 'bootstrap') return json({ state: profileFromRow(row), config });
+
+    if (action === 'story-progress') {
+      const storyProgress = safeStoryDocument(body.progress, 'Story progress');
+      const storyStageProgress = safeStoryDocument(body.stageProgress, 'Story stage progress');
+      const storyDiscovery = safeStoryDocument(body.discovery, 'Story discovery');
+      await db.prepare('UPDATE players SET story_progress=?2,story_stage_progress=?3,story_discovery=?4,updated_at=unixepoch() WHERE uid=?1')
+        .bind(user.uid, storyProgress, storyStageProgress, storyDiscovery).run();
+      return json({ ok: true });
+    }
 
     if (action === 'tutorial-starter') {
       const id = String(body.id || '');

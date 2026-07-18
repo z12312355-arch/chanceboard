@@ -1941,7 +1941,7 @@
 </head>
 <body>
 <!-- 發布版本唯一維護位置：每次正式同步／部署時更新日期與當日版次。 -->
-<div id="appVersionBadge" data-version="v2026.07.18-24" aria-label="目前版本">讀取版本…</div>
+<div id="appVersionBadge" data-version="v2026.07.18-25" aria-label="目前版本">讀取版本…</div>
 <script>
 (function showOnlineBuildVersion(){
   const badge=document.getElementById('appVersionBadge'),version=badge.dataset.version||'dev';
@@ -7917,7 +7917,7 @@ let storyAutoMode=false,storySpeed=1,storyAutoTimer=null,storyDialogueLog=[];
 let storyMenuView='chapters',storyMenuRoute=null;
 window.__resetStoryBlocks=function(){storyBlocks=null;};
 function loadStoryProgress(){try{const v=JSON.parse(localStorage.getItem(STORY_PROGRESS_KEY)||'null');return v&&typeof v==='object'?v:null;}catch(e){return null;}}
-function saveStoryProgress(){try{if(!storyRun||storyPreviewMode)return;if(storyRun.replayMode)localStorage.setItem(STORY_REPLAY_KEY,JSON.stringify(storyRun));else localStorage.setItem(STORY_PROGRESS_KEY,JSON.stringify(storyRun));}catch(e){}}
+function saveStoryProgress(){try{if(!storyRun||storyPreviewMode)return;if(storyRun.replayMode)localStorage.setItem(STORY_REPLAY_KEY,JSON.stringify(storyRun));else{localStorage.setItem(STORY_PROGRESS_KEY,JSON.stringify(storyRun));if(window.__queueAccountStorySync)window.__queueAccountStorySync();}}catch(e){}}
 function storyStageForBlock(route,block){return (STORY_STAGE_DEFS[route]||[]).find(stage=>stage.blocks.includes(Number(block)))||null;}
 function storyDefaultStageProgress(){return {version:2,routes:{black:{cleared:[],state:null,checkpoints:{}},white:{cleared:[],state:null,checkpoints:{}}}};}
 function loadStoryStageProgress(){
@@ -7933,7 +7933,7 @@ function loadStoryStageProgress(){
   }
   return data;
 }
-function saveStoryStageProgress(data){try{if(!storyPreviewMode)localStorage.setItem(STORY_STAGE_PROGRESS_KEY,JSON.stringify(data));}catch(e){}}
+function saveStoryStageProgress(data){try{if(!storyPreviewMode){localStorage.setItem(STORY_STAGE_PROGRESS_KEY,JSON.stringify(data));if(window.__queueAccountStorySync)window.__queueAccountStorySync();}}catch(e){}}
 function storyRouteStateSnapshot(run){return {score:Number(run&&run.score)||0,flags:Object.assign({helped:null,joined:false},run&&run.flags||{}),choices:Object.assign({},run&&run.choices||{}),applied:Object.assign({},run&&run.applied||{})};}
 const STORY_BLOCK_IDS={black:{2:'opening',3:'stage1',4:'stage2',5:'rescue',6:'accept',7:'promise',8:'responsible',9:'abandon',10:'refuse',11:'no_capacity',12:'weak',13:'no_help',14:'boss',15:'boss_joined',16:'boss_alone',17:'boss_common',18:'ending_gate',19:'ending_low',20:'ending_high'},white:{22:'opening',23:'stage1',24:'stage2',25:'protect',26:'accept',27:'promise',28:'promised',29:'uncertain',30:'refuse',31:'unsuitable',32:'burden',33:'no_help',34:'boss',35:'boss_joined',36:'boss_no_help',37:'boss_common',38:'ending_gate',39:'ending_hope',40:'ending_regret'}};
 const STORY_BRANCH_OUTCOMES={black:{3:[8,9,11,12,13],4:[19,20]},white:{3:[28,29,31,32,33],4:[39,40]}};
@@ -7941,7 +7941,7 @@ const STORY_FATE_CHOICES={black:{3:[{block:5,title:'是否伸出援手',choices:
 const STORY_OUTCOME_LABELS={8:'承諾負責',9:'必要時放棄',11:'隊伍沒有餘力',12:'弱者只會拖累',13:'選擇旁觀',19:'求生結局',20:'同伴結局',28:'許下承諾',29:'不作保證',31:'隊伍不適合她',32:'拒絕背負生命',33:'選擇旁觀',39:'守護結局',40:'遺憾結局'};
 function storyDefaultDiscovery(){return {version:1,routes:{black:{visitedBlocks:[],choices:{},blockStates:{},branchStates:{},endingPaths:{},endings:[],replayState:null},white:{visitedBlocks:[],choices:{},blockStates:{},branchStates:{},endingPaths:{},endings:[],replayState:null}}};}
 function loadStoryDiscovery(){let data=null;try{data=JSON.parse(localStorage.getItem(STORY_DISCOVERY_KEY)||'null');}catch(e){}if(!data||!data.routes)data=storyDefaultDiscovery();['black','white'].forEach(route=>{const r=data.routes[route]||(data.routes[route]={});if(!Array.isArray(r.visitedBlocks))r.visitedBlocks=[];if(!r.choices||typeof r.choices!=='object')r.choices={};if(!r.blockStates||typeof r.blockStates!=='object')r.blockStates={};if(!r.branchStates||typeof r.branchStates!=='object')r.branchStates={};if(!r.endingPaths||typeof r.endingPaths!=='object')r.endingPaths={};if(!Array.isArray(r.endings))r.endings=[];if(!('replayState' in r))r.replayState=null;});const old=loadStoryProgress();if(old&&old.route&&data.routes[old.route]){const r=data.routes[old.route],currentId=storyStableBlockId(old.route,old.block);if(!r.visitedBlocks.includes(currentId))r.visitedBlocks.push(currentId);Object.keys(old.choices||{}).forEach(block=>{const id=storyStableBlockId(old.route,block),choice=old.choices[block];if(!r.visitedBlocks.includes(id))r.visitedBlocks.push(id);if(!Array.isArray(r.choices[id]))r.choices[id]=[];if(!r.choices[id].includes(choice))r.choices[id].push(choice);const dest=storyChoiceDestination(old.route,Number(block),choice),destId=storyStableBlockId(old.route,dest);if(dest&&!r.visitedBlocks.includes(destId))r.visitedBlocks.push(destId);});}return data;}
-function saveStoryDiscovery(data){try{if(!storyPreviewMode)localStorage.setItem(STORY_DISCOVERY_KEY,JSON.stringify(data));}catch(e){}}
+function saveStoryDiscovery(data){try{if(!storyPreviewMode){localStorage.setItem(STORY_DISCOVERY_KEY,JSON.stringify(data));if(window.__queueAccountStorySync)window.__queueAccountStorySync();}}catch(e){}}
 function storyStableBlockId(route,block){return route+':'+((STORY_BLOCK_IDS[route]||{})[Number(block)]||('block_'+block));}
 function storyMarkBlockVisited(route,block){if(storyPreviewMode)return;const data=loadStoryDiscovery(),r=data.routes[route],id=storyStableBlockId(route,block);let changed=false;if(!r.visitedBlocks.includes(id)){r.visitedBlocks.push(id);changed=true;}if(storyRun&&storyRun.route===route&&!r.blockStates[id]){r.blockStates[id]=storyRouteStateSnapshot(storyRun);changed=true;}if((STORY_BRANCH_OUTCOMES[route]&&STORY_BRANCH_OUTCOMES[route][4]||[]).includes(Number(block))&&!r.endings.includes(id)){r.endings.push(id);changed=true;}if(changed)saveStoryDiscovery(data);}
 function storyRecordChoice(route,block,choice){if(storyPreviewMode)return;const data=loadStoryDiscovery(),r=data.routes[route],id=storyStableBlockId(route,block);if(!Array.isArray(r.choices[id]))r.choices[id]=[];if(!r.choices[id].includes(choice))r.choices[id].push(choice);saveStoryDiscovery(data);}
@@ -10180,6 +10180,34 @@ function adminManagerField(label,id,type,value){
 function adminManagerJson(label,id,value){
   return '<label style="display:block;margin:7px 0 3px;font-size:12px;color:var(--muted)">'+label+'<textarea id="'+id+'" rows="4" style="display:block;width:100%;margin-top:3px;resize:vertical">'+JSON.stringify(value==null?{}:value,null,2).replace(/</g,'&lt;')+'</textarea></label>';
 }
+function adminManagerNullableJson(label,id,value){
+  return '<label style="display:block;margin:7px 0 3px;font-size:12px;color:var(--muted)">'+label+'<textarea id="'+id+'" rows="4" style="display:block;width:100%;margin-top:3px;resize:vertical">'+JSON.stringify(value==null?null:value,null,2).replace(/</g,'&lt;')+'</textarea></label>';
+}
+function adminStoryStageEditorValue(value){
+  const data=value&&typeof value==='object'?JSON.parse(JSON.stringify(value)):storyDefaultStageProgress();
+  if(!data.routes)data.routes={};
+  ['black','white'].forEach(function(route){
+    const current=data.routes[route]&&typeof data.routes[route]==='object'?data.routes[route]:{};
+    current.cleared=Array.from(new Set((Array.isArray(current.cleared)?current.cleared:[]).map(Number).filter(function(n){return n>=1&&n<=4;}))).sort();
+    if(!current.checkpoints||typeof current.checkpoints!=='object')current.checkpoints={};
+    if(!('state' in current))current.state=null;
+    data.routes[route]=current;
+  });
+  data.version=2;
+  return data;
+}
+function adminStoryStageCheckboxes(value){
+  const data=adminStoryStageEditorValue(value);
+  return ['black','white'].map(function(route){
+    const label=route==='black'?'執黑':'執白';
+    return '<div style="padding:9px;border:1px solid var(--line);border-radius:8px"><b style="font-size:13px">'+label+'</b><div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:6px">'+[1,2,3,4].map(function(stage){return '<label style="font-size:12px"><input type="checkbox" class="managed-story-stage" data-route="'+route+'" data-stage="'+stage+'" '+(data.routes[route].cleared.includes(stage)?'checked':'')+'> 第 '+stage+' 節</label>';}).join('')+'</div></div>';
+  }).join('');
+}
+function collectAdminStoryStageProgress(){
+  const data=adminStoryStageEditorValue(adminManagedPlayer&&adminManagedPlayer.state.storyStageProgress);
+  ['black','white'].forEach(function(route){data.routes[route].cleared=Array.from(document.querySelectorAll('.managed-story-stage[data-route="'+route+'"]:checked')).map(function(input){return Number(input.dataset.stage);}).sort();});
+  return data;
+}
 const ADMIN_TUTORIAL_STORY_FIELDS = [
   ['pickIntro','選擇第一枚棋子前'],['afterPick','選完初始棋子後'],
   ['battleIntro','第一場 1v1 戰鬥前'],['afterBattleWin','教學戰鬥勝利'],['afterBattleLose','教學戰鬥失敗'],['returnLobby','引導返回大廳'],
@@ -10354,7 +10382,7 @@ function populateAdminPlayerSelect(){
   const selected=adminManagedPlayer&&adminManagedPlayer.uid;
   select.replaceChildren();
   const first=document.createElement('option'); first.value=''; first.textContent='選擇要管理的帳號'; select.appendChild(first);
-  adminManagedPlayers.forEach(function(player){const option=document.createElement('option');option.value=player.uid;option.textContent=(player.email||player.uid)+' ・ '+player.gold+' 金 / '+player.diamond+' 鑽';if(player.uid===selected)option.selected=true;select.appendChild(option);});
+  adminManagedPlayers.forEach(function(player){const option=document.createElement('option');option.value=player.uid;option.textContent=(player.isAdmin?'[管理者] ':'')+(player.email||player.uid)+' ・ '+player.gold+' 金 / '+player.diamond+' 鑽';if(player.uid===selected)option.selected=true;select.appendChild(option);});
 }
 async function refreshAdminManagedPlayers(){
   try{const result=await window.__adminAccountApi('admin-players');adminManagedPlayers=result.players||[];populateAdminPlayerSelect();adminManagerMessage('✅ 已載入 '+adminManagedPlayers.length+' 個帳號。');}
@@ -10369,16 +10397,29 @@ function renderAdminManagedPlayerEditor(){
   const player=adminManagedPlayer,state=player.state;
   holder.style.color='var(--text)';
   holder.innerHTML='<div style="font-size:12px;color:var(--muted);margin-bottom:5px">'+(player.email||'無 Email')+'<br>UID：'+player.uid+'</div>'
+    +'<section style="margin:9px 0;padding:10px;border:1px solid '+(player.isAdmin?'#d6aa3d':'var(--line)')+';border-radius:9px;background:rgba(255,255,255,.025)"><b>管理者權限</b><div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:7px"><label style="font-size:12px"><input id="managed-is-admin" type="checkbox" '+(player.isAdmin?'checked':'')+' '+(player.adminManagedByEnv?'disabled':'')+'> 可登入並操作後檯</label><button type="button" class="btn small" id="admin-save-admin">更新權限</button></div>'+(player.adminManagedByEnv?'<div style="font-size:11px;color:var(--muted);margin-top:5px">此帳號由 Cloudflare 環境變數指定為最高管理者，不能在此取消。</div>':'')+'</section>'
     +'<div class="admin-grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px">'+adminManagerField('金幣','managed-gold','number',state.gold)+adminManagerField('鑽石','managed-diamond','number',state.diamond)+adminManagerField('每日獎勵日期（清空可重領）','managed-daily','text',state.dailyBonusDate||'')+'</div>'
     +'<label style="font-size:12px"><input id="managed-tutorial" type="checkbox" '+(state.tutorialDone?'checked':'')+'> 已完成新手教學</label> '
     +'<label style="font-size:12px">新手陣營 <select id="managed-faction"><option value="black" '+(state.tutorialFaction==='black'?'selected':'')+'>小黑</option><option value="white" '+(state.tutorialFaction==='white'?'selected':'')+'>小白</option></select></label> '
     +adminManagerField('大廳立繪角色 ID（清空＝預設）','managed-hero','text',state.lobbyHeroId||'')
     +'<div class="admin-grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px;margin-top:8px">'+adminManagerField('劍之碎片','managed-frag-sword','number',(state.skillFragments&&state.skillFragments['劍'])||0)+adminManagerField('槍之碎片','managed-frag-gun','number',(state.skillFragments&&state.skillFragments['槍'])||0)+adminManagerField('法之碎片','managed-frag-magic','number',(state.skillFragments&&state.skillFragments['法'])||0)+adminManagerField('願之碎片','managed-frag-wish','number',(state.skillFragments&&state.skillFragments['願'])||0)+'</div>'
+    +'<details open style="margin:10px 0;padding:10px;border:1px solid var(--line);border-radius:9px"><summary style="cursor:pointer;font-weight:700">故事進度</summary><div style="font-size:11px;color:var(--muted);margin:7px 0">勾選已通關的關卡；進行中的節點與分支探索可在下方進階資料調整。</div><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:8px">'+adminStoryStageCheckboxes(state.storyStageProgress)+'</div><div style="display:flex;gap:7px;flex-wrap:wrap;margin-top:8px"><button type="button" class="btn small" id="admin-story-clear">清除故事進度</button><button type="button" class="btn small" id="admin-story-complete">黑白全通關</button></div><details style="margin-top:8px"><summary style="cursor:pointer;font-size:12px;color:var(--muted)">進階：目前劇情節點與分支探索資料</summary>'+adminManagerNullableJson('正式劇情進行中資料（null＝目前沒有進行中的關卡）','managed-story-progress',state.storyProgress)+adminManagerJson('命運棋譜／已探索分支','managed-story-discovery',state.storyDiscovery||storyDefaultDiscovery())+'</details></details>'
     +adminManagerJson('擁有角色 ID（陣列）','managed-owned',state.ownedCharIds)+adminManagerJson('角色星級（物件）','managed-stars',state.charStars)+adminManagerJson('技能等級（劍槍法最高5；願最高2）','managed-move-levels',state.moveLevels||{})+adminManagerJson('持有卡牌（物件）','managed-cards',state.ownedCardCounts)+adminManagerJson('隊伍（陣列；每副牌合計必須 10 張）','managed-teams',state.teams)+adminManagerJson('帳號設定（物件）','managed-settings',state.settings)
     +'<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px"><button type="button" class="btn primary small" id="admin-save-player">儲存此帳號</button><button type="button" class="btn small" id="admin-grant-full-inventory">開通全角色五星＋滿技能＋滿卡牌</button><button type="button" class="btn small" id="admin-clear-inventory" style="border-color:var(--bad);color:#ffb0b0">清空全角色／全卡牌</button></div>';
   document.getElementById('admin-save-player').onclick=saveAdminManagedPlayer;
+  document.getElementById('admin-save-admin').onclick=saveAdminManagedPlayerAdmin;
   document.getElementById('admin-grant-full-inventory').onclick=function(){applyAdminInventoryPreset('full');};
   document.getElementById('admin-clear-inventory').onclick=function(){applyAdminInventoryPreset('clear');};
+  document.getElementById('admin-story-clear').onclick=function(){adminManagedPlayer.state.storyStageProgress=storyDefaultStageProgress();document.querySelectorAll('.managed-story-stage').forEach(function(input){input.checked=false;});document.getElementById('managed-story-progress').value='null';document.getElementById('managed-story-discovery').value=JSON.stringify(storyDefaultDiscovery(),null,2);};
+  document.getElementById('admin-story-complete').onclick=function(){document.querySelectorAll('.managed-story-stage').forEach(function(input){input.checked=true;});};
+}
+async function saveAdminManagedPlayerAdmin(){
+  if(!adminManagedPlayer)return;
+  const input=document.getElementById('managed-is-admin'),next=!!input.checked,current=!!adminManagedPlayer.isAdmin;
+  if(next===current){adminManagerMessage('管理者權限沒有變更。');return;}
+  if(!confirm((next?'確定授予':'確定取消')+'「'+(adminManagedPlayer.email||adminManagedPlayer.uid)+'」的管理者權限？')){input.checked=current;return;}
+  try{const result=await window.__adminAccountApi('admin-player-admin',{uid:adminManagedPlayer.uid,isAdmin:next});adminManagedPlayer=result.player;renderAdminManagedPlayerEditor();adminManagerMessage(next?'✅ 已授予管理者權限。':'✅ 已取消管理者權限。');await refreshAdminManagedPlayers();}
+  catch(e){input.checked=current;adminManagerMessage('❌ 更新管理者權限失敗：'+e.message,true);}
 }
 async function applyAdminInventoryPreset(kind){
   if(!adminManagedPlayer) return;
@@ -10407,7 +10448,7 @@ async function saveAdminManagedPlayer(){
   if(!adminManagedPlayer)return;
   const parse=id=>JSON.parse(document.getElementById(id).value);
   let state;
-  try{const hero=document.getElementById('managed-hero').value.trim();state={gold:Number(document.getElementById('managed-gold').value),diamond:Number(document.getElementById('managed-diamond').value),dailyBonusDate:document.getElementById('managed-daily').value.trim(),tutorialDone:document.getElementById('managed-tutorial').checked,tutorialFaction:document.getElementById('managed-faction').value,lobbyHeroId:hero||null,ownedCharIds:parse('managed-owned'),charStars:parse('managed-stars'),moveLevels:parse('managed-move-levels'),skillFragments:{劍:Number(document.getElementById('managed-frag-sword').value),槍:Number(document.getElementById('managed-frag-gun').value),法:Number(document.getElementById('managed-frag-magic').value),願:Number(document.getElementById('managed-frag-wish').value)},ownedCardCounts:parse('managed-cards'),teams:parse('managed-teams'),settings:parse('managed-settings')};}
+  try{const hero=document.getElementById('managed-hero').value.trim();state={gold:Number(document.getElementById('managed-gold').value),diamond:Number(document.getElementById('managed-diamond').value),dailyBonusDate:document.getElementById('managed-daily').value.trim(),tutorialDone:document.getElementById('managed-tutorial').checked,tutorialFaction:document.getElementById('managed-faction').value,lobbyHeroId:hero||null,storyProgress:parse('managed-story-progress'),storyStageProgress:collectAdminStoryStageProgress(),storyDiscovery:parse('managed-story-discovery'),ownedCharIds:parse('managed-owned'),charStars:parse('managed-stars'),moveLevels:parse('managed-move-levels'),skillFragments:{劍:Number(document.getElementById('managed-frag-sword').value),槍:Number(document.getElementById('managed-frag-gun').value),法:Number(document.getElementById('managed-frag-magic').value),願:Number(document.getElementById('managed-frag-wish').value)},ownedCardCounts:parse('managed-cards'),teams:parse('managed-teams'),settings:parse('managed-settings')};}
   catch(e){adminManagerMessage('❌ JSON 格式錯誤：'+e.message,true);return;}
   try{const result=await window.__adminAccountApi('admin-player-update',{uid:adminManagedPlayer.uid,state:state});adminManagedPlayer=result.player;renderAdminManagedPlayerEditor();adminManagerMessage('✅ 帳號資料已更新。');await refreshAdminManagedPlayers();}
   catch(e){adminManagerMessage('❌ 儲存帳號資料失敗：'+e.message,true);}
@@ -12516,7 +12557,7 @@ document.getElementById('admin1v1BattleBtn').onclick=function(){ closeAdminPanel
     projectId:'chanceboard',
     appId:'1:144089217775:web:3659b974333dcf23a9b91a'
   };
-  let auth=null, currentUser=null, accountReady=false, authResolved=false, preferenceSyncTimer=null;
+  let auth=null, currentUser=null, accountReady=false, authResolved=false, preferenceSyncTimer=null, storySyncTimer=null;
   window.__accountMode=false;
   const loadScript=function(src){ return new Promise(function(resolve,reject){
     if(document.querySelector('script[src="'+src+'"]')) return resolve();
@@ -12541,6 +12582,14 @@ document.getElementById('admin1v1BattleBtn').onclick=function(){ closeAdminPanel
   }
   // 後臺全域設定與玩家管理共用同一個、已驗證 Firebase 身分的 API 入口。
   window.__adminAccountApi=accountApi;
+  window.__queueAccountStorySync=function(){
+    if(!currentUser||!accountReady||!window.__accountMode)return;
+    clearTimeout(storySyncTimer);
+    storySyncTimer=setTimeout(function(){
+      const progress=loadStoryProgress(),stageProgress=loadStoryStageProgress(),discovery=loadStoryDiscovery();
+      accountApi('story-progress',{progress:progress,stageProgress:stageProgress,discovery:discovery}).catch(function(error){console.warn('[Account] 故事進度同步失敗',error);});
+    },500);
+  };
   function applyAccountState(p){
     if(!p) return;
     // 願望結晶（2026-07升星改制）：帳號模式的結晶餘額以伺服器為準。
@@ -12569,7 +12618,13 @@ document.getElementById('admin1v1BattleBtn').onclick=function(){ closeAdminPanel
       localStorage.setItem(TUTORIAL_DONE_KEY,p.tutorialDone?'1':'');
       localStorage.setItem(TUTORIAL_FACTION_KEY,tutorialFaction);
       if(p.lobbyHeroId) localStorage.setItem(LOBBY_HERO_KEY,p.lobbyHeroId); else localStorage.removeItem(LOBBY_HERO_KEY);
+      if(p.storyProgress!==null&&p.storyProgress!==undefined)localStorage.setItem(STORY_PROGRESS_KEY,JSON.stringify(p.storyProgress));
+      if(p.storyStageProgress!==null&&p.storyStageProgress!==undefined)localStorage.setItem(STORY_STAGE_PROGRESS_KEY,JSON.stringify(p.storyStageProgress));
+      if(p.storyDiscovery!==null&&p.storyDiscovery!==undefined)localStorage.setItem(STORY_DISCOVERY_KEY,JSON.stringify(p.storyDiscovery));
     }catch(e){}
+    // First deployment migration: preserve any existing local story save and upload
+    // it instead of replacing it with an empty server value.
+    if(p.storyProgress==null&&p.storyStageProgress==null&&p.storyDiscovery==null)setTimeout(function(){if(window.__queueAccountStorySync)window.__queueAccountStorySync();},0);
     refreshCurrencyDisplays();
     if(typeof renderGachaCollectionGrid==='function' && document.getElementById('gachaCollectionGrid')) renderGachaCollectionGrid();
     if(typeof renderShopGrid==='function' && document.getElementById('shopCardGrid')) renderShopGrid();
