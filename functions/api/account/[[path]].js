@@ -47,6 +47,7 @@ function isAdminUser(env, user) {
 function defaultGlobalConfig() {
   return {
     balanceVersion: 3,
+    cardBalanceVersion: 0,
     characters: null, monsters: null, moves: null, cards: null, statuses: null, storyMode: null,
     introStory: {
       black: ['哈哈，歡迎加入黑方，我是小黑。', '對了，你叫什麼？', '……原來如此。', '從今天開始，我就叫你『{name}』了。', '可別太早死啊。'],
@@ -66,6 +67,7 @@ function normalizeGlobalConfig(input) {
   // identifiable as v1 so the client does not overwrite the new bundled combat
   // data with the old small-number character/move/card snapshot.
   const balanceVersion = Number.isInteger(Number(source.balanceVersion)) ? Number(source.balanceVersion) : 1;
+  const cardBalanceVersion = Number.isInteger(Number(source.cardBalanceVersion)) ? Math.max(0, Number(source.cardBalanceVersion)) : 0;
   const list = (key, max) => Array.isArray(source[key]) && source[key].length <= max ? source[key] : null;
   const settings = source.settings && typeof source.settings === 'object' ? source.settings : {};
   const introFallback = fallback.introStory;
@@ -122,6 +124,7 @@ function normalizeGlobalConfig(input) {
   }
   return {
     balanceVersion,
+    cardBalanceVersion,
     characters: list('characters', 100), monsters: list('monsters', 100), moves: list('moves', 500), cards: list('cards', 200), statuses: list('statuses', 200),
     introStory: { black: storyLines('black'), white: storyLines('white') },
     tutorialStory,

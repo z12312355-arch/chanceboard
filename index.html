@@ -1934,7 +1934,7 @@
 </head>
 <body>
 <!-- 發布版本唯一維護位置：每次正式同步／部署時更新日期與當日版次。 -->
-<div id="appVersionBadge" data-version="v2026.07.18-11" aria-label="目前版本">讀取版本…</div>
+<div id="appVersionBadge" data-version="v2026.07.18-12" aria-label="目前版本">讀取版本…</div>
 <script>
 (function showOnlineBuildVersion(){
   const badge=document.getElementById('appVersionBadge'),version=badge.dataset.version||'dev';
@@ -2704,6 +2704,15 @@ const DEFAULT_STATUS_PRESENTATION = {
   if(!status.color)status.color=presentation[1];
   if(!status.category)status.category=presentation[2];
 });
+const CURRENT_CARD_BALANCE_VERSION = 1;
+function applyProtectCardBalance(){
+  const card=(DB.cards||[]).find(function(item){return String(item.id)==='010';});
+  if(!card)return;
+  card.description='角色獲得200點護盾，抵免傷害時消耗，最多持續10秒';
+  const shield=(card.effectOps||[]).find(function(op){return op.op==='status'&&op.key==='護盾+';});
+  if(shield){shield.value=200;shield.durSec=10;}
+}
+applyProtectCardBalance();
 const USING_EXTERNAL_DB = !!window.CHANCEBOARD_DB;
 
 // 保留 Git 內建資料快照，供 D1 同步與單項還原使用。
@@ -2764,6 +2773,9 @@ function applyGlobalGameConfig(config){
       });
     });
   }
+  // 既有 D1 仍可能保存舊版「保護」數值。只在舊卡牌平衡版本做一次遷移；後臺重新儲存後會帶上
+  // cardBalanceVersion，之後管理者仍可自由調整，不會每次載入都被程式強制覆寫。
+  if(Number(config.cardBalanceVersion||0)<CURRENT_CARD_BALANCE_VERSION)applyProtectCardBalance();
   if(config.settings && typeof config.settings==='object') globalEconomySettings=Object.assign({},globalEconomySettings,config.settings);
   if(config.introStory && typeof config.introStory==='object'){
     ['black','white'].forEach(function(side){ if(Array.isArray(config.introStory[side])) globalIntroStory[side]=config.introStory[side].map(String); });
@@ -2805,7 +2817,7 @@ function applyGlobalGameConfig(config){
   if(typeof renderShopGrid==='function' && document.getElementById('shopCardGrid')) renderShopGrid();
 }
 function globalGameConfigPayload(){
-  return {balanceVersion:CURRENT_BALANCE_VERSION,characters:DB.characters,monsters:DB.monsters,moves:DB.moves,cards:DB.cards,statuses:DB.statuses,settings:globalEconomySettings,introStory:globalIntroStory,tutorialStory:JSON.parse(JSON.stringify(TUTORIAL_LINES)),storyMode:JSON.parse(JSON.stringify(globalStoryModeConfig))};
+  return {balanceVersion:CURRENT_BALANCE_VERSION,cardBalanceVersion:CURRENT_CARD_BALANCE_VERSION,characters:DB.characters,monsters:DB.monsters,moves:DB.moves,cards:DB.cards,statuses:DB.statuses,settings:globalEconomySettings,introStory:globalIntroStory,tutorialStory:JSON.parse(JSON.stringify(TUTORIAL_LINES)),storyMode:JSON.parse(JSON.stringify(globalStoryModeConfig))};
 }
 // Captured before account bootstrap applies D1, so this remains the exact
 // Git/chanceboard_db.js data even when the current in-memory DB was overlaid by
@@ -2814,6 +2826,7 @@ function bundledGameConfigPayload(sourceDb){
   const bundled=sourceDb && typeof sourceDb==='object' ? sourceDb : ORIGINAL_DB_SNAPSHOT;
   return {
     balanceVersion:CURRENT_BALANCE_VERSION,
+    cardBalanceVersion:CURRENT_CARD_BALANCE_VERSION,
     characters:JSON.parse(JSON.stringify(bundled.characters||[])),
     monsters:JSON.parse(JSON.stringify(bundled.monsters||DB.monsters||[])),
     moves:JSON.parse(JSON.stringify(bundled.moves||[])),

@@ -4638,7 +4638,7 @@ window.CHANCEBOARD_DB = {
           "mode": "value",
           "target": "chosen",
           "chance": 1,
-          "value": 100,
+          "value": 200,
           "durSec": 10
         }
       ],
