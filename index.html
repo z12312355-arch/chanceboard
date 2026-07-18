@@ -1947,7 +1947,7 @@
 </head>
 <body>
 <!-- 發布版本唯一維護位置：每次正式同步／部署時更新日期與當日版次。 -->
-<div id="appVersionBadge" data-version="v2026.07.18-28" aria-label="目前版本">讀取版本…</div>
+<div id="appVersionBadge" data-version="v2026.07.18-29" aria-label="目前版本">讀取版本…</div>
 <script>
 (function showOnlineBuildVersion(){
   const badge=document.getElementById('appVersionBadge'),version=badge.dataset.version||'dev';
@@ -9155,7 +9155,9 @@ function renderBattle(){
   // opponent's turn keep this area on the local player's information instead.
   const onlineLocalSide = window.__onlineLocalSide;
   const isOnlineOpponentTurn = !!onlineLocalSide && currentActUnit && currentActUnit.side!==onlineLocalSide;
-  const isStoryBossTurn = window.__storyBattleKind==='boss' && state.phase==='act' && currentActUnit && currentActUnit.side==='B';
+  // Every story battle uses the same privacy rule. Boss and normal enemies may
+  // have different AI/mechanics, but neither may expose its hand or move panel.
+  const isStoryOpponentTurn = !!window.__storyBattleKind && state.phase==='act' && currentActUnit && currentActUnit.side==='B';
 
 
   // 使用者反應單人對戰打AI「常常搞不清楚對方做了什麼」：第一版修法是輪到電腦對手時整個
@@ -9163,17 +9165,18 @@ function renderBattle(){
   // 不見」——版面整塊消失/清空、忽隱忽現會跳動。改成單人對戰下輪到電腦對手時，面板繼續顯示
   // 內容（那個角色目前的招式/卡面，純資訊、可以看但不能點），只是整塊變灰＋擋掉點擊
   // （見上面CSS #actPanel.opp-turn-disabled 的說明），不再整個隱藏。
-  if(isOnlineOpponentTurn){
+  if(isOnlineOpponentTurn || isStoryOpponentTurn){
     actPanel.classList.remove('hidden');
     actPanel.classList.add('opp-turn-disabled');
     actConfirmBtn.classList.remove('hidden');
-    actHint.textContent='對手回合中：等待你的角色行動';
+    actHint.textContent=isStoryOpponentTurn?'對方回合中：顯示我方角色與手牌':'對手回合中：等待你的角色行動';
     // 對手行動時仍顯示「自己」下一次可用的完整操作資訊；所有控制都由外層
     // .opp-turn-disabled 擋住，因此看起來與自己回合一致，但絕不會誤出手。
-    const ownUnit=(onlineLocalSide==='A'?state.teamA:state.teamB).find(function(u){ return u.alive; });
+    const localSide=onlineLocalSide||'A';
+    const ownUnit=(localSide==='A'?state.teamA:state.teamB).find(function(u){ return u.alive; });
     actSlotRow.innerHTML='<span class="slotrow-label">移動到：</span>';
     if(ownUnit){
-      (onlineLocalSide==='B' ? [3,2,1] : [1,2,3]).forEach(function(s){
+      (localSide==='B' ? [3,2,1] : [1,2,3]).forEach(function(s){
         const b=document.createElement('button');
         b.className='btn slotbtn'+(ownUnit.slot===s?' current':'');
         b.textContent=slotDistLabel(ownUnit.side,s);
@@ -9199,18 +9202,11 @@ function renderBattle(){
       suitHandEntries(ownUnit).forEach(function(entry){ actCardZone.appendChild(renderCardFace(entry.card,{isCustom:entry.source==='custom'})); });
       combinedFlowerHand(ownUnit).forEach(function(entry){ actCardZone.appendChild(renderCardFace(entry.card,{isCustom:entry.source==='custom'})); });
     }
-    fitActCardsRow();
-  } else if(isStoryBossTurn){
-    actPanel.classList.remove('hidden');
-    actPanel.classList.add('opp-turn-disabled');
-    actHint.textContent='Boss 回合中：正在決定行動…';
-    actSlotRow.innerHTML='';
-    moveGrid.innerHTML='<div style="color:var(--muted);font-size:12px;grid-column:1/-1;text-align:center;padding:12px;">等待 Boss 行動</div>';
-    actCardZone.innerHTML='';
-    actConfirmBtn.classList.add('hidden');
+    // Close any information popup left from the player's previous turn so it
+    // cannot be mistaken for the enemy's current move details.
     actInfoRequest=null;
-    const bossDetailPopup=document.getElementById('actDetailPopup'),bossDetailBackdrop=document.getElementById('actDetailBackdrop');
-    bossDetailPopup.classList.add('hidden');bossDetailBackdrop.classList.add('hidden');bossDetailPopup.innerHTML='';
+    const opponentDetailPopup=document.getElementById('actDetailPopup'),opponentDetailBackdrop=document.getElementById('actDetailBackdrop');
+    opponentDetailPopup.classList.add('hidden');opponentDetailBackdrop.classList.add('hidden');opponentDetailPopup.innerHTML='';
     fitActCardsRow();
   } else if(state.phase==='act' && currentActUnit){
     actPanel.classList.remove('hidden');
