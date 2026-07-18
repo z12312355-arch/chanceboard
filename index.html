@@ -122,7 +122,7 @@
   .story-fate-ending-map .story-fate-visual-node.branch{box-sizing:border-box;min-height:0;height:70px;padding:7px 10px;display:flex;flex-direction:column;justify-content:center}
   .story-fate-ending-map .story-fate-visual-node.ending{min-height:0;height:96px;display:flex;flex-direction:column;justify-content:center}
   .story-fate-ending-map .story-fate-visual-node.branch .story-fate-replay{margin-top:3px;padding:3px 7px}
-  @media(max-height:500px) and (orientation:landscape){.story-fate-ending-map .story-fate-visual-node.branch{height:56px;padding:4px 7px}.story-fate-ending-map .story-fate-visual-node.branch .story-fate-visual-node-meta{display:none}.story-fate-ending-map .story-fate-visual-node.branch .story-fate-replay{margin-top:3px;padding:2px 5px;font-size:7px;line-height:1.2}.story-fate-ending-map .story-fate-visual-node.ending{height:58px;padding:5px 8px}.story-fate-link{stroke-width:1.25}.story-fate-link.seen{stroke-width:1.7;filter:drop-shadow(0 0 2px rgba(117,216,151,.28))}}
+  @media(max-height:500px) and (orientation:landscape){.story-fate-ending-map .story-fate-visual-node.branch{height:54px;padding:3px 7px}.story-fate-ending-map .story-fate-visual-node.branch .story-fate-visual-node-meta{display:block;margin-top:1px;font-size:7px;line-height:1}.story-fate-ending-map .story-fate-visual-node.branch .story-fate-replay{margin-top:2px;padding:1px 5px;font-size:7px;line-height:1.2}.story-fate-ending-map .story-fate-visual-node.ending{height:58px;padding:5px 8px}.story-fate-link{stroke-width:1.25}.story-fate-link.seen{stroke-width:1.7;filter:drop-shadow(0 0 2px rgba(117,216,151,.28))}}
   /* 故事選單總體版面：四個入口畫面共用同一個「單螢幕殼」。標題、內容、底部操作各自佔用
      必要高度，中央 panel 吃掉其餘空間；這樣桌機不會四周留一圈大空白，手機也不需要上下捲動。 */
   #storyMenu{padding:clamp(6px,1.4vw,18px)}
@@ -2033,7 +2033,7 @@
 </head>
 <body>
 <!-- 發布版本唯一維護位置：每次正式同步／部署時更新日期與當日版次。 -->
-<div id="appVersionBadge" data-version="v2026.07.19-07" aria-label="目前版本">讀取版本…</div>
+<div id="appVersionBadge" data-version="v2026.07.19-08" aria-label="目前版本">讀取版本…</div>
 <script>
 (function showOnlineBuildVersion(){
   const badge=document.getElementById('appVersionBadge'),version=badge.dataset.version||'dev';
@@ -8169,11 +8169,11 @@ function storyEndingVisualHtml(route,data){
   const endings=(STORY_BRANCH_OUTCOMES[route]&&STORY_BRANCH_OUTCOMES[route][4])||[];
   const compact=window.matchMedia&&window.matchMedia('(max-height:500px) and (orientation:landscape)').matches;
   const narrow=window.matchMedia&&window.matchMedia('(max-width:700px)').matches,small=compact||narrow;
-  const nodeW=small?190:220,branchH=compact?56:70,endingH=compact?58:96;
+  const nodeW=small?190:220,branchH=compact?54:70,endingH=compact?58:96;
   const viewportW=Math.max(320,window.innerWidth||document.documentElement.clientWidth||1280);
   const canvasW=small?1040:Math.max(1150,Math.min(1500,viewportW-70)),viewportH=Math.max(320,window.innerHeight||document.documentElement.clientHeight||720);
   const canvasH=Math.max(compact?280:420,Math.min(compact?520:780,viewportH-(compact?105:(narrow?120:150))));
-  const branchX=small?24:45,endingX=small?810:canvasW-nodeW-55,verticalPad=compact?22:(narrow?38:48);
+  const branchX=small?24:45,endingX=small?810:canvasW-nodeW-55,verticalPad=compact?4:(narrow?38:48);
   const branchStartY=verticalPad,branchStep=(canvasH-verticalPad*2-branchH)/Math.max(1,branchTargets.length-1);
   const endingStartY=canvasH*.22-endingH/2,endingStep=canvasH*.56;
   const branchPos=new Map(branchTargets.map((block,index)=>[Number(block),{x:branchX,y:branchStartY+index*branchStep}]));
@@ -8191,7 +8191,7 @@ function storyEndingVisualHtml(route,data){
   const branchNodes=branchTargets.map(block=>{
     const pos=branchPos.get(Number(block)),id=storyStableBlockId(route,block),saved=branches[id],ending=r.endingPaths[id];
     const seen=storyWasBlockVisited(route,block,data)||!!saved||!!ending;
-    return '<div class="story-fate-visual-node branch '+(seen?'discovered':'')+'" style="left:'+pos.x+'px;top:'+pos.y+'px"><div class="story-fate-visual-node-title">'+(seen?escHtml(STORY_OUTCOME_LABELS[block]||'已探索命運'):'？？？')+'</div><div class="story-fate-visual-node-meta">'+(saved?(ending?'已抵達結局':'結局路線已解鎖'):'尚未探索')+'</div>'+(saved?'<button type="button" class="story-fate-replay" data-story-fourth-branch="'+block+'">'+(ending?'沿此命運重破':'沿此命運挑戰')+'</button>':'')+'</div>';
+    return '<div class="story-fate-visual-node branch '+(seen?'discovered':'')+'" style="left:'+pos.x+'px;top:'+pos.y+'px"><div class="story-fate-visual-node-title">'+(seen?escHtml(STORY_OUTCOME_LABELS[block]||'已探索命運'):'？？？')+'</div><div class="story-fate-visual-node-meta">'+(saved?(ending?'✓ 已完成':'尚未完成'):'尚未探索')+'</div>'+(saved?'<button type="button" class="story-fate-replay" data-story-fourth-branch="'+block+'">沿此命運出發</button>':'')+'</div>';
   }).join('');
   const endingNodes=endings.map(block=>{
     const pos=endingPos.get(Number(block)),seen=storyWasBlockVisited(route,block,data);
