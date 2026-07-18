@@ -2034,7 +2034,7 @@
 </head>
 <body>
 <!-- 發布版本唯一維護位置：每次正式同步／部署時更新日期與當日版次。 -->
-<div id="appVersionBadge" data-version="v2026.07.19-10" aria-label="目前版本">讀取版本…</div>
+<div id="appVersionBadge" data-version="v2026.07.19-11" aria-label="目前版本">讀取版本…</div>
 <script>
 (function showOnlineBuildVersion(){
   const badge=document.getElementById('appVersionBadge'),version=badge.dataset.version||'dev';
@@ -8323,7 +8323,8 @@ function storyPlayCinematic(text){
 function storyAppendLog(beat,speaker,text){if(!beat||!text)return;const key=storyRun.block+':'+storyRun.beat;if(storyDialogueLog.some(x=>x.key===key))return;const normalized=storyNormalizeSpeaker(speaker),isPlayer=normalized===(playerName||'玩家')||normalized==='玩家';storyDialogueLog.push({key,speaker:speaker||'',text:String(text),type:beat.type,isPlayer});}
 function storyOpenLog(){storyCancelAuto();const list=document.getElementById('storyLogList');list.innerHTML=storyDialogueLog.length?storyDialogueLog.map(x=>'<div class="story-log-row '+(x.type==='narration'?'narration':'')+(x.isPlayer?' player':'')+'">'+(x.speaker?'<div class="story-log-speaker">'+escHtml(x.speaker)+'</div>':'')+'<div>'+escHtml(x.text).replace(/\n/g,'<br>')+'</div></div>').join(''):'<div style="padding:24px;text-align:center;color:var(--muted)">尚無對話紀錄</div>';document.getElementById('storyLogOverlay').classList.remove('hidden');list.scrollTop=list.scrollHeight;}
 function storyCloseLog(){document.getElementById('storyLogOverlay').classList.add('hidden');if(storyAutoMode)storyRenderCurrent();}
-function storyFlash(text){const el=document.getElementById('storySystemNote');el.textContent=text;el.classList.add('show');setTimeout(()=>el.classList.remove('show'),1800);}
+let storyFlashTimer=null;
+function storyFlash(text,duration){const el=document.getElementById('storySystemNote');if(storyFlashTimer)clearTimeout(storyFlashTimer);el.textContent=text;el.classList.add('show');storyFlashTimer=setTimeout(()=>{el.classList.remove('show');storyFlashTimer=null;},Math.max(1200,Number(duration)||1800));}
 function storyApplyBeatEvent(beat){if(!storyRun.applied)storyRun.applied={};const key=storyRun.block+':'+storyRun.beat;if(storyRun.applied[key])return;if(beat.type==='score'){storyRun.score=(Number(storyRun.score)||0)+beat.amount;storyRun.applied[key]=true;saveStoryProgress();storyFlash(beat.label+(beat.amount>=0?'＋':'－')+Math.abs(beat.amount));}}
 function storySetSpeakerAvatar(speaker){
   const avatar=document.getElementById('storySpeakerAvatar'),portrait=storyPortraitForSpeaker(speaker);avatar.classList.toggle('hidden',!portrait);
@@ -8370,18 +8371,19 @@ function storyCompleteStage(stageNumber){
   const completedBranch=stageNumber===3?((STORY_BRANCH_OUTCOMES[route]&&STORY_BRANCH_OUTCOMES[route][3]||[]).includes(Number(storyRun.block))?Number(storyRun.block):storyOutcomeBlockForState(route,snapshot)):null;
   const completedBranchId=completedBranch?storyStableBlockId(route,completedBranch):null,completedBranchLabel=completedBranch?(STORY_OUTCOME_LABELS[completedBranch]||'已探索命運'):'';
   const branchWasKnown=!!(completedBranchId&&loadStoryDiscovery().routes[route].branchStates[completedBranchId]);
+  const completionMessage=storyPreviewMode?'預覽完成第 '+stageNumber+' 關':stageNumber===3?(branchWasKnown?'第三節通關：「'+completedBranchLabel+'」已探索過，沒有新增第四節分支':'第三節通關：已解鎖新的第四節分支「'+completedBranchLabel+'」'):'第 '+stageNumber+' 關通關，下一關已解鎖';
   if(stageNumber===3)storyRememberBranchState(route,snapshot,storyRun.block);
   if(stageNumber>=4)storyRememberEndingPath(route,snapshot,storyRun.sourceBranch,storyRun.block);
   if(storyRun.replayMode){
     const discovery=loadStoryDiscovery();
     if(stageNumber===3)discovery.routes[route].replayState=Object.assign({fromStage:3},snapshot);
     else if(stageNumber>=4)discovery.routes[route].replayState=null;
-    saveStoryDiscovery(discovery);storyRun.active=false;storyRun.stageCompleted=stageNumber;saveStoryProgress();storyDialogueLog=[];storyShowMenu('stages',route);storyFlash(stageNumber===3?(branchWasKnown?'回溯完成：「'+completedBranchLabel+'」已探索過，沒有新增第四節分支':'回溯完成：已解鎖新的第四節分支「'+completedBranchLabel+'」'):'回溯完成，新的結局已收入命運棋譜');return;
+    saveStoryDiscovery(discovery);storyRun.active=false;storyRun.stageCompleted=stageNumber;saveStoryProgress();storyDialogueLog=[];storyShowMenu('stages',route);storyFlash(stageNumber===3?(branchWasKnown?'回溯完成：「'+completedBranchLabel+'」已探索過，沒有新增第四節分支':'回溯完成：已解鎖新的第四節分支「'+completedBranchLabel+'」'):'回溯完成，新的結局已收入命運棋譜',stageNumber===3?6000:2600);return;
   }
   if(!routeData.cleared.includes(stageNumber))routeData.cleared.push(stageNumber);routeData.cleared.sort((a,b)=>a-b);routeData.state=snapshot;routeData.checkpoints=routeData.checkpoints||{};routeData.checkpoints[stageNumber]=snapshot;saveStoryStageProgress(progress);
   if(stageNumber>=4){if(!storyRun.completed)storyRun.completed={};storyRun.completed[route]=true;}
   storyRun.active=false;storyRun.stageCompleted=stageNumber;saveStoryProgress();storyDialogueLog=[];
-  storyShowMenu('stages',route);storyFlash(storyPreviewMode?'預覽完成第 '+stageNumber+' 關':stageNumber===3?(branchWasKnown?'第三節通關：「'+completedBranchLabel+'」已探索過，沒有新增第四節分支':'第三節通關：已解鎖新的第四節分支「'+completedBranchLabel+'」'):'第 '+stageNumber+' 關通關，下一關已解鎖');
+  storyShowMenu('stages',route);storyFlash(completionMessage,stageNumber===3?6000:2600);
 }
 function storyCompleteChapter(){storyCompleteStage(storyRun.stageNumber||4);}
 function storyCarryForStage(routeData,stageNumber,override){
