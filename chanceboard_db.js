@@ -4032,6 +4032,213 @@ window.CHANCEBOARD_DB = {
       ],
       "effectTrigger": "onHit",
       "effectChance": 1
+    },
+    {
+      "id": "m001-sword",
+      "ownerId": "m001",
+      "ownerName": "無名戰士",
+      "name": "拒關橫掃",
+      "slot": "劍",
+      "condition": 1,
+      "rangeType": "劍",
+      "scope": "群",
+      "powerRatio": 180,
+      "hitRate": 0.95,
+      "critRate": 0.1,
+      "cooldown": null,
+      "description": "以長槍橫掃前方敵人；命中時有30%機率使對象禁足10秒。",
+      "effectOps": [
+        {
+          "op": "status",
+          "key": "禁足",
+          "mode": "value",
+          "target": "target",
+          "chance": 0.3,
+          "durSec": 10
+        }
+      ],
+      "effectTrigger": "onHit",
+      "effectChance": 1
+    },
+    {
+      "id": "m001-gun",
+      "ownerId": "m001",
+      "ownerName": "無名戰士",
+      "name": "貫城一槍",
+      "slot": "槍",
+      "condition": 1,
+      "rangeType": "槍",
+      "scope": "單",
+      "powerRatio": 280,
+      "hitRate": 0.9,
+      "critRate": 0.15,
+      "cooldown": null,
+      "description": "蓄力投出長槍貫穿最近的敵人；命中時使對象DEF-20%，持續20秒。",
+      "effectOps": [
+        {
+          "op": "status",
+          "key": "DEF-",
+          "mode": "pct",
+          "target": "target",
+          "chance": 1,
+          "value": 0.2,
+          "durSec": 20
+        }
+      ],
+      "effectTrigger": "onHit",
+      "effectChance": 1
+    },
+    {
+      "id": "m001-magic",
+      "ownerId": "m001",
+      "ownerName": "無名戰士",
+      "name": "封關槍陣",
+      "slot": "法",
+      "condition": 2,
+      "rangeType": "法",
+      "scope": "群",
+      "powerRatio": 150,
+      "hitRate": 0.85,
+      "critRate": 0.05,
+      "cooldown": 2,
+      "description": "召出槍陣封鎖敵方；命中時有40%機率使對象禁足20秒。",
+      "effectOps": [
+        {
+          "op": "status",
+          "key": "禁足",
+          "mode": "value",
+          "target": "target",
+          "chance": 0.4,
+          "durSec": 20
+        }
+      ],
+      "effectTrigger": "onHit",
+      "effectChance": 1
+    },
+    {
+      "id": "m001-wish",
+      "ownerId": "m001",
+      "ownerName": "無名戰士",
+      "name": "喚衛・守關之誓",
+      "slot": "願",
+      "condition": 3,
+      "rangeType": null,
+      "scope": null,
+      "powerRatio": null,
+      "hitRate": null,
+      "critRate": null,
+      "cooldown": 5,
+      "description": "召喚1名「守關戰士」加入己方。若己方已有存活的守關戰士，召喚失敗。",
+      "effectOps": [
+        {
+          "op": "summonMonster",
+          "monsterId": "m002",
+          "failIfAlive": true
+        }
+      ],
+      "effectTrigger": "postAction",
+      "effectChance": 1
+    },
+    {
+      "id": "m002-sword",
+      "ownerId": "m002",
+      "ownerName": "守關戰士",
+      "name": "拒馬橫掃",
+      "slot": "劍",
+      "condition": 1,
+      "rangeType": "劍",
+      "scope": "群",
+      "powerRatio": 150,
+      "hitRate": 0.95,
+      "critRate": 0.05,
+      "cooldown": null,
+      "description": "以長槍守住前線並橫掃同格敵人。",
+      "effectOps": [],
+      "effectTrigger": null,
+      "effectChance": 1
+    },
+    {
+      "id": "m002-gun",
+      "ownerId": "m002",
+      "ownerName": "守關戰士",
+      "name": "穿陣突刺",
+      "slot": "槍",
+      "condition": 1,
+      "rangeType": "槍",
+      "scope": "單",
+      "powerRatio": 220,
+      "hitRate": 0.9,
+      "critRate": 0.1,
+      "cooldown": null,
+      "description": "朝最近的敵人發動長槍突刺；命中時有25%機率使對象禁足10秒。",
+      "effectOps": [
+        {
+          "op": "status",
+          "key": "禁足",
+          "mode": "value",
+          "target": "target",
+          "chance": 0.25,
+          "durSec": 10
+        }
+      ],
+      "effectTrigger": "onHit",
+      "effectChance": 1
+    },
+    {
+      "id": "m002-magic",
+      "ownerId": "m002",
+      "ownerName": "守關戰士",
+      "name": "鐵壁陣式",
+      "slot": "法",
+      "condition": 2,
+      "rangeType": null,
+      "scope": null,
+      "powerRatio": null,
+      "hitRate": null,
+      "critRate": null,
+      "cooldown": 2,
+      "description": "架起盾槍陣，獲得500點護盾，最多持續20秒。",
+      "effectOps": [
+        {
+          "op": "status",
+          "key": "護盾+",
+          "mode": "value",
+          "target": "self",
+          "chance": 1,
+          "value": 500,
+          "durSec": 20
+        }
+      ],
+      "effectTrigger": "postAction",
+      "effectChance": 1
+    },
+    {
+      "id": "m002-wish",
+      "ownerId": "m002",
+      "ownerName": "守關戰士",
+      "name": "不退之誓",
+      "slot": "願",
+      "condition": 2,
+      "rangeType": null,
+      "scope": null,
+      "powerRatio": null,
+      "hitRate": null,
+      "critRate": null,
+      "cooldown": 4,
+      "description": "為己方全體賦予減傷20%，持續20秒。",
+      "effectOps": [
+        {
+          "op": "status",
+          "key": "減傷%",
+          "mode": "value",
+          "target": "ownTeam",
+          "chance": 1,
+          "value": 0.2,
+          "durSec": 20
+        }
+      ],
+      "effectTrigger": "postAction",
+      "effectChance": 1
     }
   ],
   "statuses": [
@@ -4918,6 +5125,32 @@ window.CHANCEBOARD_DB = {
         "后(Queen)": null,
         "王(King)": 1
       }
+    }
+  ],
+  "monsters": [
+    {
+      "id": "m001",
+      "name": "無名戰士",
+      "title": "第一關守關者",
+      "element": "劍",
+      "hp": 2600,
+      "atk": 120,
+      "def": 110,
+      "spd": 90,
+      "assetDir": "monster",
+      "description": "沉默駐守在棋盤入口的長槍戰士。擅長封鎖走位，並在戰況危急時召來守關戰士。"
+    },
+    {
+      "id": "m002",
+      "name": "守關戰士",
+      "title": "受召喚的衛士",
+      "element": "劍",
+      "hp": 1300,
+      "atk": 90,
+      "def": 130,
+      "spd": 70,
+      "assetDir": "monster",
+      "description": "回應無名戰士誓約而現身的重裝長槍衛士，負責承受攻勢與牽制敵人。"
     }
   ]
 };

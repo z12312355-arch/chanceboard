@@ -1934,7 +1934,7 @@
 </head>
 <body>
 <!-- 發布版本唯一維護位置：每次正式同步／部署時更新日期與當日版次。 -->
-<div id="appVersionBadge" data-version="v2026.07.18-09" aria-label="目前版本">讀取版本…</div>
+<div id="appVersionBadge" data-version="v2026.07.18-10" aria-label="目前版本">讀取版本…</div>
 <script>
 (function showOnlineBuildVersion(){
   const badge=document.getElementById('appVersionBadge'),version=badge.dataset.version||'dev';
@@ -2671,10 +2671,12 @@ const DEFAULT_MONSTER_MOVES = [
   {id:'m001-gun',ownerId:'m001',ownerName:'無名戰士',name:'貫城一槍',slot:'槍',condition:1,rangeType:'槍',scope:'單',powerRatio:280,hitRate:0.9,critRate:0.15,cooldown:null,description:'蓄力投出長槍貫穿最近的敵人；命中時使對象DEF-20%，持續20秒。',effectOps:[{op:'status',key:'DEF-',mode:'pct',target:'target',chance:1,value:0.2,durSec:20}],effectTrigger:'onHit',effectChance:1},
   {id:'m001-magic',ownerId:'m001',ownerName:'無名戰士',name:'封關槍陣',slot:'法',condition:2,rangeType:'法',scope:'群',powerRatio:150,hitRate:0.85,critRate:0.05,cooldown:2,description:'召出槍陣封鎖敵方；命中時有40%機率使對象禁足20秒。',effectOps:[{op:'status',key:'禁足',mode:'value',target:'target',chance:0.4,durSec:20}],effectTrigger:'onHit',effectChance:1},
   {id:'m001-wish',ownerId:'m001',ownerName:'無名戰士',name:'喚衛・守關之誓',slot:'願',condition:3,rangeType:null,scope:null,powerRatio:null,hitRate:null,critRate:null,cooldown:5,description:'召喚1名「守關戰士」加入己方。若己方已有存活的守關戰士，召喚失敗。',effectOps:[{op:'summonMonster',monsterId:'m002',failIfAlive:true}],effectTrigger:'postAction',effectChance:1},
+  {id:'m001-passive',ownerId:'m001',ownerName:'無名戰士',name:'守關死誓',slot:'被',condition:null,rangeType:null,scope:null,powerRatio:null,hitRate:null,critRate:null,cooldown:null,description:'守關戰士陣亡時，進入「死戰」狀態20秒：ATK+20%、SPD+10%。每場戰鬥只觸發一次。',effectOps:[{op:'enrageOnMonsterDeath',monsterId:'m002',onceFlag:'guardDeathEnrage',atkPct:0.2,spdPct:0.1,durSec:20}],effectTrigger:'onAllyDeath',effectChance:1},
   {id:'m002-sword',ownerId:'m002',ownerName:'守關戰士',name:'拒馬橫掃',slot:'劍',condition:1,rangeType:'劍',scope:'群',powerRatio:150,hitRate:0.95,critRate:0.05,cooldown:null,description:'以長槍守住前線並橫掃同格敵人。',effectOps:[],effectTrigger:null,effectChance:1},
   {id:'m002-gun',ownerId:'m002',ownerName:'守關戰士',name:'穿陣突刺',slot:'槍',condition:1,rangeType:'槍',scope:'單',powerRatio:220,hitRate:0.9,critRate:0.1,cooldown:null,description:'朝最近的敵人發動長槍突刺；命中時有25%機率使對象禁足10秒。',effectOps:[{op:'status',key:'禁足',mode:'value',target:'target',chance:0.25,durSec:10}],effectTrigger:'onHit',effectChance:1},
   {id:'m002-magic',ownerId:'m002',ownerName:'守關戰士',name:'鐵壁陣式',slot:'法',condition:2,rangeType:null,scope:null,powerRatio:null,hitRate:null,critRate:null,cooldown:2,description:'架起盾槍陣，獲得500點護盾，最多持續20秒。',effectOps:[{op:'status',key:'護盾+',mode:'value',target:'self',chance:1,value:500,durSec:20}],effectTrigger:'postAction',effectChance:1},
-  {id:'m002-wish',ownerId:'m002',ownerName:'守關戰士',name:'不退之誓',slot:'願',condition:2,rangeType:null,scope:null,powerRatio:null,hitRate:null,critRate:null,cooldown:4,description:'為己方全體賦予減傷20%，持續20秒。',effectOps:[{op:'status',key:'減傷%',mode:'value',target:'ownTeam',chance:1,value:0.2,durSec:20}],effectTrigger:'postAction',effectChance:1}
+  {id:'m002-wish',ownerId:'m002',ownerName:'守關戰士',name:'不退之誓',slot:'願',condition:2,rangeType:null,scope:null,powerRatio:null,hitRate:null,critRate:null,cooldown:4,description:'為己方全體賦予減傷20%，持續20秒。',effectOps:[{op:'status',key:'減傷%',mode:'value',target:'ownTeam',chance:1,value:0.2,durSec:20}],effectTrigger:'postAction',effectChance:1},
+  {id:'m002-passive',ownerId:'m002',ownerName:'守關戰士',name:'代主受擊',slot:'被',condition:null,rangeType:null,scope:null,powerRatio:null,hitRate:null,critRate:null,cooldown:null,description:'無名戰士受到傷害時，替他承受其中25%的傷害；守關戰士死亡或不在場時失效。',effectOps:[{op:'redirectDamage',protectMonsterId:'m001',percent:0.25}],effectTrigger:'damageRedirect',effectChance:1}
 ];
 function ensureMonsterDatabase(target){
   if(!Array.isArray(target.monsters)) target.monsters=[];
@@ -4587,12 +4589,45 @@ function computeDamage(attacker, defender, powerRatio, opts){
   const dmg = Math.max(0,afterMitigation-shieldAbsorbed);
   return {raw, dmg, elementAdvantage, shieldAbsorbed};
 }
+function triggerOnAllyDeathPassives(deadUnit){
+  const team=deadUnit.side==='A'?state.teamA:state.teamB;
+  team.filter(function(unit){return unit.alive&&unit!==deadUnit;}).forEach(function(unit){
+    const passive=unit.moves&&unit.moves.passive;
+    if(!passive||passive.effectTrigger!=='onAllyDeath'||!Array.isArray(passive.effectOps))return;
+    const chance=passive.effectChance==null?1:passive.effectChance;
+    if(Math.random()<=chance)executeOps(unit,deadUnit,passive.effectOps,{mover:unit,moveTarget:deadUnit,deadUnit:deadUnit,ownTeam:team,enemyTeam:deadUnit.side==='A'?state.teamB:state.teamA,moveName:passive.name});
+  });
+}
+function damageRedirectGuardian(defender){
+  const team=defender.side==='A'?state.teamA:state.teamB;
+  return team.find(function(unit){
+    if(!unit.alive||unit===defender||!unit.moves||!unit.moves.passive)return false;
+    const passive=unit.moves.passive;
+    return passive.effectTrigger==='damageRedirect'&&Array.isArray(passive.effectOps)&&passive.effectOps.some(function(op){return op.op==='redirectDamage'&&op.protectMonsterId===defender.baseId;});
+  })||null;
+}
 function applyDamage(attacker, defender, dmg, moveName, shieldAbsorbed){
   if(shieldAbsorbed>0) consumeShield(defender,shieldAbsorbed);
   // 結冰：受到攻擊會立即解除（不需等時間到），跟落冰賦招式描述與規則說明一致。
   if(hasStatus(defender,'結冰')){
     thawUnit(defender);
     addLog('fx', unitName(defender)+' 受到攻擊，結冰狀態解除');
+  }
+  // 守關戰士的「代主受擊」：在無名戰士實際扣血前攔截25%，轉移傷害本身仍可被守關戰士的
+  // 護盾／減傷承受。轉移後再處理雙方死亡，確保守關戰士因此倒下時能立即觸發Boss的第二階段。
+  const guardian=damageRedirectGuardian(defender);
+  if(guardian&&dmg>0){
+    const redirectOp=guardian.moves.passive.effectOps.find(function(op){return op.op==='redirectDamage'&&op.protectMonsterId===defender.baseId;});
+    const chance=guardian.moves.passive.effectChance==null?1:guardian.moves.passive.effectChance;
+    if(redirectOp&&Math.random()<=chance){
+      const redirected=Math.min(dmg,Math.max(1,Math.round(dmg*Math.max(0,Math.min(1,Number(redirectOp.percent)||0)))));
+      dmg-=redirected;
+      const guardReduce=Math.min(1,sumStatus(guardian,'減傷%','value'));
+      const afterReduce=Math.max(0,Math.round(redirected*(1-guardReduce)));
+      const guardShield=Math.min(afterReduce,sumStatus(guardian,'護盾+','value'));
+      const guardTaken=applyDamage(attacker,guardian,Math.max(0,afterReduce-guardShield),guardian.moves.passive.name,guardShield);
+      addLog('fx',sideTag(guardian)+unitName(guardian)+' 發動「'+guardian.moves.passive.name+'」，替 '+unitName(defender)+' 承受 <span class="dmg">'+guardTaken+'</span> 點傷害'+(!guardian.alive?'　→ <b>陣亡</b>':''));
+    }
   }
   const wasAlive = defender.alive;
   const rawHp = defender.hp - dmg;
@@ -4605,7 +4640,7 @@ function applyDamage(attacker, defender, dmg, moveName, shieldAbsorbed){
     defender.hp = Math.max(0, rawHp);
   }
   defender.lastHitMoveName = moveName;
-  if(defender.hp<=0 && defender.alive){ defender.alive=false; defender._justDied=true; }
+  if(defender.hp<=0 && defender.alive){ defender.alive=false; defender._justDied=true; triggerOnAllyDeathPassives(defender); }
   if(hasStatus(defender,'反擊') && defender.alive && moveName!=='反擊' && attacker!==defender){
     // attacker!==defender 防止自傷來源（例如混亂狀態的50%反打自己）誤觸發自己的反擊，
     // 導致對自己重複造成兩次傷害（混亂打自己一次，反擊又反打自己一次）。
@@ -4614,8 +4649,8 @@ function applyDamage(attacker, defender, dmg, moveName, shieldAbsorbed){
     // using the counter-attacker's own stats/element. moveName!=='反擊' guard above (plus
     // here) stops two counter-holders from ping-ponging into infinite recursion.
     const counterHit = computeDamage(defender, attacker, 100, {moveName:'反擊'});
-    const counterDmg=counterHit.dmg, counterAdv=counterHit.elementAdvantage;
-    applyDamage(defender, attacker, counterDmg, '反擊', counterHit.shieldAbsorbed);
+    let counterDmg=counterHit.dmg; const counterAdv=counterHit.elementAdvantage;
+    counterDmg=applyDamage(defender, attacker, counterDmg, '反擊', counterHit.shieldAbsorbed);
     addLog('dmg', sideTag(defender)+unitName(defender)+' 觸發「還手」，反擊 '+sideTag(attacker)+unitName(attacker)+(counterAdv?'　🔺屬性相剋':'')+'，造成 <span class="dmg">'+counterDmg+'</span> 點傷害'
       + (attacker.hp<=0 ? '　→ <b>陣亡</b>' : '（剩餘 '+attacker.hp+'/'+attacker.maxHp+'）'));
   }
@@ -4672,6 +4707,15 @@ function runOp(op, ctx){
   if(chance<1 && Math.random()>chance) return;
   const targets = op.target ? resolveOpTarget(op.target, ctx) : [];
   switch(op.op){
+    case 'enrageOnMonsterDeath': {
+      const dead=ctx.deadUnit||ctx.moveTarget;
+      const onceFlag=op.onceFlag||('enrageOnDeath:'+op.monsterId);
+      if(!dead||dead.baseId!==op.monsterId||ctx.mover.flags[onceFlag])break;
+      ctx.mover.flags[onceFlag]=true;
+      if(Number(op.atkPct)>0)addStatus(ctx.mover,'ATK+','pct',Number(op.atkPct),op.durSec||20,ctx.mover);
+      if(Number(op.spdPct)>0)addStatus(ctx.mover,'SPD+','pct',Number(op.spdPct),op.durSec||20,ctx.mover);
+      addLog('fx',sideTag(ctx.mover)+unitName(ctx.mover)+' 的「'+ctx.moveName+'」發動，進入死戰：ATK+'+Math.round((Number(op.atkPct)||0)*100)+'%、SPD+'+Math.round((Number(op.spdPct)||0)*100)+'%（'+(op.durSec||20)+'秒）');
+      break; }
     case 'summonMonster': {
       const monster=MONSTER_BY_ID[op.monsterId];
       if(!monster){addLog('miss',sideTag(ctx.mover)+unitName(ctx.mover)+' 的召喚失敗：找不到怪物資料「'+op.monsterId+'」');break;}
@@ -4750,7 +4794,7 @@ function runOp(op, ctx){
       targets.forEach(t=>{ t.hp = Math.min(t.maxHp, t.hp+op.amount); addLog('heal', unitName(t)+' 回復 <span class="heal">'+op.amount+'</span> 點血量'); queueHealEffect(t, op.amount); });
       break;
     case 'kill':
-      targets.forEach(t=>{ if(t.alive){ t.alive=false; t.hp=0; t._justDied=true; addLog('dmg', unitName(t)+' <b>陷入死亡狀態</b>'); } });
+      targets.forEach(t=>{ if(t.alive){ t.alive=false; t.hp=0; t._justDied=true; triggerOnAllyDeathPassives(t); addLog('dmg', unitName(t)+' <b>陷入死亡狀態</b>'); } });
       break;
     case 'discard': doDiscard(op, ctx); break;
     case 'draw': doDraw(op, ctx); break;
@@ -6182,8 +6226,8 @@ function resolveMove(unit, move, ownTeam, enemyTeam){
   // 混亂：50% self-hit instead of normal resolution（100威力＝舊制100%威力比）
   if(hasStatus(unit,'混亂') && Math.random()<0.5){
     const confusionHit = computeDamage(unit, unit, 100, {moveName:move.name});
-    const dmg=confusionHit.dmg;
-    applyDamage(unit, unit, dmg, move.name, confusionHit.shieldAbsorbed);
+    let dmg=confusionHit.dmg;
+    dmg=applyDamage(unit, unit, dmg, move.name, confusionHit.shieldAbsorbed);
     addLog('dmg', sideTag(unit)+unitName(unit)+' 陷入混亂，攻擊了自己，造成 <span class="dmg">'+dmg+'</span> 點傷害'+(unit.hp<=0?'　→ <b>陣亡</b>':''));
     // No cast-flourish here (moveSlot omitted) — this is a confusion mishap, not really "using"
     // the move's themed flavor; still shows a hit-flash/shake/damage number on the self-hit.
@@ -6245,9 +6289,9 @@ function resolveMove(unit, move, ownTeam, enemyTeam){
       powerMult: phantomActive ? 2 : 1,
       moveName:move.name
     });
-    const dmg=hitResult.dmg, elementAdvantage=hitResult.elementAdvantage;
+    let dmg=hitResult.dmg; const elementAdvantage=hitResult.elementAdvantage;
+    dmg=applyDamage(unit, target, dmg, move.name, hitResult.shieldAbsorbed);
     ctx.lastDamage = dmg;
-    applyDamage(unit, target, dmg, move.name, hitResult.shieldAbsorbed);
     addLog('dmg', sideTag(unit)+unitName(unit)+' 攻擊 '+sideTag(target)+unitName(target)+(isCrit?'　💥爆擊':'')+(elementAdvantage?'　🔺屬性相剋':'')+'，造成 <span class="dmg">'+dmg+'</span> 點傷害'
       + (target.hp<=0 ? '　→ <b>陣亡</b>' : '（剩餘 '+target.hp+'/'+target.maxHp+'）'));
     fxHits.push({target, isCrit, dmg, isKill: target.hp<=0});
