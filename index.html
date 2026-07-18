@@ -16,7 +16,7 @@
   html, body{height:100%;}
   body{margin:0;font-family:"Microsoft JhengHei","PingFang TC",-apple-system,sans-serif;background:var(--bg);color:var(--text);}
   #appVersionBadge{position:fixed;left:10px;bottom:7px;z-index:8999;padding:3px 7px;border:1px solid rgba(255,255,255,.12);border-radius:999px;background:rgba(5,7,12,.46);color:rgba(226,230,241,.68);font-size:10px;line-height:1.2;letter-spacing:.045em;text-shadow:0 1px 3px #000;pointer-events:none;user-select:none;backdrop-filter:blur(3px)}
-  body.battle-mode #appVersionBadge{display:none}
+  body:not(.login-mode) #appVersionBadge{display:none}
   /* 選角／組卡組畫面（第一步／第二步）也要用到左右兩邊的空間（使用者要求），寬度上限從 1180px
      加大；不像戰鬥畫面整個拿掉上限，是因為這裡還有 h1/副標題/規則說明這些長文字段落，太寬的話
      一行字會拉得很長、反而不好讀，所以保留一個比較寬鬆但還是有限制的上限。 */
