@@ -4037,12 +4037,12 @@ window.CHANCEBOARD_DB = {
       "id": "m001-sword",
       "ownerId": "m001",
       "ownerName": "無名戰士",
-      "name": "拒關橫掃",
+      "name": "斷界(Boundary Sever)",
       "slot": "劍",
       "condition": 1,
       "rangeType": "劍",
       "scope": "群",
-      "powerRatio": 180,
+      "powerRatio": 280,
       "hitRate": 0.95,
       "critRate": 0.1,
       "cooldown": null,
@@ -4064,12 +4064,12 @@ window.CHANCEBOARD_DB = {
       "id": "m001-gun",
       "ownerId": "m001",
       "ownerName": "無名戰士",
-      "name": "貫城一槍",
+      "name": "貫城(Fortress Piercer)",
       "slot": "槍",
       "condition": 1,
       "rangeType": "槍",
       "scope": "單",
-      "powerRatio": 280,
+      "powerRatio": 180,
       "hitRate": 0.9,
       "critRate": 0.15,
       "cooldown": null,
@@ -4092,7 +4092,7 @@ window.CHANCEBOARD_DB = {
       "id": "m001-magic",
       "ownerId": "m001",
       "ownerName": "無名戰士",
-      "name": "封關槍陣",
+      "name": "封關(Sealing Ground)",
       "slot": "法",
       "condition": 2,
       "rangeType": "法",
@@ -4119,7 +4119,7 @@ window.CHANCEBOARD_DB = {
       "id": "m001-wish",
       "ownerId": "m001",
       "ownerName": "無名戰士",
-      "name": "喚衛・守關之誓",
+      "name": "破面・喚衛(Arrancar Guardian)",
       "slot": "願",
       "condition": 3,
       "rangeType": null,
@@ -4148,7 +4148,7 @@ window.CHANCEBOARD_DB = {
       "condition": 1,
       "rangeType": "劍",
       "scope": "群",
-      "powerRatio": 150,
+      "powerRatio": 220,
       "hitRate": 0.95,
       "critRate": 0.05,
       "cooldown": null,
@@ -4166,7 +4166,7 @@ window.CHANCEBOARD_DB = {
       "condition": 1,
       "rangeType": "槍",
       "scope": "單",
-      "powerRatio": 220,
+      "powerRatio": 150,
       "hitRate": 0.9,
       "critRate": 0.1,
       "cooldown": null,
@@ -4239,123 +4239,266 @@ window.CHANCEBOARD_DB = {
       ],
       "effectTrigger": "postAction",
       "effectChance": 1
+    },
+    {
+      "id": "m001-passive",
+      "ownerId": "m001",
+      "ownerName": "無名戰士",
+      "name": "死誓(oath to death)",
+      "slot": "被",
+      "condition": null,
+      "rangeType": null,
+      "scope": null,
+      "powerRatio": null,
+      "hitRate": null,
+      "critRate": null,
+      "cooldown": null,
+      "description": "守關戰士陣亡時，進入「死戰」狀態20秒：ATK+20%、SPD+10%。每場戰鬥只觸發一次。",
+      "effectOps": [
+        {
+          "op": "enrageOnMonsterDeath",
+          "monsterId": "m002",
+          "onceFlag": "guardDeathEnrage",
+          "atkPct": 0.2,
+          "spdPct": 0.1,
+          "durSec": 20
+        }
+      ],
+      "effectTrigger": "onAllyDeath",
+      "effectChance": 1
+    },
+    {
+      "id": "m002-passive",
+      "ownerId": "m002",
+      "ownerName": "守關戰士",
+      "name": "代主受擊",
+      "slot": "被",
+      "condition": null,
+      "rangeType": null,
+      "scope": null,
+      "powerRatio": null,
+      "hitRate": null,
+      "critRate": null,
+      "cooldown": null,
+      "description": "無名戰士受到傷害時，替他承受其中25%的傷害；守關戰士死亡或不在場時失效。",
+      "effectOps": [
+        {
+          "op": "redirectDamage",
+          "protectMonsterId": "m001",
+          "percent": 0.25
+        }
+      ],
+      "effectTrigger": "damageRedirect",
+      "effectChance": 1
     }
   ],
   "statuses": [
     {
       "id": "001",
       "name": "死亡",
-      "description": "無法戰鬥"
+      "description": "無法戰鬥",
+      "displayName": "死亡",
+      "icon": "💀",
+      "color": "#aeb4c2",
+      "category": "特殊"
     },
     {
       "id": "002",
       "name": "HP+",
-      "description": "每秒回復 HP"
+      "description": "每秒回復 HP",
+      "displayName": "HP+",
+      "icon": "💚",
+      "color": "#75e39a",
+      "category": "增益"
     },
     {
       "id": "003",
       "name": "HP-",
-      "description": "每秒減去 HP"
+      "description": "每秒減去 HP",
+      "displayName": "HP-",
+      "icon": "🩸",
+      "color": "#ff7575",
+      "category": "減益"
     },
     {
       "id": "004",
       "name": "ATK+",
-      "description": "攻擊提升 點"
+      "description": "攻擊提升 點",
+      "displayName": "ATK+",
+      "icon": "⚔️",
+      "color": "#ffd166",
+      "category": "增益"
     },
     {
       "id": "005",
       "name": "ATK-",
-      "description": "攻擊下降 點"
+      "description": "攻擊下降 點",
+      "displayName": "ATK-",
+      "icon": "📉",
+      "color": "#ff8b8b",
+      "category": "減益"
     },
     {
       "id": "006",
       "name": "BAT+",
-      "description": "間隔拉長 秒"
+      "description": "間隔拉長 秒",
+      "displayName": "BAT+",
+      "icon": "⏳",
+      "color": "#ff9b8f",
+      "category": "減益"
     },
     {
       "id": "007",
       "name": "BAT-",
-      "description": "間隔縮短 秒"
+      "description": "間隔縮短 秒",
+      "displayName": "BAT-",
+      "icon": "⚡",
+      "color": "#ffe066",
+      "category": "增益"
     },
     {
       "id": "008",
       "name": "必中",
-      "description": "攻擊必定命中"
+      "description": "攻擊必定命中",
+      "displayName": "必中",
+      "icon": "🎯",
+      "color": "#ffe066",
+      "category": "增益"
     },
     {
       "id": "009",
       "name": "迴避 %",
-      "description": " %受到的攻擊無效"
+      "description": " %受到的攻擊無效",
+      "displayName": "迴避 %",
+      "icon": "🌫️",
+      "color": "#b9d7ff",
+      "category": "增益"
     },
     {
       "id": "010",
       "name": "封招",
-      "description": "無法攻擊"
+      "description": "無法攻擊",
+      "displayName": "封招",
+      "icon": "🔒",
+      "color": "#ff8b8b",
+      "category": "減益"
     },
     {
       "id": "011",
       "name": "禁足",
-      "description": "無法移動"
+      "description": "無法移動",
+      "displayName": "禁足",
+      "icon": "⛓️",
+      "color": "#ff9b8f",
+      "category": "減益"
     },
     {
       "id": "012",
       "name": "混亂",
-      "description": "攻擊時50%以100威力(以自己攻擊計算)攻擊自己"
+      "description": "攻擊時50%以100威力(以自己攻擊計算)攻擊自己",
+      "displayName": "混亂",
+      "icon": "🌀",
+      "color": "#d69cff",
+      "category": "減益"
     },
     {
       "id": "013",
       "name": "隱身",
-      "description": "令對手無法看見與攻擊"
+      "description": "令對手無法看見與攻擊",
+      "displayName": "隱身",
+      "icon": "👻",
+      "color": "#c8d3e6",
+      "category": "增益"
     },
     {
       "id": "014",
       "name": "燃燒",
-      "description": "持續20秒，每次行動結束損失最大HP的5%，最低100HP"
+      "description": "持續20秒，每次行動結束損失最大HP的5%，最低100HP",
+      "displayName": "燃燒",
+      "icon": "🔥",
+      "color": "#ff8a4c",
+      "category": "減益"
     },
     {
       "id": "015",
       "name": "結冰",
-      "description": "間隔停止倒數，但被攻擊自動取消狀態"
+      "description": "間隔停止倒數，但被攻擊自動取消狀態",
+      "displayName": "結冰",
+      "icon": "❄️",
+      "color": "#7ed6ff",
+      "category": "減益"
     },
     {
       "id": "016",
       "name": "減傷 %",
-      "description": "抵免 %的傷害"
+      "description": "抵免 %的傷害",
+      "displayName": "減傷 %",
+      "icon": "🛡️",
+      "color": "#7ed6ff",
+      "category": "增益"
     },
     {
       "id": "017",
       "name": "連動",
-      "description": "行動次數*2"
+      "description": "行動次數*2",
+      "displayName": "連動",
+      "icon": "🔗",
+      "color": "#ffe066",
+      "category": "增益"
     },
     {
       "id": "018",
       "name": "解放",
-      "description": "招式條件固定為1"
+      "description": "招式條件固定為1",
+      "displayName": "解放",
+      "icon": "🕊️",
+      "color": "#f2d27a",
+      "category": "增益"
     },
     {
       "id": "019",
       "name": "護盾+",
-      "description": "可抵免的傷害值，受到傷害時消耗"
+      "description": "可抵免的傷害值，受到傷害時消耗",
+      "displayName": "護盾+",
+      "icon": "🔷",
+      "color": "#66c7ff",
+      "category": "增益"
     },
     {
       "id": "020",
       "name": "麻痺",
-      "description": "間隔*2"
+      "description": "間隔*2",
+      "displayName": "麻痺",
+      "icon": "⚡",
+      "color": "#e5d46b",
+      "category": "減益"
     },
     {
       "id": "021",
       "name": "威能",
-      "description": "攻擊*2"
+      "description": "攻擊*2",
+      "displayName": "威能",
+      "icon": "💥",
+      "color": "#ffcf66",
+      "category": "增益"
     },
     {
       "id": "022",
       "name": "覺醒",
-      "description": "優先攻擊HP最低角色"
+      "description": "優先攻擊HP最低角色",
+      "displayName": "覺醒",
+      "icon": "👁️",
+      "color": "#e8a8ff",
+      "category": "增益"
     },
     {
       "id": "023",
       "name": "強運",
-      "description": "攻擊必定爆擊"
+      "description": "攻擊必定爆擊",
+      "displayName": "強運",
+      "icon": "🍀",
+      "color": "#75e39a",
+      "category": "增益"
     }
   ],
   "cards": [
@@ -4467,25 +4610,26 @@ window.CHANCEBOARD_DB = {
       "id": "009",
       "name": "命運(Fate)",
       "color": "花牌",
-      "description": "角色回復最大HP35%",
+      "description": "角色回復最大HP10%",
       "isSuitCard": false,
       "effectOps": [
         {
           "op": "healPct",
-          "percent": 0.35,
+          "percent": 0.1,
           "of": "max",
           "target": "chosen",
           "chance": 1
         }
       ],
       "effectTrigger": "onPlay",
-      "effectChance": 1
+      "effectChance": 1,
+      "shopPrice": 150
     },
     {
       "id": "010",
       "name": "保護(Protect)",
       "color": "花牌",
-      "description": "角色獲得500點護盾，抵免傷害時消耗，最多持續20秒",
+      "description": "角色獲得200點護盾，抵免傷害時消耗，最多持續10秒",
       "isSuitCard": false,
       "effectOps": [
         {
@@ -4494,12 +4638,13 @@ window.CHANCEBOARD_DB = {
           "mode": "value",
           "target": "chosen",
           "chance": 1,
-          "value": 500,
-          "durSec": 20
+          "value": 100,
+          "durSec": 10
         }
       ],
       "effectTrigger": "onPlay",
-      "effectChance": 1
+      "effectChance": 1,
+      "shopPrice": 150
     },
     {
       "id": "011",
@@ -4521,7 +4666,7 @@ window.CHANCEBOARD_DB = {
       "id": "012",
       "name": "愛心(Heart)",
       "color": "花牌",
-      "description": "角色HP+50(10秒)，每秒回復50HP",
+      "description": "角色HP+20(10秒)，每秒回復20HP",
       "isSuitCard": false,
       "effectOps": [
         {
@@ -4530,12 +4675,13 @@ window.CHANCEBOARD_DB = {
           "mode": "flat",
           "target": "chosen",
           "chance": 1,
-          "value": 50,
+          "value": 20,
           "durSec": 10
         }
       ],
       "effectTrigger": "onPlay",
-      "effectChance": 1
+      "effectChance": 1,
+      "shopPrice": 150
     },
     {
       "id": "013",
