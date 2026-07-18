@@ -4127,7 +4127,7 @@ window.CHANCEBOARD_DB = {
       "powerRatio": null,
       "hitRate": null,
       "critRate": null,
-      "cooldown": 5,
+      "cooldown": 10,
       "description": "召喚1名「守關戰士」加入己方。若己方已有存活的守關戰士，召喚失敗。",
       "effectOps": [
         {
