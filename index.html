@@ -1934,7 +1934,7 @@
 </head>
 <body>
 <!-- 發布版本唯一維護位置：每次正式同步／部署時更新日期與當日版次。 -->
-<div id="appVersionBadge" data-version="v2026.07.18-05" aria-label="目前版本">讀取版本…</div>
+<div id="appVersionBadge" data-version="v2026.07.18-06" aria-label="目前版本">讀取版本…</div>
 <script>
 (function showOnlineBuildVersion(){
   const badge=document.getElementById('appVersionBadge'),version=badge.dataset.version||'dev';
@@ -7692,9 +7692,9 @@ function storyRenderStage(beat){
   const normalized=storyNormalizeSpeaker(beat.speaker),isPlayer=normalized===(playerName||'玩家')||normalized==='玩家',isChoice=beat.type==='choice';
   const heldSpeaker=isChoice&&storyRun.lastContext&&storyRun.lastContext.speaker?storyRun.lastContext.speaker:(storyRun.lastNpcLine&&storyRun.lastNpcLine.speaker);
   const previous=(isPlayer||isChoice)&&heldSpeaker?storyPortraitForSpeaker(heldSpeaker):null;
-  const active=(isPlayer||isChoice)?null:storyPortraitForSpeaker(beat.speaker),guide=storyPortraitForSpeaker(storyRun.route==='white'?'小白':'小黑');
-  const blockPortraits=storyParseBlock(storyRun.block).filter(b=>b.type==='dialogue').map(b=>storyPortraitForSpeaker(b.speaker)).filter(Boolean);
-  let cast=[];[previous,active,guide].concat(blockPortraits).forEach(p=>{if(p&&!cast.some(x=>x.src===p.src))cast.push(p);});cast=cast.slice(0,2);
+  const active=(isPlayer||isChoice)?null:storyPortraitForSpeaker(beat.speaker);
+  const appearedPortraits=storyParseBlock(storyRun.block).slice(0,storyRun.beat+1).filter(b=>b.type==='dialogue').map(b=>storyPortraitForSpeaker(b.speaker)).filter(Boolean);
+  let cast=[];[previous,active].concat(appearedPortraits).forEach(p=>{if(p&&!cast.some(x=>x.src===p.src))cast.push(p);});cast=cast.slice(0,2);
   const guideKey=storyRun.route==='white'?'小白':'小黑';
   if(cast.length===2&&cast[1].key===guideKey&&cast[0].key!==guideKey)cast=[cast[1],cast[0]];
   [left,right].forEach((el,i)=>{const p=cast[i];const pos=cast.length===1&&i===0?'center':(i===0?'left':'right');el.className='story-actor '+pos;if(!p){el.removeAttribute('src');el.alt='';return;}el.src=p.src;el.alt=p.name;el.classList.add('visible');if(active&&p.src===active.src)el.classList.add('active');el.onerror=function(){this.classList.remove('visible','active');};});
