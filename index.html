@@ -1390,6 +1390,7 @@
 
   #roundlabel{flex:0 0 auto;white-space:nowrap;}
   #roundlabel{font-size:14px;font-weight:bold;}
+  #roundlabel.unlimited{color:#ffe08a;}
   #autoBattleRow{flex:0 0 auto;margin-left:auto;}
   /* 使用者要求新增大廳「遊戲規則說明」按鈕，取代原本要點「展開」才看得到的常駐折疊區塊：
      #rulesBackdrop 沿用跟 #battleLogBackdrop 一樣的彈窗版型，#rules-box 需要自己
@@ -1934,7 +1935,7 @@
 </head>
 <body>
 <!-- 發布版本唯一維護位置：每次正式同步／部署時更新日期與當日版次。 -->
-<div id="appVersionBadge" data-version="v2026.07.18-12" aria-label="目前版本">讀取版本…</div>
+<div id="appVersionBadge" data-version="v2026.07.18-14" aria-label="目前版本">讀取版本…</div>
 <script>
 (function showOnlineBuildVersion(){
   const badge=document.getElementById('appVersionBadge'),version=badge.dataset.version||'dev';
@@ -3978,6 +3979,8 @@ function newState(){
     teamA:[], teamB:[],
     drawPublic:[], discardPublic:[],
     clock:0, dealtRound:-1, round:0,
+    // 故事模式不受 100 秒（10 回合）上限影響；把規則存進本局 state，避免離開故事後污染其他模式。
+    unlimitedTime:false,
     handA:[], handB:[], handCustomA:[], handCustomB:[],
     lastDiscardedA:null, lastDiscardedB:null, // for 縫合-style "get back last discarded" passives
     actingUnitId:null, actPending:null, actMovePicked:null, actMoveTarget:null, turnDeadlineAt:0,
@@ -4214,6 +4217,7 @@ function startGame(){
     ? piecePreference
     : pickRandom(DB.pieceTypes));
   state.selectedPiece = sharedPiece;
+  state.unlimitedTime = !!window.__storyBattleKind;
   applyBattleBackground(sharedPiece);
 
   // 初始站位：依照選角順序（陣列順序＝選人時的點擊順序），第1位站前、第2位站中、第3位站後
@@ -4303,18 +4307,44 @@ function topUpHand(side){
     hand.push(c);
   }
 }
+// 故事模式不限時，因此10張自選牌每走完一輪就重新洗牌再依序補發。補發時以原牌組內
+// 同名牌的張數為上限：上一輪尚未用掉的牌會保留並計入，不會因進入下一輪無限累積。
+// 一般模式仍只發完第一輪，不改變原本100秒戰鬥的規則。
+function dealCustomCardForRound(side, roundIdx){
+  const isA=side==='A';
+  const deck=isA?state.customDeck:state.customDeckB;
+  let order=isA?state.customDeckOrder:state.customDeckOrderB;
+  const hand=isA?state.handCustomA:state.handCustomB;
+  if(!deck.length || !order.length) return {dealt:false,reshuffled:false,retained:false};
+  if(!state.unlimitedTime && roundIdx>=order.length) return {dealt:false,reshuffled:false,retained:false};
+
+  let reshuffled=false;
+  if(state.unlimitedTime && roundIdx>0 && roundIdx%order.length===0){
+    order=shuffle(deck.map((_,i)=>i));
+    if(isA) state.customDeckOrder=order; else state.customDeckOrderB=order;
+    reshuffled=true;
+  }
+  const orderPos=state.unlimitedTime ? roundIdx%order.length : roundIdx;
+  const card=deck[order[orderPos]];
+  if(!card) return {dealt:false,reshuffled,retained:false};
+  const deckCopies=deck.filter(c=>c && c.id===card.id).length;
+  const handCopies=hand.filter(c=>c && c.id===card.id).length;
+  if(handCopies>=deckCopies) return {dealt:false,reshuffled,retained:true};
+  hand.push(card);
+  return {dealt:true,reshuffled,retained:false};
+}
 function dealRoundCards(roundIdx){
   topUpHand('A'); topUpHand('B');
-  if(roundIdx < state.customDeckOrder.length){
-    const cardIdx = state.customDeckOrder[roundIdx];
-    state.handCustomA.push(state.customDeck[cardIdx]);
-  }
-  if(roundIdx < state.customDeckOrderB.length){
-    const cardIdxB = state.customDeckOrderB[roundIdx];
-    state.handCustomB.push(state.customDeckB[cardIdxB]);
-  }
+  const customA=dealCustomCardForRound('A',roundIdx);
+  const customB=dealCustomCardForRound('B',roundIdx);
   state.round = roundIdx+1;
-  addLog('round', '─── 第 '+state.round+' 回合（遊戲內 '+(roundIdx*10)+'～'+(roundIdx*10+10)+' 秒）開始：公牌補至 '+HAND_LIMIT+' 張，並發下本回合的自訂卡 ───');
+  const reshuffled=customA.reshuffled||customB.reshuffled;
+  const dealt=customA.dealt||customB.dealt;
+  const retained=customA.retained||customB.retained;
+  let customMessage=dealt?'，並依牌組補發本回合的自訂卡':'';
+  if(retained) customMessage+='（尚未用掉的同名牌保留，不重複補發）';
+  if(reshuffled) customMessage+='（自選牌已重新洗牌）';
+  addLog('round', '─── 第 '+state.round+' 回合（遊戲內 '+(roundIdx*10)+'～'+(roundIdx*10+10)+' 秒）開始：公牌補至 '+HAND_LIMIT+' 張'+customMessage+' ───');
   // roundStart passives
   state.teamA.concat(state.teamB).filter(u=>u.alive).forEach(u=>{
     const p = u.moves.passive;
@@ -6801,7 +6831,8 @@ function runLoop(){
       return effectiveSpd(a) >= effectiveSpd(b) ? a : b;
     });
 
-    if(effectiveReadyAt(next) >= ROUND_SECONDS*ROUND_CAP){ finishByTimeCap(); return; }
+    // 故事戰鬥沒有 10 回合／100 秒限制；其他模式仍在相同時間點依原規則判定勝負。
+    if(!state.unlimitedTime && effectiveReadyAt(next) >= ROUND_SECONDS*ROUND_CAP){ finishByTimeCap(); return; }
 
     const prevClock = state.clock;
     state.clock = effectiveReadyAt(next);
@@ -8346,11 +8377,11 @@ function statusPresentation(key){
   return {name:definition&&definition.displayName||key,icon:definition&&definition.icon||fallback[0],color:definition&&definition.color||fallback[1],description:definition&&definition.description||''};
 }
 // Battle-start passives often grant statuses with a huge durSec (e.g. 999999) to mean
-// "lasts the whole match". A match can never exceed ROUND_CAP*ROUND_SECONDS seconds, so
-// any remaining duration at or beyond that is effectively permanent — show a short label
-// instead of a distractingly long raw second count.
+// "lasts the whole match". 普通模式可用100秒上限判斷常駐；故事模式不限時，因此只把真正使用
+// 超大秒數的狀態視為常駐，避免120秒等一般狀態被誤標。
 function statusRemainText(remain){
-  return remain >= ROUND_CAP*ROUND_SECONDS ? '常駐' : (remain+'s');
+  const permanentThreshold = state && state.unlimitedTime ? 999000 : ROUND_CAP*ROUND_SECONDS;
+  return remain >= permanentThreshold ? '常駐' : (remain+'s');
 }
 // compact（共用一格、橫向並排，見 renderUnitBlock()）時每個標籤能用的寬度非常窄。標籤文字本身
 // 不設 white-space:nowrap 的話，中文字會被硬擠到一個字一行、直向疊起來變成看不懂的樣子（比省略號
@@ -8604,7 +8635,11 @@ function collapseAllTapExpandedCells(exceptCell){
 }
 
 function renderBattle(){
-  document.getElementById('roundlabel').textContent = '第 '+Math.min(state.round,ROUND_CAP)+' 回合 ／ 遊戲內 '+Math.round(state.clock)+'s ／ '+(ROUND_SECONDS*ROUND_CAP)+'s'+(state.phase==='end'?'（結束）':'');
+  const roundLabel=document.getElementById('roundlabel');
+  roundLabel.classList.toggle('unlimited', !!state.unlimitedTime);
+  roundLabel.textContent = state.unlimitedTime
+    ? '第 '+state.round+' 回合 ／ 遊戲內 '+Math.round(state.clock)+'s ／ ∞ 不限時'+(state.phase==='end'?'（結束）':'')
+    : '第 '+Math.min(state.round,ROUND_CAP)+' 回合 ／ 遊戲內 '+Math.round(state.clock)+'s ／ '+(ROUND_SECONDS*ROUND_CAP)+'s'+(state.phase==='end'?'（結束）':'');
   // 開關已經從 checkbox 改成按鈕（見上面 HTML 的說明），這裡用 classList.toggle('on', ...) 同步
   // 視覺上的「啟用中」狀態，取代原本讀/寫 checkbox.checked。
   const autoBattleAButton=document.getElementById('autoBattleToggle');

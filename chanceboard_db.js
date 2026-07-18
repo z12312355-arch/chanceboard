@@ -4197,7 +4197,7 @@ window.CHANCEBOARD_DB = {
       "hitRate": null,
       "critRate": null,
       "cooldown": 2,
-      "description": "架起盾槍陣，獲得500點護盾，最多持續20秒。",
+      "description": "架起盾槍陣，獲得500點護盾，最多持續10秒。",
       "effectOps": [
         {
           "op": "status",
@@ -4206,7 +4206,7 @@ window.CHANCEBOARD_DB = {
           "target": "self",
           "chance": 1,
           "value": 500,
-          "durSec": 20
+          "durSec": 10
         }
       ],
       "effectTrigger": "postAction",
@@ -4253,14 +4253,14 @@ window.CHANCEBOARD_DB = {
       "hitRate": null,
       "critRate": null,
       "cooldown": null,
-      "description": "守關戰士陣亡時，進入「死戰」狀態20秒：ATK+20%、SPD+10%。每場戰鬥只觸發一次。",
+      "description": "守關戰士陣亡時，進入「死戰」狀態20秒：ATK+50%、SPD+50%。每場戰鬥只觸發一次。",
       "effectOps": [
         {
           "op": "enrageOnMonsterDeath",
           "monsterId": "m002",
           "onceFlag": "guardDeathEnrage",
-          "atkPct": 0.2,
-          "spdPct": 0.1,
+          "atkPct": 0.5,
+          "spdPct": 0.5,
           "durSec": 20
         }
       ],
@@ -4280,12 +4280,12 @@ window.CHANCEBOARD_DB = {
       "hitRate": null,
       "critRate": null,
       "cooldown": null,
-      "description": "無名戰士受到傷害時，替他承受其中25%的傷害；守關戰士死亡或不在場時失效。",
+      "description": "無名戰士受到傷害時，替他承受其中100%的傷害；守關戰士死亡或不在場時失效。",
       "effectOps": [
         {
           "op": "redirectDamage",
           "protectMonsterId": "m001",
-          "percent": 0.25
+          "percent": 1
         }
       ],
       "effectTrigger": "damageRedirect",
