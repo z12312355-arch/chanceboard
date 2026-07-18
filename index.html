@@ -96,7 +96,7 @@
   .story-route-card:hover{border-color:#f2c14e;box-shadow:0 0 22px rgba(242,193,78,.22);}
   .story-route-name{font-size:23px;font-weight:900;text-shadow:0 2px 8px #000;}.story-route-desc{font-size:12px;color:#dce0ec;margin-top:5px;}
   .story-route-progress{margin-top:10px;font-size:11px;color:#ffe08a;font-weight:750}.story-stage-map{position:relative;display:flex;flex-direction:column;gap:0;padding:8px 8px 8px 42px;max-width:760px;margin:0 auto}.story-stage-node{position:relative;display:grid;grid-template-columns:58px minmax(0,1fr) auto;align-items:center;gap:15px;width:100%;min-height:108px;border:1px solid rgba(112,126,164,.48);border-radius:15px;padding:15px 18px;background:linear-gradient(135deg,rgba(27,33,50,.95),rgba(12,16,27,.96));color:#fff;text-align:left;cursor:pointer;box-shadow:0 11px 25px rgba(0,0,0,.28);transition:.18s}.story-stage-node:not(:last-child){margin-bottom:20px}.story-stage-node:not(:last-child)::after{content:'';position:absolute;left:-25px;top:75px;width:2px;height:54px;background:linear-gradient(#f2c14e,#55617e);box-shadow:0 0 8px rgba(242,193,78,.3)}.story-stage-node::before{content:'';position:absolute;left:-33px;top:43px;width:16px;height:16px;border-radius:50%;border:2px solid #7c88a8;background:#151a28;box-shadow:0 0 0 5px rgba(15,19,31,.9)}.story-stage-node:hover{transform:translateX(5px);border-color:#f2c14e;box-shadow:0 13px 31px rgba(0,0,0,.42),0 0 18px rgba(242,193,78,.12)}.story-stage-node.cleared::before{background:#f2c14e;border-color:#ffe9a9}.story-stage-node.current{border-color:#f2c14e;background:linear-gradient(135deg,rgba(53,47,35,.97),rgba(16,19,29,.97));animation:storyStageGlow 1.8s ease-in-out infinite}.story-stage-node.current::before{background:#fff0a8;border-color:#fff}.story-stage-index{width:58px;height:58px;display:grid;place-items:center;border-radius:50%;border:1px solid rgba(242,193,78,.55);background:rgba(5,7,13,.72);color:#ffe08a;font-weight:950;font-size:19px}.story-stage-info{min-width:0}.story-stage-kicker{font-size:10px;color:#9fa9c4;letter-spacing:.2em}.story-stage-title{margin-top:4px;font-size:19px;font-weight:900}.story-stage-desc{margin-top:5px;color:#b9c1d6;font-size:11px;line-height:1.5}.story-stage-state{white-space:nowrap;border-radius:999px;padding:5px 10px;background:rgba(255,255,255,.06);color:#b9c1d6;font-size:10px;font-weight:850}.story-stage-node.cleared .story-stage-state{color:#9ee7b4}.story-stage-node.current .story-stage-state{background:#f2c14e;color:#17120a}.story-stage-toolbar{display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap;margin-top:18px;padding-top:16px;border-top:1px solid rgba(255,255,255,.1)}@keyframes storyStageGlow{50%{box-shadow:0 13px 34px rgba(0,0,0,.42),0 0 24px rgba(242,193,78,.19)}}
-  .story-stage-row{position:relative;margin-bottom:20px}.story-stage-row:last-child{margin-bottom:0}.story-stage-row .story-stage-node{margin-bottom:0}.story-stage-row:not(:last-child) .story-stage-node::after{display:block;content:'';position:absolute;left:-25px;top:75px;width:2px;height:74px;background:linear-gradient(#f2c14e,#55617e);box-shadow:0 0 8px rgba(242,193,78,.3)}.story-stage-explore{display:block;margin-top:6px;color:#ffe08a;font-size:10px;font-weight:800}.story-fate-btn{width:100%;margin-top:7px;border:1px solid rgba(124,145,205,.46);border-radius:10px;padding:8px 12px;background:rgba(18,25,43,.84);color:#cfd9f6;font-size:11px;font-weight:800;cursor:pointer;transition:.16s}.story-fate-btn:hover{border-color:#f2c14e;color:#ffe08a;background:rgba(45,39,28,.9)}
+  .story-stage-row{position:relative;margin-bottom:20px}.story-stage-row:last-child{margin-bottom:0}.story-stage-row .story-stage-node{margin-bottom:0}.story-stage-row:not(:last-child) .story-stage-node::after{display:block;content:'';position:absolute;left:-25px;top:75px;width:2px;height:74px;background:linear-gradient(#f2c14e,#55617e);box-shadow:0 0 8px rgba(242,193,78,.3)}.story-stage-explore{display:block;margin-top:6px;color:#ffe08a;font-size:10px;font-weight:800}.story-stage-source{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:auto;padding:6px 8px;border:1px solid rgba(117,216,151,.34);border-radius:8px;background:rgba(24,72,48,.3);color:#b9f0ca;font-size:10px;line-height:1.35}.story-stage-source b{color:#fff0a8}.story-stage-source.locked{border-color:rgba(124,145,205,.3);background:rgba(18,25,43,.5);color:#929db7}.story-stage-source-count{margin-left:auto;color:#9ee7b4;font-weight:850}.story-fate-btn{width:100%;margin-top:7px;border:1px solid rgba(124,145,205,.46);border-radius:10px;padding:8px 12px;background:rgba(18,25,43,.84);color:#cfd9f6;font-size:11px;font-weight:800;cursor:pointer;transition:.16s}.story-fate-btn:hover{border-color:#f2c14e;color:#ffe08a;background:rgba(45,39,28,.9)}
   #storyFateOverlay{position:absolute;z-index:18;inset:0;display:flex;align-items:center;justify-content:center;padding:22px;background:rgba(2,3,8,.84);backdrop-filter:blur(7px)}#storyFateOverlay.hidden{display:none}.story-fate-panel{width:min(920px,100%);max-height:min(90vh,850px);display:flex;flex-direction:column;border:1px solid rgba(242,193,78,.38);border-radius:18px;background:linear-gradient(155deg,rgba(18,22,35,.98),rgba(7,10,18,.99));box-shadow:0 28px 100px #000;overflow:hidden}.story-fate-head{display:flex;align-items:flex-start;gap:12px;padding:18px 20px;border-bottom:1px solid rgba(255,255,255,.1)}.story-fate-head-main{flex:1;min-width:0}.story-fate-title{font-size:22px;font-weight:950;color:#fff}.story-fate-summary{margin-top:5px;color:#b8c1d8;font-size:12px}.story-fate-graph{overflow:auto;padding:18px 20px 24px}.story-fate-legend{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:17px;color:#aeb8d0;font-size:11px}.story-fate-section{position:relative;margin:0 auto 14px;max-width:720px;border:1px solid rgba(113,128,169,.4);border-radius:14px;padding:14px;background:rgba(20,25,40,.76)}.story-fate-section.discovered{border-color:rgba(242,193,78,.45)}.story-fate-node-head{display:flex;align-items:center;gap:9px}.story-fate-node-mark{width:25px;height:25px;display:grid;place-items:center;border-radius:50%;background:#222a40;color:#8894b4;font-weight:950}.story-fate-section.discovered .story-fate-node-mark{background:#f2c14e;color:#19130a}.story-fate-node-title{font-weight:900;color:#eef2ff}.story-fate-entry{margin:9px 0 0 34px;padding:7px 10px;border-left:2px solid rgba(242,193,78,.6);border-radius:0 7px 7px 0;background:rgba(242,193,78,.07);color:#d9c891;font-size:11px;line-height:1.55}.story-fate-entry b{color:#ffe28d}.story-fate-path{margin-top:7px;color:#b9c4de;font-size:10px;line-height:1.55}.story-fate-path span{color:#ffe08a}.story-fate-options{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:12px}.story-fate-option{border:1px solid rgba(255,255,255,.1);border-radius:9px;padding:9px 10px;background:rgba(255,255,255,.035);color:#7f899f;font-size:12px}.story-fate-option.seen{border-color:rgba(117,216,151,.4);color:#b9f0ca;background:rgba(48,117,72,.12)}.story-fate-option b{display:block;margin-bottom:3px;color:inherit}.story-fate-replay{margin-top:12px;border:1px solid rgba(242,193,78,.55);border-radius:8px;padding:7px 11px;background:rgba(242,193,78,.09);color:#ffe08a;font-weight:850;cursor:pointer}.story-fate-replay:disabled{opacity:.38;cursor:not-allowed}.story-choice-state{display:block;margin-top:4px;font-size:10px;color:#8d98b3}.story-choice.seen .story-choice-state{color:#9ee7b4}.story-choice.unseen{border-color:#7ea3ff;box-shadow:0 10px 28px rgba(0,0,0,.5),0 0 15px rgba(87,129,236,.15)}
   .story-fate-destination{margin-top:7px;border-left:2px solid #f2c14e;padding:5px 8px;background:rgba(242,193,78,.08);color:#ffe7a1;font-weight:850;line-height:1.45}.story-fate-destination.reached{border-color:#75d897;background:rgba(77,170,106,.1);color:#b9f0ca}
   /* Horizontal stage route with explicit navigation and a draggable scrollbar. */
@@ -2033,7 +2033,7 @@
 </head>
 <body>
 <!-- 發布版本唯一維護位置：每次正式同步／部署時更新日期與當日版次。 -->
-<div id="appVersionBadge" data-version="v2026.07.19-04" aria-label="目前版本">讀取版本…</div>
+<div id="appVersionBadge" data-version="v2026.07.19-05" aria-label="目前版本">讀取版本…</div>
 <script>
 (function showOnlineBuildVersion(){
   const badge=document.getElementById('appVersionBadge'),version=badge.dataset.version||'dev';
@@ -2044,6 +2044,7 @@
     badge.textContent='版本 '+version+' · '+build;badge.title='線上 Build ID：'+etag;
   }).catch(()=>{});
 })();
+
 </script>
 <!-- 手機直向拿著玩戰鬥畫面時擋住底下擁擠的橫式排版，請玩家轉橫向——純 CSS 驅動（見上面
      #rotateOverlay 的 media query），不需要 JS 判斷方向。其他畫面（選角/組卡/結束）本來就正常
@@ -7296,7 +7297,8 @@ function syncActionDeadlineUi(){
   const label = document.getElementById('actConfirmTime');
   const unit = getActingUnit();
   if(!btn || !label || !unit || state.phase!=='act' || !state.turnDeadlineAt){
-    if(btn){ btn.style.setProperty('--turn-progress','1'); btn.classList.remove('timed-out','turn-locked','turn-unlocking'); }
+    const lockWithoutDeadline=!!(btn&&unit&&state.phase==='act'&&!isLocalActionController(unit));
+    if(btn){ btn.disabled=lockWithoutDeadline;btn.setAttribute('aria-disabled',String(lockWithoutDeadline));btn.style.setProperty('--turn-progress','1'); btn.classList.remove('timed-out','turn-unlocking');btn.classList.toggle('turn-locked',lockWithoutDeadline); }
     if(label) label.textContent = '';
     return;
   }
@@ -7304,6 +7306,8 @@ function syncActionDeadlineUi(){
   const shouldUnlock = localTurn && actionButtonWasLocked;
   actionButtonWasLocked = !localTurn || actionTimedOutForId===unit.id;
   btn.classList.toggle('turn-locked', !localTurn || actionTimedOutForId===unit.id);
+  btn.disabled=!localTurn || actionTimedOutForId===unit.id;
+  btn.setAttribute('aria-disabled',String(btn.disabled));
   btn.classList.toggle('turn-unlocking', shouldUnlock);
   if(shouldUnlock){
     setTimeout(function(){ btn.classList.remove('turn-unlocking'); }, 650);
@@ -8110,9 +8114,11 @@ function storyUpdateChapterStatus(){
 function storyRenderStageMap(route){
   const map=document.getElementById('storyStageMap'),progress=loadStoryStageProgress(),routeData=progress.routes[route],cleared=routeData.cleared;
   const highestVisible=storyPreviewMode?4:Math.min(4,Math.max(1,cleared.length+1));
+  const savedRun=loadStoryProgress(),activeFourth=!!(savedRun&&savedRun.active&&savedRun.route===route&&Number(savedRun.stageNumber)===4),branchTargets=(STORY_BRANCH_OUTCOMES[route]&&STORY_BRANCH_OUTCOMES[route][3])||[],branches=storySavedBranchStates(route),canonical=routeData.checkpoints&&routeData.checkpoints[3]||routeData.cleared.includes(3)&&routeData.state||null,currentBranch=activeFourth?(Number(savedRun.sourceBranch)||storyOutcomeBlockForState(route,savedRun)):storyOutcomeBlockForState(route,canonical),currentBranchLabel=currentBranch?(STORY_OUTCOME_LABELS[currentBranch]||'已探索命運'):'';
   map.innerHTML=(STORY_STAGE_DEFS[route]||[]).filter(stage=>stage.number<=highestVisible).map(stage=>{
     const done=cleared.includes(stage.number),current=!done&&stage.number===highestVisible,explore=storyExploration(route,stage.number),hasBranches=explore.total>0;
-    return '<div class="story-stage-row"><button type="button" class="story-stage-node '+(done?'cleared ':'')+(current?'current':'')+'" data-story-stage="'+stage.number+'"><span class="story-stage-index">'+(done?'✓':String(stage.number).padStart(2,'0'))+'</span><span class="story-stage-info"><span class="story-stage-kicker">STAGE 01-'+stage.number+'</span><span class="story-stage-title">'+escHtml(stage.shortTitle)+'</span><span class="story-stage-desc">'+escHtml(stage.description)+'</span>'+(hasBranches?'<span class="story-stage-explore">分支探索 '+explore.seen+'／'+explore.total+'</span>':'')+'</span><span class="story-stage-state">'+(done?'重播':current?'挑戰':'未解鎖')+'</span></button>'+(done&&hasBranches?'<button type="button" class="story-fate-btn" data-story-fate-stage="'+stage.number+'">⌘ 命運棋譜　'+explore.seen+'／'+explore.total+'</button>':'')+'</div>';
+    const source=stage.number===4?(currentBranch?'<span class="story-stage-source"><b>'+(activeFourth?'進行中的第四節':'本次挑戰沿用')+'</b>第三節「'+escHtml(currentBranchLabel)+'」<span class="story-stage-source-count">已解鎖 '+Object.keys(branches).length+'／'+branchTargets.length+'</span></span>':'<span class="story-stage-source locked">完成第三節後，將在這裡顯示本次沿用的命運節點</span>'):'';
+    return '<div class="story-stage-row"><button type="button" class="story-stage-node '+(done?'cleared ':'')+(current?'current':'')+'" data-story-stage="'+stage.number+'"><span class="story-stage-index">'+(done?'✓':String(stage.number).padStart(2,'0'))+'</span><span class="story-stage-info"><span class="story-stage-kicker">STAGE 01-'+stage.number+'</span><span class="story-stage-title">'+escHtml(stage.shortTitle)+'</span><span class="story-stage-desc">'+escHtml(stage.description)+'</span>'+(hasBranches?'<span class="story-stage-explore">分支探索 '+explore.seen+'／'+explore.total+'</span>':'')+source+'</span><span class="story-stage-state">'+(done?'重播':current?'挑戰':'未解鎖')+'</span></button>'+(done&&hasBranches?'<button type="button" class="story-fate-btn" data-story-fate-stage="'+stage.number+'">⌘ 命運棋譜　'+explore.seen+'／'+explore.total+'</button>':'')+'</div>';
   }).join('');
   map.querySelectorAll('[data-story-stage]').forEach(btn=>btn.onclick=async()=>{try{await storyEnsureSource();storyOpenStage(route,Number(btn.dataset.storyStage));}catch(e){document.getElementById('storyLoadMessage').textContent='❌ '+e.message;}});
   map.querySelectorAll('[data-story-fate-stage]').forEach(btn=>btn.onclick=e=>{e.stopPropagation();storyOpenFateMap(route,Number(btn.dataset.storyFateStage));});
@@ -8120,9 +8126,9 @@ function storyRenderStageMap(route){
   if(left)left.onclick=function(){scroller.scrollBy({left:-Math.max(260,scroller.clientWidth*.72),behavior:'smooth'});};
   if(right)right.onclick=function(){scroller.scrollBy({left:Math.max(260,scroller.clientWidth*.72),behavior:'smooth'});};
   setTimeout(function(){const focus=map.querySelector('.story-stage-node.current')||map.querySelector('.story-stage-node:last-of-type');if(focus){const row=focus.closest('.story-stage-row');scroller.scrollLeft=Math.max(0,(row?row.offsetLeft:focus.offsetLeft)-(scroller.clientWidth-focus.offsetWidth)/2);}},0);
-  const saved=loadStoryProgress(),continueBtn=document.getElementById('storyContinueBtn');
-  const canResume=!storyPreviewMode&&saved&&saved.active&&saved.route===route;
-  continueBtn.classList.toggle('hidden',!canResume);if(canResume){const stage=saved.stageNumber||((storyStageForBlock(saved.route,saved.block)||{}).number);continueBtn.textContent='繼續第 '+stage+' 關';}
+  const continueBtn=document.getElementById('storyContinueBtn');
+  const canResume=!storyPreviewMode&&savedRun&&savedRun.active&&savedRun.route===route;
+  continueBtn.classList.toggle('hidden',!canResume);if(canResume){const stage=savedRun.stageNumber||((storyStageForBlock(savedRun.route,savedRun.block)||{}).number);continueBtn.textContent='繼續第 '+stage+' 關';}
   const replayBtn=document.getElementById('storyReplayContinueBtn'),replayState=loadStoryDiscovery().routes[route].replayState;replayBtn.classList.toggle('hidden',!(replayState&&replayState.fromStage===3));if(replayState)replayBtn.dataset.route=route;
 }
 function storyFateVisualHtml(route,data){
@@ -8361,18 +8367,21 @@ async function storyClaimReward(name){const charId=storyRun.route==='white'?'009
 function storyCompleteStage(stageNumber){
   const route=storyRun.route,progress=loadStoryStageProgress(),routeData=progress.routes[route];
   const snapshot=storyRouteStateSnapshot(storyRun);
+  const completedBranch=stageNumber===3?((STORY_BRANCH_OUTCOMES[route]&&STORY_BRANCH_OUTCOMES[route][3]||[]).includes(Number(storyRun.block))?Number(storyRun.block):storyOutcomeBlockForState(route,snapshot)):null;
+  const completedBranchId=completedBranch?storyStableBlockId(route,completedBranch):null,completedBranchLabel=completedBranch?(STORY_OUTCOME_LABELS[completedBranch]||'已探索命運'):'';
+  const branchWasKnown=!!(completedBranchId&&loadStoryDiscovery().routes[route].branchStates[completedBranchId]);
   if(stageNumber===3)storyRememberBranchState(route,snapshot,storyRun.block);
   if(stageNumber>=4)storyRememberEndingPath(route,snapshot,storyRun.sourceBranch,storyRun.block);
   if(storyRun.replayMode){
     const discovery=loadStoryDiscovery();
     if(stageNumber===3)discovery.routes[route].replayState=Object.assign({fromStage:3},snapshot);
     else if(stageNumber>=4)discovery.routes[route].replayState=null;
-    saveStoryDiscovery(discovery);storyRun.active=false;storyRun.stageCompleted=stageNumber;saveStoryProgress();storyDialogueLog=[];storyShowMenu('stages',route);storyFlash(stageNumber===3?'回溯完成，可沿此命運挑戰 Boss 關':'回溯完成，新的結局已收入命運棋譜');return;
+    saveStoryDiscovery(discovery);storyRun.active=false;storyRun.stageCompleted=stageNumber;saveStoryProgress();storyDialogueLog=[];storyShowMenu('stages',route);storyFlash(stageNumber===3?(branchWasKnown?'回溯完成：「'+completedBranchLabel+'」已探索過，沒有新增第四節分支':'回溯完成：已解鎖新的第四節分支「'+completedBranchLabel+'」'):'回溯完成，新的結局已收入命運棋譜');return;
   }
   if(!routeData.cleared.includes(stageNumber))routeData.cleared.push(stageNumber);routeData.cleared.sort((a,b)=>a-b);routeData.state=snapshot;routeData.checkpoints=routeData.checkpoints||{};routeData.checkpoints[stageNumber]=snapshot;saveStoryStageProgress(progress);
   if(stageNumber>=4){if(!storyRun.completed)storyRun.completed={};storyRun.completed[route]=true;}
   storyRun.active=false;storyRun.stageCompleted=stageNumber;saveStoryProgress();storyDialogueLog=[];
-  storyShowMenu('stages',route);storyFlash(storyPreviewMode?'預覽完成第 '+stageNumber+' 關':'第 '+stageNumber+' 關通關，下一關已解鎖');
+  storyShowMenu('stages',route);storyFlash(storyPreviewMode?'預覽完成第 '+stageNumber+' 關':stageNumber===3?(branchWasKnown?'第三節通關：「'+completedBranchLabel+'」已探索過，沒有新增第四節分支':'第三節通關：已解鎖新的第四節分支「'+completedBranchLabel+'」'):'第 '+stageNumber+' 關通關，下一關已解鎖');
 }
 function storyCompleteChapter(){storyCompleteStage(storyRun.stageNumber||4);}
 function storyCarryForStage(routeData,stageNumber,override){
@@ -9333,6 +9342,7 @@ function renderBattle(){
     actPanel.classList.remove('hidden');
     actPanel.classList.add('opp-turn-disabled');
     actConfirmBtn.classList.remove('hidden');
+    actConfirmBtn.disabled=true;actConfirmBtn.setAttribute('aria-disabled','true');actConfirmBtn.classList.add('turn-locked');
     actHint.textContent=isStoryOpponentTurn?'對方回合中：顯示我方角色與手牌':'對手回合中：等待你的角色行動';
     // 對手行動時仍顯示「自己」下一次可用的完整操作資訊；所有控制都由外層
     // .opp-turn-disabled 擋住，因此看起來與自己回合一致，但絕不會誤出手。
@@ -9376,6 +9386,7 @@ function renderBattle(){
     actPanel.classList.remove('hidden');
     actConfirmBtn.classList.remove('hidden');
     const isOpponentAiTurn = !twoPlayerMode && currentActUnit.side==='B';
+    actConfirmBtn.disabled=isOpponentAiTurn;actConfirmBtn.setAttribute('aria-disabled',String(isOpponentAiTurn));actConfirmBtn.classList.toggle('turn-locked',isOpponentAiTurn);
     actPanel.classList.toggle('opp-turn-disabled', isOpponentAiTurn);
     const rooted = hasStatus(currentActUnit,'禁足');
     // 目前「預選」要站在哪一格：出手前都還沒真的套用到 unit.slot，見 moveActingUnitTo()／
