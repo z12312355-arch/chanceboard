@@ -1933,7 +1933,7 @@
 </head>
 <body>
 <!-- 發布版本唯一維護位置：每次正式同步／部署時更新日期與當日版次。 -->
-<div id="appVersionBadge" data-version="v2026.07.18-02" aria-label="目前版本">讀取版本…</div>
+<div id="appVersionBadge" data-version="v2026.07.18-03" aria-label="目前版本">讀取版本…</div>
 <script>
 (function showOnlineBuildVersion(){
   const badge=document.getElementById('appVersionBadge'),version=badge.dataset.version||'dev';
@@ -7744,7 +7744,7 @@ function storyRenderCurrent(){
   else if(beat.type==='score'){speaker='選擇的影響';text=beat.label+(beat.amount>=0?'＋':'－')+Math.abs(beat.amount);}
   else if(beat.type==='complete'){speaker='第一章　完';text=storyRun.route==='white'?'願每一枚棋子，都不被忘記。':'願望不會停止，棋局仍將繼續。';hint='點擊完成章節 ◆';}
   storyAppendLog(beat,speaker,text);
-  if(beat.type==='narration'){if(storyRun.block===2||storyRun.block===22)storyPlayCinematic(text);else{narration.textContent=text;narration.classList.remove('hidden');storyScheduleAuto(1700/storySpeed);}return;}
+  if(beat.type==='narration'){const openingMarquee=(storyRun.block===2||storyRun.block===22)&&storyRun.beat===0;if(openingMarquee)storyPlayCinematic(text);else{narration.textContent=text;narration.classList.remove('hidden');storyScheduleAuto(1700/storySpeed);}return;}
   const normalized=storyNormalizeSpeaker(speaker),isPlayer=beat.type==='dialogue'&&(normalized===(playerName||'玩家')||normalized==='玩家');
   if(isPlayer){if(storyRun.lastNpcLine){dialog.classList.remove('hidden');document.getElementById('storySpeaker').textContent=storyRun.lastNpcLine.speaker;storySetSpeakerAvatar(storyRun.lastNpcLine.speaker);document.getElementById('storyText').textContent=storyRun.lastNpcLine.text;document.getElementById('storyContinueHint').textContent='請選擇回應';}playerLine.classList.remove('hidden');playerLine.innerHTML='<button type="button" class="story-player-line-btn">'+escHtml(text)+'</button>';playerLine.querySelector('button').onclick=function(e){e.stopPropagation();storyAdvance();};return;}
   if(beat.type==='dialogue')storyRun.lastNpcLine={speaker,text};
