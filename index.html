@@ -1934,7 +1934,7 @@
 </head>
 <body>
 <!-- 發布版本唯一維護位置：每次正式同步／部署時更新日期與當日版次。 -->
-<div id="appVersionBadge" data-version="v2026.07.18-07" aria-label="目前版本">讀取版本…</div>
+<div id="appVersionBadge" data-version="v2026.07.18-08" aria-label="目前版本">讀取版本…</div>
 <script>
 (function showOnlineBuildVersion(){
   const badge=document.getElementById('appVersionBadge'),version=badge.dataset.version||'dev';
@@ -4139,9 +4139,11 @@ function applyBattleBackground(pieceName){
 function startGame(){
   // Piece type is picked once per match, at random, and shared by both sides —
   // it determines the single shared public deck both teams draw from.
-  const sharedPiece = (piecePreference!=='random' && DB.pieceTypes.includes(piecePreference))
+  // 故事第一章「兵（Pawn）」的所有戰鬥固定使用兵牌庫；其他模式仍沿用玩家指定／隨機規則。
+  const storyPiece = window.__storyBattleKind ? DB.pieceTypes.find(name=>name==='兵(Pawn)') : null;
+  const sharedPiece = storyPiece || ((piecePreference!=='random' && DB.pieceTypes.includes(piecePreference))
     ? piecePreference
-    : pickRandom(DB.pieceTypes);
+    : pickRandom(DB.pieceTypes));
   state.selectedPiece = sharedPiece;
   applyBattleBackground(sharedPiece);
 
