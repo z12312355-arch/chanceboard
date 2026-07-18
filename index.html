@@ -1934,7 +1934,7 @@
 </head>
 <body>
 <!-- 發布版本唯一維護位置：每次正式同步／部署時更新日期與當日版次。 -->
-<div id="appVersionBadge" data-version="v2026.07.18-10" aria-label="目前版本">讀取版本…</div>
+<div id="appVersionBadge" data-version="v2026.07.18-11" aria-label="目前版本">讀取版本…</div>
 <script>
 (function showOnlineBuildVersion(){
   const badge=document.getElementById('appVersionBadge'),version=badge.dataset.version||'dev';
@@ -2605,6 +2605,7 @@
     <div class="admin-tabs" id="admin-tabs" role="tablist" aria-label="後臺功能分類">
       <button type="button" class="admin-tab" data-admin-tab="characters">🎭 角色與招式</button>
       <button type="button" class="admin-tab" data-admin-tab="monsters">👹 怪物與招式</button>
+      <button type="button" class="admin-tab" data-admin-tab="statuses">🧿 狀態設定</button>
       <button type="button" class="admin-tab" data-admin-tab="flowers">🌸 花牌設定</button>
       <button type="button" class="admin-tab" data-admin-tab="global">☁️ 全域設定</button>
       <button type="button" class="admin-tab" data-admin-tab="story">📜 新手劇情</button>
@@ -2686,6 +2687,23 @@ function ensureMonsterDatabase(target){
   return target;
 }
 ensureMonsterDatabase(DB);
+const DEFAULT_STATUS_PRESENTATION = {
+  '死亡':['💀','#aeb4c2','特殊'],'HP+':['💚','#75e39a','增益'],'HP-':['🩸','#ff7575','減益'],
+  'ATK+':['⚔️','#ffd166','增益'],'ATK-':['📉','#ff8b8b','減益'],'DEF+':['🛡️','#7ed6ff','增益'],'DEF-':['🛡️','#ff8b8b','減益'],
+  'SPD+':['💨','#8ce8ff','增益'],'SPD-':['🐌','#d69cff','減益'],'BAT+':['⏳','#ff9b8f','減益'],'BAT-':['⚡','#ffe066','增益'],
+  '必中':['🎯','#ffe066','增益'],'迴避 %':['🌫️','#b9d7ff','增益'],'迴避%':['🌫️','#b9d7ff','增益'],
+  '封招':['🔒','#ff8b8b','減益'],'禁足':['⛓️','#ff9b8f','減益'],'混亂':['🌀','#d69cff','減益'],'隱身':['👻','#c8d3e6','增益'],
+  '燃燒':['🔥','#ff8a4c','減益'],'結冰':['❄️','#7ed6ff','減益'],'減傷 %':['🛡️','#7ed6ff','增益'],'減傷%':['🛡️','#7ed6ff','增益'],
+  '連動':['🔗','#ffe066','增益'],'解放':['🕊️','#f2d27a','增益'],'護盾+':['🔷','#66c7ff','增益'],'麻痺':['⚡','#e5d46b','減益'],
+  '威能':['💥','#ffcf66','增益'],'覺醒':['👁️','#e8a8ff','增益'],'強運':['🍀','#75e39a','增益'],'帶電':['⚡','#ffe066','減益']
+};
+(DB.statuses||[]).forEach(function(status){
+  const presentation=DEFAULT_STATUS_PRESENTATION[status.name]||['◆','#c8d3e6','特殊'];
+  if(!status.displayName)status.displayName=status.name;
+  if(!status.icon)status.icon=presentation[0];
+  if(!status.color)status.color=presentation[1];
+  if(!status.category)status.category=presentation[2];
+});
 const USING_EXTERNAL_DB = !!window.CHANCEBOARD_DB;
 
 // 保留 Git 內建資料快照，供 D1 同步與單項還原使用。
@@ -2737,7 +2755,7 @@ function applyGlobalGameConfig(config){
   // overwrite the new bundled combat database. Story/economy values below remain
   // editable and continue to load normally. The next admin save writes v2.
   if(Number(config.balanceVersion||1)>=CURRENT_BALANCE_VERSION){
-    ['characters','monsters','moves','cards'].forEach(function(key){
+    ['characters','monsters','moves','cards','statuses'].forEach(function(key){
       if(!Array.isArray(config[key])) return;
       const liveList=DB[key]||[];
       config[key].forEach(function(saved){
@@ -2787,7 +2805,7 @@ function applyGlobalGameConfig(config){
   if(typeof renderShopGrid==='function' && document.getElementById('shopCardGrid')) renderShopGrid();
 }
 function globalGameConfigPayload(){
-  return {balanceVersion:CURRENT_BALANCE_VERSION,characters:DB.characters,monsters:DB.monsters,moves:DB.moves,cards:DB.cards,settings:globalEconomySettings,introStory:globalIntroStory,tutorialStory:JSON.parse(JSON.stringify(TUTORIAL_LINES)),storyMode:JSON.parse(JSON.stringify(globalStoryModeConfig))};
+  return {balanceVersion:CURRENT_BALANCE_VERSION,characters:DB.characters,monsters:DB.monsters,moves:DB.moves,cards:DB.cards,statuses:DB.statuses,settings:globalEconomySettings,introStory:globalIntroStory,tutorialStory:JSON.parse(JSON.stringify(TUTORIAL_LINES)),storyMode:JSON.parse(JSON.stringify(globalStoryModeConfig))};
 }
 // Captured before account bootstrap applies D1, so this remains the exact
 // Git/chanceboard_db.js data even when the current in-memory DB was overlaid by
@@ -2800,6 +2818,7 @@ function bundledGameConfigPayload(sourceDb){
     monsters:JSON.parse(JSON.stringify(bundled.monsters||DB.monsters||[])),
     moves:JSON.parse(JSON.stringify(bundled.moves||[])),
     cards:JSON.parse(JSON.stringify(bundled.cards||[])),
+    statuses:JSON.parse(JSON.stringify(bundled.statuses||DB.statuses||[])),
     settings:Object.assign({},globalEconomySettings),
     introStory:JSON.parse(JSON.stringify(globalIntroStory)),
     tutorialStory:JSON.parse(JSON.stringify(TUTORIAL_LINES)),
@@ -8307,6 +8326,12 @@ function statusMagText(mode, value){
   if(!value) return '';
   return '('+(mode==='pct'?Math.round(value*100)+'%':value)+')';
 }
+function statusPresentation(key){
+  const normalized=String(key||'').replace(/\s+/g,'');
+  const definition=(DB.statuses||[]).find(function(status){return String(status.name||'').replace(/\s+/g,'')===normalized;});
+  const fallback=DEFAULT_STATUS_PRESENTATION[key]||DEFAULT_STATUS_PRESENTATION[normalized]||['◆','#c8d3e6','特殊'];
+  return {name:definition&&definition.displayName||key,icon:definition&&definition.icon||fallback[0],color:definition&&definition.color||fallback[1],description:definition&&definition.description||''};
+}
 // Battle-start passives often grant statuses with a huge durSec (e.g. 999999) to mean
 // "lasts the whole match". A match can never exceed ROUND_CAP*ROUND_SECONDS seconds, so
 // any remaining duration at or beyond that is effectively permanent — show a short label
@@ -8328,17 +8353,21 @@ function statusTagsHtml(u, compact){
   const chargeEntries = u.statuses.filter(s=>s.key==='帶電');
   if(chargeEntries.length){
     const remain = Math.max(0, Math.round(Math.max(...chargeEntries.map(s=>s.expiresAt))-state.clock));
-    const full = '帶電x'+chargeEntries.length+' '+statusRemainText(remain);
-    tags.push('<span class="tag status" title="'+full+'">'+full+'</span>');
+    const presentation=statusPresentation('帶電');
+    const full = presentation.icon+presentation.name+'x'+chargeEntries.length+' '+statusRemainText(remain);
+    const title=full+(presentation.description?'｜'+presentation.description:'');
+    tags.push('<span class="tag status" style="color:'+escHtml(presentation.color)+'" title="'+escHtml(title)+'">'+escHtml(full)+'</span>');
   }
   u.statuses.forEach(s=>{
     if(s.key==='帶電') return;
     const key = s.key+(s.mode==='pct'?Math.round(s.value*100)+'%':(s.value?('+'+s.value):''));
     if(seen[key]) return; seen[key]=true;
     const remain = Math.max(0, Math.round(s.expiresAt-state.clock));
-    const full = s.key+statusMagText(s.mode,s.value)+' '+statusRemainText(remain);
-    const shown = compact ? (s.key+' '+statusRemainText(remain)) : full; // compact：先省略數值百分比，狀態名＋剩餘時間優先顯示
-    tags.push('<span class="tag status" title="'+full+'">'+shown+'</span>');
+    const presentation=statusPresentation(s.key);
+    const full = presentation.icon+presentation.name+statusMagText(s.mode,s.value)+' '+statusRemainText(remain);
+    const shown = compact ? (presentation.icon+presentation.name+' '+statusRemainText(remain)) : full; // compact：先省略數值百分比，狀態名＋剩餘時間優先顯示
+    const title=full+(presentation.description?'｜'+presentation.description:'');
+    tags.push('<span class="tag status" style="color:'+escHtml(presentation.color)+'" title="'+escHtml(title)+'">'+escHtml(shown)+'</span>');
   });
   return tags.join('');
 }
@@ -9379,6 +9408,7 @@ document.getElementById('moveInfoBackdrop').onclick = function(e){ if(e.target==
 // ORIGINAL_DB_SNAPSHOT 定義在檔案前段，供 D1 同步與還原使用。
 let adminSelectedCharId = null;
 let adminSelectedMonsterId = null;
+let adminSelectedStatusId = null;
 let adminSelectedFlowerCardId = null;
 let adminActiveTab = 'characters';
 
@@ -9387,6 +9417,7 @@ function openAdminPanel(){
   document.getElementById('adminBackdrop').classList.remove('hidden');
   if(!adminSelectedCharId && DB.characters.length) adminSelectedCharId = DB.characters[0].id;
   if(!adminSelectedMonsterId && DB.monsters.length) adminSelectedMonsterId = DB.monsters[0].id;
+  if(!adminSelectedStatusId && DB.statuses.length) adminSelectedStatusId = DB.statuses[0].id;
   renderAdminActiveTab();
   renderAdminDbSourceInfo();
 }
@@ -9408,13 +9439,15 @@ function renderAdminActiveTab(){
   const charList=document.getElementById('admin-charlist');
   const showCharacters=adminActiveTab==='characters';
   const showMonsters=adminActiveTab==='monsters';
+  const showStatuses=adminActiveTab==='statuses';
   const showFlowers=adminActiveTab==='flowers';
-  const showSideList=showCharacters||showMonsters||showFlowers;
+  const showSideList=showCharacters||showMonsters||showStatuses||showFlowers;
   if(body) body.classList.toggle('characters-tab',showSideList);
   if(charList) charList.classList.toggle('hidden',!showSideList);
   renderAdminTabs();
   if(showCharacters){ renderAdminCharList(); renderAdminForm(); }
   else if(showMonsters){ renderAdminMonsterList(); renderAdminMonsterForm(); }
+  else if(showStatuses){ renderAdminStatusList(); renderAdminStatusForm(); }
   else if(showFlowers){ renderAdminFlowerCardList(); renderAdminFlowerCardForm(); }
   else renderAdminAccountManager();
 }
@@ -9497,6 +9530,13 @@ function renderAdminMonsterList(){
   if(!adminSelectedMonsterId&&DB.monsters.length)adminSelectedMonsterId=DB.monsters[0].id;
   wrap.innerHTML=DB.monsters.map(function(monster){return '<div class="ac-item'+(monster.id===adminSelectedMonsterId?' active':'')+'" data-id="'+monster.id+'">👹 '+escHtml(monster.name)+'</div>';}).join('');
   wrap.querySelectorAll('.ac-item').forEach(function(el){el.onclick=function(){adminSelectedMonsterId=this.getAttribute('data-id');renderAdminMonsterList();renderAdminMonsterForm();};});
+}
+
+function renderAdminStatusList(){
+  const wrap=document.getElementById('admin-charlist');
+  if(!adminSelectedStatusId&&DB.statuses.length)adminSelectedStatusId=DB.statuses[0].id;
+  wrap.innerHTML=DB.statuses.map(function(status){return '<div class="ac-item'+(status.id===adminSelectedStatusId?' active':'')+'" data-id="'+status.id+'"><span style="color:'+escHtml(status.color||'#c8d3e6')+'">'+escHtml(status.icon||'◆')+'</span> '+escHtml(status.displayName||status.name)+'</div>';}).join('');
+  wrap.querySelectorAll('.ac-item').forEach(function(el){el.onclick=function(){adminSelectedStatusId=this.getAttribute('data-id');renderAdminStatusList();renderAdminStatusForm();};});
 }
 
 function renderAdminFlowerCardList(){
@@ -9680,6 +9720,43 @@ async function resetAdminMonster(monsterId){
   const original=ORIGINAL_DB_SNAPSHOT.monsters.find(function(item){return item.id===monsterId;}),live=MONSTER_BY_ID[monsterId];
   if(!original||!live)return;Object.keys(live).forEach(function(key){delete live[key];});Object.assign(live,JSON.parse(JSON.stringify(original)));
   try{await saveGlobalAdminConfig();}catch(error){alert('全域還原失敗：'+error.message);}renderAdminMonsterList();renderAdminMonsterForm();renderAdminDbSourceInfo();
+}
+
+function renderAdminStatusForm(){
+  const form=document.getElementById('admin-form');
+  const status=(DB.statuses||[]).find(function(item){return String(item.id)===String(adminSelectedStatusId);});
+  if(!status){form.innerHTML='<div style="color:var(--muted)">目前沒有可編輯的狀態</div>';return;}
+  const references=[];
+  (DB.moves||[]).forEach(function(move){(move.effectOps||[]).forEach(function(op){if(op.key===status.name)references.push(move.name);});});
+  (DB.cards||[]).forEach(function(card){(card.effectOps||[]).forEach(function(op){if(op.key===status.name)references.push(card.name);});});
+  form.innerHTML='<div class="admin-section"><div class="as-title" id="admin-status-title-display">'+escHtml(status.icon||'◆')+' '+escHtml(status.displayName||status.name)+'　狀態設定</div>'
+    +'<p style="font-size:11px;color:var(--muted);line-height:1.65">「狀態代碼」是戰鬥引擎與招式 effectOps 使用的固定識別值，因此只讀，避免改名後效果失效。這裡可安全調整玩家看到的名稱、圖示、顏色、分類與說明；實際數值和持續時間仍由每個招式／卡牌的 effectOps 控制。</p>'
+    +'<div class="admin-grid">'+adminTextField('status-code','狀態代碼（只讀）',status.name)+adminTextField('status-displayName','顯示名稱',status.displayName||status.name)+adminTextField('status-icon','圖示（Emoji／短文字）',status.icon||'◆')+adminTextField('status-color','標籤顏色（#RRGGBB）',status.color||'#c8d3e6')
+    +'<div class="admin-field"><label>顯示分類</label><select id="admin-status-category">'+['增益','減益','特殊'].map(function(category){return '<option value="'+category+'"'+(status.category===category?' selected':'')+'>'+category+'</option>';}).join('')+'</select></div></div>'
+    +'<div class="admin-field"><label>狀態說明 description</label><textarea id="admin-status-description" rows="5">'+escHtml(status.description||'')+'</textarea></div>'
+    +'<div style="font-size:11px;color:var(--muted);line-height:1.6;margin:7px 0">目前引用：'+(references.length?escHtml(Array.from(new Set(references)).join('、')):'尚無招式或卡牌直接引用')+'</div>'
+    +'<div class="admin-move-actions"><button type="button" class="btn small primary" id="admin-apply-status">儲存狀態設定</button><button type="button" class="btn small" id="admin-reset-status">還原狀態設定</button><span class="admin-msg" id="admin-status-msg"></span></div></div>';
+  document.getElementById('admin-status-code').readOnly=true;
+  document.getElementById('admin-apply-status').onclick=function(){applyAdminStatus(status.id);};
+  document.getElementById('admin-reset-status').onclick=function(){resetAdminStatus(status.id);};
+}
+
+async function applyAdminStatus(statusId){
+  const status=(DB.statuses||[]).find(function(item){return String(item.id)===String(statusId);}),msg=document.getElementById('admin-status-msg');
+  const displayName=(readText('status-displayName')||'').trim(),icon=(readText('status-icon')||'').trim(),color=(readText('status-color')||'').trim();
+  if(!displayName){msg.textContent='❌ 顯示名稱不能留白。';msg.className='admin-msg err';return;}
+  if(!icon||icon.length>12){msg.textContent='❌ 圖示不能留白，且最多12個字元。';msg.className='admin-msg err';return;}
+  if(!/^#[0-9a-fA-F]{6}$/.test(color)){msg.textContent='❌ 顏色必須使用 #RRGGBB 格式，例如 #75e39a。';msg.className='admin-msg err';return;}
+  Object.assign(status,{displayName:displayName,icon:icon,color:color.toLowerCase(),category:document.getElementById('admin-status-category').value,description:(readText('status-description')||'').trim()});
+  msg.textContent='⏳ 儲存中…';msg.className='admin-msg';
+  try{await saveGlobalAdminConfig();msg.textContent='✅ 狀態顯示設定已儲存至 D1。';msg.className='admin-msg';renderAdminStatusList();const title=document.getElementById('admin-status-title-display');if(title)title.textContent=status.icon+' '+status.displayName+'　狀態設定';}
+  catch(error){msg.textContent='❌ 儲存失敗：'+error.message;msg.className='admin-msg err';}
+}
+
+async function resetAdminStatus(statusId){
+  const original=(ORIGINAL_DB_SNAPSHOT.statuses||[]).find(function(item){return String(item.id)===String(statusId);}),live=(DB.statuses||[]).find(function(item){return String(item.id)===String(statusId);});
+  if(!original||!live)return;Object.keys(live).forEach(function(key){delete live[key];});Object.assign(live,JSON.parse(JSON.stringify(original)));
+  try{await saveGlobalAdminConfig();}catch(error){alert('狀態還原失敗：'+error.message);}renderAdminStatusList();renderAdminStatusForm();renderAdminDbSourceInfo();
 }
 
 function readNum(id){
