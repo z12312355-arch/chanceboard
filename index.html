@@ -106,6 +106,7 @@
   .story-menu-card.stage-map-mode{height:min(650px,calc(100vh - 24px));max-height:none;overflow:hidden;display:flex;flex-direction:column}.stage-map-mode .story-menu-head{flex:0 0 auto}.stage-map-mode #storyStagePanel:not(.hidden){display:flex;flex:1 1 auto;min-height:0;flex-direction:column;overflow:hidden}.stage-map-mode .story-stage-shell{flex:1 1 auto;min-height:220px;overflow:hidden}.stage-map-mode .story-stage-scroll{height:100%;overflow-x:auto;overflow-y:hidden}.stage-map-mode .story-stage-map,.stage-map-mode .story-stage-row{height:100%}.stage-map-mode .story-stage-row{grid-template-rows:minmax(0,1fr) auto}.stage-map-mode .story-stage-node{height:100%;min-height:0}.stage-map-mode .story-stage-toolbar,.stage-map-mode #storyMenuActions,.stage-map-mode #storyLoadMessage{flex:0 0 auto}
   /* Spatial fate graph: the fixed canvas makes choice-to-result causality visible. */
   .story-fate-visual-scroll{overflow-x:auto;overflow-y:hidden;margin:12px -5px 18px;padding:5px 5px 18px;scrollbar-color:#d3a83f rgba(255,255,255,.08)}.story-fate-visual-scroll::-webkit-scrollbar{height:12px}.story-fate-visual-scroll::-webkit-scrollbar-track{border-radius:999px;background:rgba(255,255,255,.07)}.story-fate-visual-scroll::-webkit-scrollbar-thumb{border:3px solid transparent;border-radius:999px;background:#d3a83f padding-box}.story-fate-canvas{position:relative;width:1100px;height:610px;border:1px solid rgba(122,139,181,.28);border-radius:16px;background:radial-gradient(circle at 12% 50%,rgba(242,193,78,.08),transparent 22%),linear-gradient(135deg,rgba(15,20,34,.95),rgba(8,11,20,.98));overflow:hidden}.story-fate-svg{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}.story-fate-link{fill:none;stroke:#47516c;stroke-width:2}.story-fate-link.seen{stroke:#75d897;stroke-width:3;filter:drop-shadow(0 0 4px rgba(117,216,151,.35))}.story-fate-edge-label{position:absolute;z-index:2;transform:translate(-50%,-50%);max-width:130px;border:1px solid #4d5874;border-radius:999px;padding:4px 9px;background:#101522;color:#78839d;font-size:10px;white-space:nowrap}.story-fate-edge-label.seen{border-color:rgba(117,216,151,.65);background:#12251d;color:#b9f0ca}.story-fate-visual-node{position:absolute;z-index:3;width:220px;min-height:128px;border:1px solid #47516d;border-radius:13px;padding:12px;background:linear-gradient(145deg,rgba(28,34,52,.98),rgba(13,17,29,.98));color:#7f899f;box-shadow:0 12px 26px rgba(0,0,0,.32)}.story-fate-visual-node.discovered{border-color:rgba(242,193,78,.58);color:#e8edf9}.story-fate-visual-node.outcome.discovered{border-color:rgba(117,216,151,.55);background:linear-gradient(145deg,rgba(24,50,38,.96),rgba(12,24,21,.98))}.story-fate-visual-node-title{font-size:14px;font-weight:900;color:inherit}.story-fate-visual-node-meta{margin-top:6px;color:#8f9ab4;font-size:10px;line-height:1.5}.story-fate-visual-node.discovered .story-fate-visual-node-meta{color:#c6cee1}.story-fate-visual-node .story-fate-replay{width:100%;margin-top:9px;padding:6px 8px;font-size:10px}.story-fate-column-label{position:absolute;top:14px;z-index:1;color:#79849f;font-size:10px;font-weight:850;letter-spacing:.14em}.story-fate-scroll-note{color:#909ab3;font-size:10px;text-align:center;margin-top:-10px}
+  .story-fate-visual-scroll.story-fate-ending-scroll{overflow-x:hidden;padding-bottom:0;scrollbar-width:none}.story-fate-ending-scroll::-webkit-scrollbar{display:none}
   /* Fate map follows the same one-screen rule as stage selection: horizontal only. */
   #storyFateOverlay{padding:8px}.story-fate-panel{height:min(680px,calc(100vh - 16px));max-height:none;overflow:hidden}.story-fate-head{flex:0 0 auto}.story-fate-graph{flex:1 1 auto;min-height:0;overflow:hidden;padding:12px 16px 14px}.story-fate-visual-scroll{height:100%;margin:0;padding:0 0 14px;overflow-x:auto;overflow-y:hidden}.story-fate-canvas{height:100%;min-height:0}.story-fate-scroll-note,.story-fate-legend{display:none}.story-fate-head .hidden{display:none}
   #storyMenuActions{display:flex;gap:9px;align-items:center;flex-wrap:wrap;margin-top:18px;}
@@ -2033,7 +2034,7 @@
 </head>
 <body>
 <!-- 發布版本唯一維護位置：每次正式同步／部署時更新日期與當日版次。 -->
-<div id="appVersionBadge" data-version="v2026.07.19-08" aria-label="目前版本">讀取版本…</div>
+<div id="appVersionBadge" data-version="v2026.07.19-09" aria-label="目前版本">讀取版本…</div>
 <script>
 (function showOnlineBuildVersion(){
   const badge=document.getElementById('appVersionBadge'),version=badge.dataset.version||'dev';
@@ -8169,11 +8170,10 @@ function storyEndingVisualHtml(route,data){
   const endings=(STORY_BRANCH_OUTCOMES[route]&&STORY_BRANCH_OUTCOMES[route][4])||[];
   const compact=window.matchMedia&&window.matchMedia('(max-height:500px) and (orientation:landscape)').matches;
   const narrow=window.matchMedia&&window.matchMedia('(max-width:700px)').matches,small=compact||narrow;
-  const nodeW=small?190:220,branchH=compact?54:70,endingH=compact?58:96;
   const viewportW=Math.max(320,window.innerWidth||document.documentElement.clientWidth||1280);
-  const canvasW=small?1040:Math.max(1150,Math.min(1500,viewportW-70)),viewportH=Math.max(320,window.innerHeight||document.documentElement.clientHeight||720);
+  const canvasW=Math.max(300,Math.min(1460,viewportW-(small?(compact?36:34):90))),nodeW=compact?170:(narrow?Math.max(128,Math.min(150,Math.floor((canvasW-32)/2))):220),branchH=compact?54:70,endingH=compact?58:96,viewportH=Math.max(320,window.innerHeight||document.documentElement.clientHeight||720);
   const canvasH=Math.max(compact?280:420,Math.min(compact?520:780,viewportH-(compact?105:(narrow?120:150))));
-  const branchX=small?24:45,endingX=small?810:canvasW-nodeW-55,verticalPad=compact?4:(narrow?38:48);
+  const branchX=small?8:36,endingX=canvasW-nodeW-(small?8:36),verticalPad=compact?4:(narrow?38:48);
   const branchStartY=verticalPad,branchStep=(canvasH-verticalPad*2-branchH)/Math.max(1,branchTargets.length-1);
   const endingStartY=canvasH*.22-endingH/2,endingStep=canvasH*.56;
   const branchPos=new Map(branchTargets.map((block,index)=>[Number(block),{x:branchX,y:branchStartY+index*branchStep}]));
@@ -8191,13 +8191,13 @@ function storyEndingVisualHtml(route,data){
   const branchNodes=branchTargets.map(block=>{
     const pos=branchPos.get(Number(block)),id=storyStableBlockId(route,block),saved=branches[id],ending=r.endingPaths[id];
     const seen=storyWasBlockVisited(route,block,data)||!!saved||!!ending;
-    return '<div class="story-fate-visual-node branch '+(seen?'discovered':'')+'" style="left:'+pos.x+'px;top:'+pos.y+'px"><div class="story-fate-visual-node-title">'+(seen?escHtml(STORY_OUTCOME_LABELS[block]||'已探索命運'):'？？？')+'</div><div class="story-fate-visual-node-meta">'+(saved?(ending?'✓ 已完成':'尚未完成'):'尚未探索')+'</div>'+(saved?'<button type="button" class="story-fate-replay" data-story-fourth-branch="'+block+'">沿此命運出發</button>':'')+'</div>';
+    return '<div class="story-fate-visual-node branch '+(seen?'discovered':'')+'" style="left:'+pos.x+'px;top:'+pos.y+'px;width:'+nodeW+'px"><div class="story-fate-visual-node-title">'+(seen?escHtml(STORY_OUTCOME_LABELS[block]||'已探索命運'):'？？？')+'</div><div class="story-fate-visual-node-meta">'+(saved?(ending?'✓ 已完成':'尚未完成'):'尚未探索')+'</div>'+(saved?'<button type="button" class="story-fate-replay" data-story-fourth-branch="'+block+'">沿此命運出發</button>':'')+'</div>';
   }).join('');
   const endingNodes=endings.map(block=>{
     const pos=endingPos.get(Number(block)),seen=storyWasBlockVisited(route,block,data);
-    return '<div class="story-fate-visual-node outcome ending '+(seen?'discovered':'')+'" style="left:'+pos.x+'px;top:'+pos.y+'px"><div class="story-fate-visual-node-title">'+(seen?escHtml(STORY_OUTCOME_LABELS[block]||'已探索結局'):'？？？')+'</div><div class="story-fate-visual-node-meta">'+(seen?'已收入命運棋譜':'尚未抵達')+'</div></div>';
+    return '<div class="story-fate-visual-node outcome ending '+(seen?'discovered':'')+'" style="left:'+pos.x+'px;top:'+pos.y+'px;width:'+nodeW+'px"><div class="story-fate-visual-node-title">'+(seen?escHtml(STORY_OUTCOME_LABELS[block]||'已探索結局'):'？？？')+'</div><div class="story-fate-visual-node-meta">'+(seen?'已收入命運棋譜':'尚未抵達')+'</div></div>';
   }).join('');
-  return '<div class="story-fate-visual-scroll"><div class="story-fate-canvas story-fate-ending-map" style="width:'+canvasW+'px;height:'+canvasH+'px"><span class="story-fate-column-label" style="left:'+branchX+'px">第三節命運</span><span class="story-fate-column-label" style="left:'+endingX+'px">第四節結局</span>'+svg+branchNodes+endingNodes+'</div></div>';
+  return '<div class="story-fate-visual-scroll story-fate-ending-scroll"><div class="story-fate-canvas story-fate-ending-map" style="width:'+canvasW+'px;height:'+canvasH+'px"><span class="story-fate-column-label" style="left:'+branchX+'px">第三節命運</span><span class="story-fate-column-label" style="left:'+endingX+'px">第四節結局</span>'+svg+branchNodes+endingNodes+'</div></div>';
 }
 function storyOpenFateMap(route,stageNumber){
   const overlay=document.getElementById('storyFateOverlay'),graph=document.getElementById('storyFateGraph'),data=loadStoryDiscovery();
