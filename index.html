@@ -50,6 +50,8 @@
   #storyShade{position:absolute;inset:0;background:linear-gradient(90deg,rgba(0,0,0,.16),transparent 22%,transparent 78%,rgba(0,0,0,.16)),linear-gradient(180deg,rgba(0,0,0,.08) 0%,rgba(0,0,0,.08) 48%,rgba(2,3,7,.9) 100%);pointer-events:none;}
   #storyStage{position:absolute;z-index:2;inset:58px 0 116px;overflow:hidden;pointer-events:none;}
   .story-actor{position:absolute;bottom:-18%;width:min(54vw,820px);height:118%;object-fit:contain;object-position:center bottom;opacity:0;filter:brightness(.48) saturate(.76) drop-shadow(0 22px 28px rgba(0,0,0,.82));transition:opacity .35s ease,filter .32s ease,transform .38s cubic-bezier(.2,.8,.2,1);}
+  /* 進入 CG 演出時立繪要瞬間消失，不能留著淡出的殘影蓋在 CG 上 */
+  #storyStage.cg-scene .story-actor{transition:none;opacity:0;}
   .story-actor.left{left:30%;right:auto;transform:translateX(-50%) scale(.96);}.story-actor.right{left:70%;right:auto;transform:translateX(-50%) scale(.96);}
   .story-actor.visible{opacity:.88;}.story-actor.active{opacity:1;filter:brightness(1) saturate(1) drop-shadow(0 25px 34px rgba(0,0,0,.86));}
   .story-actor.left.active,.story-actor.right.active{transform:translateX(-50%) scale(1.035);}
@@ -8784,12 +8786,23 @@ function storySetCg(){
   // CG 依「目前這一拍」的狀態，而不是整個段落——同一段落裡 Boss 戰前後可以是不同的 CG。
   const beat=storyRun?storyParseBlock(storyRun.block)[storyRun.beat]:null;
   const directive=beat&&beat.cg||null,src=directive&&directive.src||'';
-  // 使用者反應「故事裡有時候會出現破圖」：CG 是整個畫面大小的 <img>，先前沒有掛 onerror，
-  // 只要設定裡的檔名不存在（改過檔名、或後台留著舊路徑）就會顯示一大張破圖示。其他故事圖層
-  // （立繪 storyRenderStage、頭像 storySetSpeakerAvatar）本來就有 onerror 隱藏，這裡補齊，
-  // 讓找不到圖時單純不顯示 CG，而不是破圖。
-  if(src){[img,blur].forEach(el=>{el.onerror=function(){this.classList.remove('show');this.removeAttribute('src');};if(!el.src.endsWith(src))el.src=src;el.classList.add('show');});}
-  else [img,blur].forEach(el=>{el.classList.remove('show');el.removeAttribute('src');});
+  const clear=function(){[img,blur].forEach(el=>{el.classList.remove('show');el.removeAttribute('src');});};
+  if(!src){img.dataset.cgSrc='';clear();return;}
+  if(img.dataset.cgSrc===src){[img,blur].forEach(el=>el.classList.add('show'));return;}
+  // 使用者反應「看CG時前面都會先跑出前一張圖，有點突兀」：<img> 換 src 之後，瀏覽器要等新圖
+  // 解碼完成才會換畫面，在那之前畫面上留著的仍是「上一張已解碼的圖」——再加上 .show 有 0.7 秒
+  // 的淡入，等於先看到舊 CG（開場的兵、或上一段的擊破圖）淡進來，才被新圖取代。
+  // 改成：先把舊圖連 src 一起清掉（畫面立刻淨空），用 Image() 在背景預載，載好了才塞進去淡入。
+  // 這同時取代了原本掛在元素上的 onerror ——載不到就整個不顯示，不會出現破圖。
+  img.dataset.cgSrc=src;
+  clear();
+  const pre=new Image();
+  pre.onload=function(){
+    if(img.dataset.cgSrc!==src)return; // 已經被後面的 CG 取代，放棄這次結果
+    [img,blur].forEach(el=>{el.src=src;el.classList.add('show');});
+  };
+  pre.onerror=function(){if(img.dataset.cgSrc===src){img.dataset.cgSrc='';clear();}};
+  pre.src=src;
 }
 function storyNormalizeSpeaker(s){return String(s||'').replace(/（.*?）/g,'').trim();}
 // （2026-07-20 移除 storyPlayerPortrait()：舊設計會用隊長的 images/<id>_full.png 當玩家立繪，
@@ -8803,9 +8816,14 @@ function storyPortraitForSpeaker(s){
 function storyRenderStage(beat){
   const left=document.getElementById('storyActorLeft'),right=document.getElementById('storyActorRight');
   // CG 演出期間一律不疊立繪（使用者要求「放這張CG，然後不要放BOSS的立繪」）。
+  // 立繪有 .35s 的淡出，進 CG 時若只是移除 visible，上一位角色會在新 CG 上淡出一小段時間，
+  // 同樣造成「先跑出上一張圖」的感覺。cg-scene 這個 class 直接關掉過場，立繪瞬間消失。
+  const stage=document.getElementById('storyStage');
   if(beat&&beat.cg){
+    if(stage)stage.classList.add('cg-scene');
     [left,right].forEach(el=>{el.classList.remove('visible','active');el.removeAttribute('src');});return;
   }
+  if(stage)stage.classList.remove('cg-scene');
   const normalized=storyNormalizeSpeaker(beat.speaker),isPlayer=normalized===(playerName||'玩家')||normalized==='玩家',isChoice=beat.type==='choice';
   const heldSpeaker=isChoice&&storyRun.lastContext&&storyRun.lastContext.speaker?storyRun.lastContext.speaker:(storyRun.lastNpcLine&&storyRun.lastNpcLine.speaker);
   const previous=(isPlayer||isChoice)&&heldSpeaker?storyPortraitForSpeaker(heldSpeaker):null;
