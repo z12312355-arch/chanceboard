@@ -4143,7 +4143,7 @@ window.CHANCEBOARD_DB = {
       "id": "m002-sword",
       "ownerId": "m002",
       "ownerName": "守關戰士",
-      "name": "拒馬橫掃",
+      "name": "橫掃",
       "slot": "劍",
       "condition": 1,
       "rangeType": "劍",
@@ -4188,7 +4188,7 @@ window.CHANCEBOARD_DB = {
       "id": "m002-magic",
       "ownerId": "m002",
       "ownerName": "守關戰士",
-      "name": "鐵壁陣式",
+      "name": "鐵壁",
       "slot": "法",
       "condition": 2,
       "rangeType": null,
@@ -4197,7 +4197,7 @@ window.CHANCEBOARD_DB = {
       "hitRate": null,
       "critRate": null,
       "cooldown": 2,
-      "description": "架起盾槍陣，獲得500點護盾，最多持續10秒。",
+      "description": "架起盾，獲得500點護盾，最多持續10秒。",
       "effectOps": [
         {
           "op": "status",
@@ -4216,7 +4216,7 @@ window.CHANCEBOARD_DB = {
       "id": "m002-wish",
       "ownerId": "m002",
       "ownerName": "守關戰士",
-      "name": "不退之誓",
+      "name": "還牙",
       "slot": "願",
       "condition": 2,
       "rangeType": null,
@@ -4225,15 +4225,14 @@ window.CHANCEBOARD_DB = {
       "hitRate": null,
       "critRate": null,
       "cooldown": 4,
-      "description": "為己方全體賦予減傷20%，持續20秒。",
+      "description": "為己方全體賦予還手狀態，被攻擊時會以100威力立即反擊攻擊者，並可立即行動，持續20秒。",
       "effectOps": [
         {
           "op": "status",
-          "key": "減傷%",
+          "key": "反擊",
           "mode": "value",
           "target": "ownTeam",
           "chance": 1,
-          "value": 0.2,
           "durSec": 20
         }
       ],
