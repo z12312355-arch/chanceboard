@@ -10792,7 +10792,28 @@ function adminBattleEditorHtml(){const stored=globalStoryModeConfig.battles||{},
 function adminCollectBattles(){const result={};document.querySelectorAll('[data-battle-key]').forEach(function(card){result[card.dataset.battleKey]={kind:card.querySelector('.admin-battle-kind').value,opponentIds:card.querySelector('.admin-battle-opponents').value.split(/[,，\s]+/).map(function(s){return s.trim();}).filter(Boolean),bossMonsterId:card.querySelector('.admin-battle-boss').value.trim(),pieceType:card.querySelector('.admin-battle-piece').value.trim()||'兵(Pawn)',teamSize:Number(card.querySelector('.admin-battle-size').value)||0,unlimitedTime:card.querySelector('.admin-battle-unlimited').checked};});return result;}
 function adminRefreshBattleEditor(){const box=document.getElementById('admin-storymode-battles');if(box)box.innerHTML=adminBattleEditorHtml();}
 function adminRebuildDesignerFromRaw(){const raw=document.getElementById('admin-storymode-text');if(!raw)return;const blocks=adminStorySplitBlocks(raw.value);if(blocks.length<3){alert('完整文本至少需要「路線選擇」「黑方線」「白方線」三個分段，目前為 '+blocks.length+' 個。');return;}adminStoryDraftBlocks=blocks;adminStoryDraftIndex=Math.min(2,blocks.length-1);adminStoryRefreshNodeList();adminStorySelectNode(adminStoryDraftIndex);adminRefreshBattleEditor();}
-function adminSyncDesignerToRaw(){adminStoryCommitNode();const raw=document.getElementById('admin-storymode-text');if(raw)raw.value=adminStoryJoinBlocks(adminStoryDraftBlocks);}
+// 「完整名稱」是關卡標題的唯一來源：儲存／預覽時把各關起始節點的標題行同步改寫成完整名稱，
+// 讓節點列表、戰鬥卡與 D1 文本跟著改名（只動「第X節／…結尾／舊關卡名」這類標題行，不碰劇情內容）。
+function adminSyncStageTitlesIntoBlocks(){
+  adminSyncStageDraftFromDom();
+  const draft=adminEnsureStageDraft(),knownTitles=[].concat(draft.black||[],draft.white||[]).map(function(s){return String(s.title||'');});
+  let renamedCurrent=false;
+  ['black','white'].forEach(function(route){(draft[route]||[]).forEach(function(stage){
+    const idx=Number(stage.startBlock);
+    if(!stage.title||!(idx>=0&&idx<adminStoryDraftBlocks.length))return;
+    const lines=String(adminStoryDraftBlocks[idx]||'').split(/\r?\n/);
+    let first=0;while(first<lines.length&&!lines[first].trim())first++;
+    const line=(lines[first]||'').trim();
+    if(!line||line===stage.title)return;
+    if(!(/^第.+節|結尾$/.test(line)||knownTitles.includes(line)))return;
+    lines[first]=stage.title;
+    adminStoryDraftBlocks[idx]=lines.join('\n');
+    if(idx===adminStoryDraftIndex)renamedCurrent=true;
+  });});
+  if(renamedCurrent){const field=document.getElementById('admin-storymode-node-text');if(field)field.value=adminStoryDraftBlocks[adminStoryDraftIndex]||'';}
+  adminStoryRefreshNodeList();
+}
+function adminSyncDesignerToRaw(){adminStoryCommitNode();adminSyncStageTitlesIntoBlocks();const raw=document.getElementById('admin-storymode-text');if(raw)raw.value=adminStoryJoinBlocks(adminStoryDraftBlocks);}
 function adminParseJsonField(id,label){try{const value=JSON.parse(document.getElementById(id).value);if(!value||typeof value!=='object')throw new Error('必須是物件');return value;}catch(e){throw new Error(label+'格式錯誤：'+e.message);}}
 function adminApplyStoryDraftForPreview(){
   adminSyncDesignerToRaw();const msg=document.getElementById('admin-storymode-msg'),text=document.getElementById('admin-storymode-text').value,error=validateStoryChapterText(text),portraits=parseStoryPortraitConfig(document.getElementById('admin-storymode-portraits').value);
