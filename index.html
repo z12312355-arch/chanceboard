@@ -8852,14 +8852,42 @@ function storyFateVisualHtml(route,data){
       return x>rc.x-PAD&&x<rc.x+rc.w+PAD&&y>rc.y-PAD&&y<rc.y+rc.h+PAD;
     });
   };
-  // 取樣一段直線，判斷中途是否穿過任何卡片（兩端自己的卡片不算）。
-  const straightIsClear=function(link){
-    const skip={a:link.from,b:link.to},steps=24;
-    for(let i=1;i<steps;i++){
-      const t=i/steps,x=link.x1+(link.x2-link.x1)*t,y=link.y1+(link.y2-link.y1)*t;
-      if(hitsCard(x,y,skip))return false;
+  // 連線的基本形狀：從卡片水平拉出一小段 → 平滑的 S 形轉折 → 再水平切進目標卡片。
+  // 純直線雖然最短，但斜著穿過畫面不好看（使用者反應「純走直線太醜」）；這種「先弧形、
+  // 兩端走直線」的畫法是流程圖的常見語彙，箭頭也會水平地進出卡片，收尾比較乾淨。
+  // 兩端同高時 S 形自然退化成一條水平直線，不會多出無謂的彎。
+  const smoothGeom=function(link){
+    const span=link.x2-link.x1,stub=Math.max(14,Math.min(46,span*.18));
+    const ax=link.x1+stub,bx=link.x2-stub,k=Math.max(0,(bx-ax)*.5);
+    return {ax:ax,bx:bx,c1:ax+k,c2:bx-k};
+  };
+  const smoothPoints=function(link){
+    const g=smoothGeom(link),pts=[];
+    if(g.bx<=g.ax){
+      for(let i=0;i<=20;i++){const t=i/20;pts.push({x:link.x1+(link.x2-link.x1)*t,y:link.y1+(link.y2-link.y1)*t});}
+      return pts;
     }
-    return true;
+    pts.push({x:link.x1,y:link.y1},{x:g.ax,y:link.y1});
+    for(let i=1;i<=18;i++){
+      const t=i/18,u=1-t;
+      pts.push({x:u*u*u*g.ax+3*u*u*t*g.c1+3*u*t*t*g.c2+t*t*t*g.bx,
+                y:u*u*u*link.y1+3*u*u*t*link.y1+3*u*t*t*link.y2+t*t*t*link.y2});
+    }
+    pts.push({x:link.x2,y:link.y2});
+    return pts;
+  };
+  const smoothPathD=function(link){
+    const g=smoothGeom(link);
+    if(g.bx<=g.ax)return 'M '+link.x1+' '+link.y1+' L '+link.x2+' '+link.y2;
+    return 'M '+link.x1+' '+link.y1+' L '+g.ax+' '+link.y1
+      +' C '+g.c1+' '+link.y1+', '+g.c2+' '+link.y2+', '+g.bx+' '+link.y2
+      +' L '+link.x2+' '+link.y2;
+  };
+  // 判斷這條路線中途是否穿過任何卡片（兩端自己的卡片不算）。取樣的是「實際會畫出來的形狀」，
+  // 不是理想直線——S 形在同一個 x 上的 y 跟直線不同，用直線判斷會漏掉真正的碰撞。
+  const pathIsClear=function(link,pts){
+    const skip={a:link.from,b:link.to};
+    return !pts.some(function(p,i){return i>0&&i<pts.length-1&&hitsCard(p.x,p.y,skip);});
   };
   // 跨欄的長邊走底部走線道。不能用單一條三次貝茲把控制點壓到底就算數——貝茲不會經過控制點，
   // 而且 x 前進得比 y 回升快，曲線仍會在中途切進卡片。改成「下降圓角 → 水平直線 → 上升圓角」
@@ -8868,11 +8896,12 @@ function storyFateVisualHtml(route,data){
   // 使用者要求「不會被卡片蓋住就優先走直線，不要繞路」：先試最短的直線，只有真的會穿過
   // 卡片時才退回曲線／底部走線道。同高度的節點之間因此都是筆直的一條，讀起來乾淨很多。
   const linkPath=function(link){
-    // 直線優先，且不分長短——跨欄的長邊只要中途沒有卡片擋著，一樣直接拉直，
+    // 平滑路線優先，且不分長短——跨欄的長邊只要中途沒有卡片擋著，一樣直接連過去，
     // 不必為了「它很長」就一律繞到底部走線道（那才是多餘的繞路）。
-    if(straightIsClear(link)){
-      link.shape='line';
-      return 'M '+link.x1+' '+link.y1+' L '+link.x2+' '+link.y2;
+    const pts=smoothPoints(link);
+    if(pathIsClear(link,pts)){
+      link.shape='smooth';link.pts=pts;
+      return smoothPathD(link);
     }
     if(link.longSpan){
       link.shape='lane';
@@ -8893,6 +8922,11 @@ function storyFateVisualHtml(route,data){
   // 完全沒有考慮卡片。改成沿著「實際畫出來的那條路徑」取樣，挑第一個既不壓到卡片、
   // 也不撞到其他標籤的位置（從中點往兩側找），全都不行才退回中點並垂直推開。
   const pointOnLink=function(link,t){
+    // 平滑路線已經取樣過整條形狀，直接沿用那份點列，標籤才會真的落在線上。
+    if(link.shape==='smooth'&&link.pts&&link.pts.length){
+      const idx=Math.max(0,Math.min(link.pts.length-1,Math.round(t*(link.pts.length-1))));
+      return link.pts[idx];
+    }
     if(link.shape==='curve'&&link.ctrl){
       const u=1-t,[c1,c2]=link.ctrl;
       return {x:u*u*u*link.x1+3*u*u*t*c1+3*u*t*t*c2+t*t*t*link.x2,
