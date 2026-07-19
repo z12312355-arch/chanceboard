@@ -8678,7 +8678,10 @@ function storyCycleAuto(){if(!storyAutoMode){storyAutoMode=true;storySpeed=1;}el
 function storyHidePresentation(){
   storyCancelReveal();storyCancelAuto();
   const cinematic=document.getElementById('storyCinematic');cinematic.classList.add('hidden');cinematic.innerHTML='';
-  ['storyNarration','storyPlayerLine','storyChapterSplash'].forEach(id=>{const el=document.getElementById(id);el.classList.add('hidden');if(id!=='storyChapterSplash')el.innerHTML='';});
+  // storyMotto／storyComplete 是後來加的全螢幕演出層，z-index 高於關卡選單，
+  // 離開故事畫面時一定要一起收掉。漏掉的話（尤其是章節結束的落幕層）它會蓋在選單上、
+  // 又因為整片 inset:0 攔截所有點擊，看起來就像整個畫面卡死、完全點不動。
+  ['storyNarration','storyPlayerLine','storyChapterSplash','storyMotto','storyComplete'].forEach(id=>{const el=document.getElementById(id);if(!el)return;el.classList.add('hidden');if(id==='storyNarration'||id==='storyPlayerLine')el.innerHTML='';});
   ['storyActorLeft','storyActorRight'].forEach(id=>{const el=document.getElementById(id);el.className='story-actor '+(id.endsWith('Left')?'left':'right');el.removeAttribute('src');});
 }
 function storyUpdateChapterStatus(){
