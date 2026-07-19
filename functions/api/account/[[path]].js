@@ -78,7 +78,7 @@ function normalizeGlobalConfig(input) {
   const storyLines = key => Array.isArray(introSource[key]) && introSource[key].length >= 2 && introSource[key].length <= 20
     ? introSource[key].map(line => String(line).slice(0, 300)) : introFallback[key];
   const tutorialSource = source.tutorialStory && typeof source.tutorialStory === 'object' ? source.tutorialStory : null;
-  const tutorialSideKeys = ['pickIntro','afterPick','goldIntro','goldOffer','afterGold','diamondIntro','diamondOffer','afterDiamond','teamIntro','teamPick3','teamDeck','afterTeam','battleIntro','battlePickTeam','afterBattleWin','afterBattleLose','returnLobby','ending'];
+  const tutorialSideKeys = ['pickIntro','afterPick','goldIntro','goldOffer','afterGold','diamondIntro','diamondOffer','afterDiamond','teamIntro','teamPick3','teamDeck','afterTeam','battleIntro','suitGuide','battlePickTeam','afterBattleWin','afterBattleLose','returnLobby','ending'];
   let tutorialStory = null;
   if (tutorialSource) {
     tutorialStory = {};
@@ -114,6 +114,13 @@ function normalizeGlobalConfig(input) {
       const safeSpeaker = String(speaker).trim().slice(0, 100), safePath = text(path);
       if (safeSpeaker && safePath) portraits[safeSpeaker] = safePath;
     });
+    // Structured story data (stage defs, flow rules, fate map config, battle configs)
+    // is stored as opaque JSON documents with a size cap. Dropping unknown keys here
+    // was the bug that silently discarded every admin stage edit on save.
+    const jsonDocument = (value, maxBytes) => {
+      if (!value || typeof value !== 'object') return null;
+      try { return JSON.stringify(value).length <= maxBytes ? JSON.parse(JSON.stringify(value)) : null; } catch (_) { return null; }
+    };
     storyMode = {
       chapterTitle: text(storyModeSource.chapterTitle) || '第一章　兵（Pawn）',
       chapter1Text: typeof storyModeSource.chapter1Text === 'string' ? storyModeSource.chapter1Text.slice(0, 200000) : '',
@@ -122,7 +129,11 @@ function normalizeGlobalConfig(input) {
       routeDescriptions: routeObject('routeDescriptions'),
       portraits,
       typewriterMs: intInRange(storyModeSource.typewriterMs, 24, 8, 120),
-      cinematicIntervalMs: intInRange(storyModeSource.cinematicIntervalMs, 850, 150, 3000)
+      cinematicIntervalMs: intInRange(storyModeSource.cinematicIntervalMs, 850, 150, 3000),
+      stageDefs: jsonDocument(storyModeSource.stageDefs, 100000),
+      flow: jsonDocument(storyModeSource.flow, 100000),
+      fate: jsonDocument(storyModeSource.fate, 100000),
+      battles: jsonDocument(storyModeSource.battles, 100000)
     };
   }
   return {

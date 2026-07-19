@@ -2809,7 +2809,9 @@ const DB = window.CHANCEBOARD_DB || EMBEDDED_DB;
 // 會在載入當下補上這份預設值；後臺另存 chanceboard_db.js 或同步 D1 時也會完整帶上。
 const DEFAULT_MONSTERS = [
   {id:'m001',name:'無名戰士',title:'第一關守關者',element:'槍',hp:2600,atk:120,def:110,spd:90,assetDir:'monster',description:'沉默駐守在棋盤入口的長槍戰士。擅長封鎖走位，並在戰況危急時召來守關戰士。'},
-  {id:'m002',name:'守關戰士',title:'受召喚的衛士',element:'槍',hp:1300,atk:90,def:130,spd:70,assetDir:'monster',description:'回應無名戰士誓約而現身的重裝長槍衛士，負責承受攻勢與牽制敵人。'}
+  {id:'m002',name:'守關戰士',title:'受召喚的衛士',element:'槍',hp:1300,atk:90,def:130,spd:70,assetDir:'monster',description:'回應無名戰士誓約而現身的重裝長槍衛士，負責承受攻勢與牽制敵人。'},
+  {id:'m003',name:'荒野孤狼',title:'初心荒野的獵手',element:'劍',hp:900,atk:100,def:60,spd:130,assetDir:'monster',description:'徘徊在初心荒野的灰狼。動作迅捷、皮薄血少，是新踏上棋盤的玩家第一個學會敬畏的對手。'},
+  {id:'m004',name:'訓練稻草人',title:'教學用的木架',element:'劍',hp:600,atk:0,def:50,spd:10,assetDir:'monster',description:'插在訓練場上的稻草人。不會攻擊、不會反抗，是練習劍・槍・法・願出手流程的最佳對象。'}
 ];
 const DEFAULT_MONSTER_MOVES = [
   {id:'m001-sword',ownerId:'m001',ownerName:'無名戰士',name:'拒關橫掃',slot:'劍',condition:1,rangeType:'劍',scope:'群',powerRatio:180,hitRate:0.95,critRate:0.1,cooldown:null,description:'以長槍橫掃前方敵人；命中時有30%機率使對象禁足10秒。',effectOps:[{op:'status',key:'禁足',mode:'value',target:'target',chance:0.3,durSec:10}],effectTrigger:'onHit',effectChance:1},
@@ -2821,7 +2823,12 @@ const DEFAULT_MONSTER_MOVES = [
   {id:'m002-gun',ownerId:'m002',ownerName:'守關戰士',name:'穿陣突刺',slot:'槍',condition:1,rangeType:'槍',scope:'單',powerRatio:220,hitRate:0.9,critRate:0.1,cooldown:null,description:'朝最近的敵人發動長槍突刺；命中時有25%機率使對象禁足10秒。',effectOps:[{op:'status',key:'禁足',mode:'value',target:'target',chance:0.25,durSec:10}],effectTrigger:'onHit',effectChance:1},
   {id:'m002-magic',ownerId:'m002',ownerName:'守關戰士',name:'鐵壁陣式',slot:'法',condition:2,rangeType:null,scope:null,powerRatio:null,hitRate:null,critRate:null,cooldown:2,description:'架起盾槍陣，獲得500點護盾，最多持續20秒。',effectOps:[{op:'status',key:'護盾+',mode:'value',target:'self',chance:1,value:500,durSec:20}],effectTrigger:'postAction',effectChance:1},
   {id:'m002-wish',ownerId:'m002',ownerName:'守關戰士',name:'不退之誓',slot:'願',condition:2,rangeType:null,scope:null,powerRatio:null,hitRate:null,critRate:null,cooldown:4,description:'為己方全體賦予減傷20%，持續20秒。',effectOps:[{op:'status',key:'減傷%',mode:'value',target:'ownTeam',chance:1,value:0.2,durSec:20}],effectTrigger:'postAction',effectChance:1},
-  {id:'m002-passive',ownerId:'m002',ownerName:'守關戰士',name:'代主受擊',slot:'被',condition:null,rangeType:null,scope:null,powerRatio:null,hitRate:null,critRate:null,cooldown:null,description:'無名戰士受到傷害時，替他承受其中25%的傷害；守關戰士死亡或不在場時失效。',effectOps:[{op:'redirectDamage',protectMonsterId:'m001',percent:0.25}],effectTrigger:'damageRedirect',effectChance:1}
+  {id:'m002-passive',ownerId:'m002',ownerName:'守關戰士',name:'代主受擊',slot:'被',condition:null,rangeType:null,scope:null,powerRatio:null,hitRate:null,critRate:null,cooldown:null,description:'無名戰士受到傷害時，替他承受其中25%的傷害；守關戰士死亡或不在場時失效。',effectOps:[{op:'redirectDamage',protectMonsterId:'m001',percent:0.25}],effectTrigger:'damageRedirect',effectChance:1},
+  {id:'m003-sword',ownerId:'m003',ownerName:'荒野孤狼',name:'撕咬',slot:'劍',condition:1,rangeType:'劍',scope:'單',powerRatio:160,hitRate:0.95,critRate:0.15,cooldown:null,description:'咬住最近的敵人撕扯；命中時有25%機率使對象DEF-15%，持續10秒。',effectOps:[{op:'status',key:'DEF-',mode:'pct',target:'target',chance:0.25,value:0.15,durSec:10}],effectTrigger:'onHit',effectChance:1},
+  {id:'m003-gun',ownerId:'m003',ownerName:'荒野孤狼',name:'猛撲',slot:'槍',condition:1,rangeType:'槍',scope:'單',powerRatio:220,hitRate:0.9,critRate:0.1,cooldown:null,description:'壓低身形猛然撲向遠處的敵人；命中時有25%機率將對象撲倒，禁足5秒。',effectOps:[{op:'status',key:'禁足',mode:'value',target:'target',chance:0.25,durSec:5}],effectTrigger:'onHit',effectChance:1},
+  {id:'m003-magic',ownerId:'m003',ownerName:'荒野孤狼',name:'月下狼嚎',slot:'法',condition:2,rangeType:null,scope:null,powerRatio:null,hitRate:null,critRate:null,cooldown:2,description:'仰首長嚎喚醒野性：自身ATK+20%、SPD+20%，持續15秒。',effectOps:[{op:'status',key:'ATK+',mode:'pct',target:'self',chance:1,value:0.2,durSec:15},{op:'status',key:'SPD+',mode:'pct',target:'self',chance:1,value:0.2,durSec:15}],effectTrigger:'postAction',effectChance:1},
+  {id:'m003-wish',ownerId:'m003',ownerName:'荒野孤狼',name:'獵殺本能',slot:'願',condition:3,rangeType:'劍',scope:'單',powerRatio:320,hitRate:0.9,critRate:0.3,cooldown:4,description:'鎖定氣息最弱的獵物，發動致命的一擊。',effectOps:[],effectTrigger:null,effectChance:1},
+  {id:'m003-passive',ownerId:'m003',ownerName:'荒野孤狼',name:'野性嗅覺',slot:'被',condition:null,rangeType:null,scope:null,powerRatio:null,hitRate:null,critRate:null,cooldown:null,description:'開戰時嗅出獵物的氣味：自身SPD+10%，持續整場戰鬥。',effectOps:[{op:'status',key:'SPD+',mode:'pct',target:'self',chance:1,value:0.1,durSec:999}],effectTrigger:'battleStart',effectChance:1}
 ];
 function ensureMonsterDatabase(target){
   if(!Array.isArray(target.monsters)) target.monsters=[];
@@ -2890,7 +2897,7 @@ let globalStoryModeConfig = {
   portraits:Object.assign({},DEFAULT_STORY_PORTRAITS),typewriterMs:24,cinematicIntervalMs:850,
   stageDefs:null,flow:null,fate:null,battles:{}
 };
-const TUTORIAL_SIDE_TEXT_KEYS = ['pickIntro','afterPick','goldIntro','goldOffer','afterGold','diamondIntro','diamondOffer','afterDiamond','teamIntro','teamPick3','teamDeck','afterTeam','battleIntro','battlePickTeam','afterBattleWin','afterBattleLose','returnLobby','ending'];
+const TUTORIAL_SIDE_TEXT_KEYS = ['pickIntro','afterPick','goldIntro','goldOffer','afterGold','diamondIntro','diamondOffer','afterDiamond','teamIntro','teamPick3','teamDeck','afterTeam','battleIntro','suitGuide','battlePickTeam','afterBattleWin','afterBattleLose','returnLobby','ending'];
 function applyStoryModePresentationConfig(){
   const cfg=globalStoryModeConfig;
   const title=document.getElementById('storyChapterTitle');if(title)title.textContent=cfg.chapterTitle;
@@ -4382,8 +4389,8 @@ function startGame(){
   if(twoPlayerMode && state.selectedIdsB.length===currentMatchSize){
     chosenB = state.selectedIdsB.map(id=>CHAR_BY_ID[id]);
   } else if(window.__tutorialFixedOpponentIds && window.__tutorialFixedOpponentIds.length>=currentMatchSize){
-    // 新手教學專用：依目前教學場次人數取固定弱化對手；目前流程使用 1v1。
-    chosenB = window.__tutorialFixedOpponentIds.slice(0,currentMatchSize).map(id=>CHAR_BY_ID[id]);
+    // 新手教學專用：依目前教學場次人數取固定弱化對手；目前流程使用 1v1 打訓練稻草人（m004）。
+    chosenB = window.__tutorialFixedOpponentIds.slice(0,currentMatchSize).map(id=>CHAR_BY_ID[id]||MONSTER_BY_ID[id]);
   } else if(window.__storyBossMonsterId && MONSTER_BY_ID[window.__storyBossMonsterId]){
     chosenB = [MONSTER_BY_ID[window.__storyBossMonsterId]];
   } else if(window.__storyFixedOpponentIds && window.__storyFixedOpponentIds.length>=currentMatchSize){
@@ -7009,6 +7016,8 @@ function storyBossBestPlan(unit,ownTeam,enemyTeam,canMove){
 
 function aiHandleTurn(unit){
   unit._didNotMoveThisTurn = true;
+  // 完全沒有主動招式的怪物（例如教學稻草人 m004）是純靶子：不移動、不出招、也不打花牌。
+  if(unit.isMonster&&!['sword','gun','magic','wish'].some(k=>unit.moves&&unit.moves[k]))return;
   const canMove = !hasStatus(unit,'禁足');
   const bossControlled=isStoryBossAiUnit(unit);
   const bossFlowerUsed=bossControlled&&storyBossUseCriticalFlower(unit,state.teamB,state.teamA);
@@ -7116,7 +7125,11 @@ function runLoop(){
       state.actPending = null;
       state.actMovePicked = null;
       state.actMoveTarget = null;
-      state.turnDeadlineAt = 0;
+      // 對手回合的 OK 環改成跑「AI思考停頓」的倒數（原本設 0 會讓環凍結在滿格，
+      // 故事模式玩家會以為時間條壞了）。時長與 scheduleOpponentAiTurn 的 setTimeout 一致。
+      const aiTurnMs=(state.autoBattleDelay||280)+AUTO_BATTLE_FX_EXTRA_MS;
+      state.turnDeadlineAt = Date.now()+aiTurnMs;
+      state.turnDeadlineTotalMs = aiTurnMs;
       actInfoRequest = null;
       actDiscardPending = [];
       state.phase = 'act';
@@ -7133,6 +7146,7 @@ function runLoop(){
     state.actMoveTarget = null; // 這回合「預計」移動到哪一格；出手前都可以隨意重選，見 moveActingUnitTo()
     // 這是「真實時間」期限，不是遊戲內 speed/clock；同步到跨網房間後，兩端會顯示相同截止時刻。
     state.turnDeadlineAt = Date.now() + ACTION_TIMEOUT_MS;
+    state.turnDeadlineTotalMs = ACTION_TIMEOUT_MS;
     actInfoRequest = null; // 新的一輪出手，上一位角色開著的招式/花牌詳情彈窗不該繼續顯示
     actDiscardPending = []; // 新的一輪出手，理論上 confirmAct() 已經清空過，這裡是保險
     state.phase = 'act';
@@ -7340,8 +7354,10 @@ function syncActionDeadlineUi(){
   const paint = function(){
     const remaining = Math.max(0, state.turnDeadlineAt-Date.now());
     // 對手回合也看得到同一個倒數環，只是按鈕保持鎖住；因此雙方都能判斷對方還剩多少時間。
-    btn.style.setProperty('--turn-progress', String(remaining / ACTION_TIMEOUT_MS));
-    btn.style.setProperty('--turn-color', remaining<=5000 ? 'var(--bad)' : (remaining<=15000 ? 'var(--warn)' : 'var(--good)'));
+    // 環的比例以「本回合總時長」為分母：玩家回合是30秒，AI回合則是思考停頓的長度。
+    const totalMs = Number(state.turnDeadlineTotalMs)||ACTION_TIMEOUT_MS;
+    btn.style.setProperty('--turn-progress', String(remaining / totalMs));
+    btn.style.setProperty('--turn-color', remaining<=totalMs*(5000/ACTION_TIMEOUT_MS) ? 'var(--bad)' : (remaining<=totalMs*(15000/ACTION_TIMEOUT_MS) ? 'var(--warn)' : 'var(--good)'));
     btn.classList.toggle('timed-out', localTurn && remaining<=0 && actionTimedOutForId!==unit.id);
     if(remaining>0 && state.phase==='act' && state.actingUnitId===unit.id){ actionDeadlineRaf=requestAnimationFrame(paint); }
   };
@@ -8031,30 +8047,30 @@ let STORY_STAGE_DEFS={
     {number:1,role:'normal',title:'第一節　初心荒野',shortTitle:'初心荒野',startBlock:3,blocks:[3],description:'穿過荒野，第一次面對棋盤上的戰鬥。'},
     {number:2,role:'normal',title:'第二節　另一位玩家',shortTitle:'另一位玩家',startBlock:4,blocks:[4],description:'遭遇另一名玩家，理解黑方世界的生存法則。'},
     {number:3,role:'branch',title:'第三節　拯救',shortTitle:'拯救',startBlock:5,blocks:[5,6,7,8,9,10,11,12,13],description:'你的選擇將決定圖卡勒絲的命運。'},
-    {number:4,role:'boss',title:'第四節　Boss：無名戰士',shortTitle:'無名戰士',startBlock:14,blocks:[14,15,16,17],description:'突破守關無名戰士。'},
-    {number:5,role:'normal',title:'尾聲1　第一章結尾',shortTitle:'尾聲1',startBlock:18,blocks:[18],description:'戰死者化作光點升空，小黑罕見地沉默。'},
-    {number:6,role:'normal',title:'尾聲2　章節結語',shortTitle:'尾聲2',startBlock:19,blocks:[19,20],description:'依你的求生意志，小黑給出不同的臨別評價。'}
+    {number:4,role:'boss',title:'第四節　無名戰士',shortTitle:'無名戰士',startBlock:14,blocks:[14,15,16,17],description:'突破守關無名戰士。'},
+    {number:5,role:'normal',title:'尾聲1　第一章結尾',shortTitle:'尾聲1',startBlock:18,blocks:[18,19,20],description:'戰死者化作光點升空，小黑依你的求生意志給出臨別評價。'},
+    {number:6,role:'normal',title:'尾聲2　注視的目光',shortTitle:'尾聲2',startBlock:21,blocks:[21],description:'黑白交錯的國王棋緩緩旋轉，有誰正注視著棋盤。'}
   ],
   white:[
-    {number:0,role:'prologue',title:'序章　開幕',shortTitle:'序章',startBlock:22,blocks:[22],description:'化作棋子的光點，小白訴說願望的規則。'},
-    {number:1,role:'normal',title:'第一節　初心荒野',shortTitle:'初心荒野',startBlock:23,blocks:[23],description:'穿過荒野，第一次面對棋盤上的戰鬥。'},
-    {number:2,role:'normal',title:'第二節　另一位玩家',shortTitle:'另一位玩家',startBlock:24,blocks:[24],description:'遭遇另一名玩家，理解白方肩負的責任。'},
-    {number:3,role:'branch',title:'第三節　守護',shortTitle:'守護',startBlock:25,blocks:[25,26,27,28,29,30,31,32,33],description:'你的選擇將決定梅朵與村莊的命運。'},
-    {number:4,role:'boss',title:'第四節　Boss：無名戰士',shortTitle:'無名戰士',startBlock:34,blocks:[34,35,36,37],description:'突破守關無名戰士。'},
-    {number:5,role:'normal',title:'尾聲1　第一章結尾',shortTitle:'尾聲1',startBlock:38,blocks:[38],description:'初心荒野歸於平靜，小白許下心願。'},
-    {number:6,role:'normal',title:'尾聲2　章節結語',shortTitle:'尾聲2',startBlock:39,blocks:[39,40],description:'依你的守護之心，小白留下不同的話語。'}
+    {number:0,role:'prologue',title:'序章　開幕',shortTitle:'序章',startBlock:23,blocks:[23],description:'化作棋子的光點，小白訴說願望的規則。'},
+    {number:1,role:'normal',title:'第一節　初心荒野',shortTitle:'初心荒野',startBlock:24,blocks:[24],description:'穿過荒野，第一次面對棋盤上的戰鬥。'},
+    {number:2,role:'normal',title:'第二節　另一位玩家',shortTitle:'另一位玩家',startBlock:25,blocks:[25],description:'遭遇另一名玩家，理解白方肩負的責任。'},
+    {number:3,role:'branch',title:'第三節　守護',shortTitle:'守護',startBlock:26,blocks:[26,27,28,29,30,31,32,33,34],description:'你的選擇將決定梅朵與村莊的命運。'},
+    {number:4,role:'boss',title:'第四節　無名戰士',shortTitle:'無名戰士',startBlock:35,blocks:[35,36,37,38],description:'突破守關無名戰士。'},
+    {number:5,role:'normal',title:'尾聲1　第一章結尾',shortTitle:'尾聲1',startBlock:39,blocks:[39,40,41],description:'初心荒野歸於平靜，小白依你的守護之心留下話語。'},
+    {number:6,role:'normal',title:'尾聲2　注視的目光',shortTitle:'尾聲2',startBlock:42,blocks:[42],description:'黑白交錯的國王棋緩緩轉動，有誰正注視著棋盤。'}
   ]
 };
 const DEFAULT_STORY_STAGE_DEFS=JSON.parse(JSON.stringify(STORY_STAGE_DEFS));
 const DEFAULT_STORY_FLOW={
   choices:{
     'black:5':{'幫忙':6,'不幫':13},'black:6':{'同意':7,'不同意':10},'black:7':{'我會負責':8,'拖累就丟下':9},'black:10':{'我的隊伍沒有餘力':11,'弱者只會拖累我':12},
-    'white:25':{'幫忙':26,'不幫':33},'white:26':{'同意':27,'不同意':30},'white:27':{'我答應妳':28,'我不能保證':29},'white:30':{'我的隊伍不適合她':31,'我不想背負她的生命':32}
+    'white:26':{'幫忙':27,'不幫':34},'white:27':{'同意':28,'不同意':31},'white:28':{'我答應妳':29,'我不能保證':30},'white:31':{'我的隊伍不適合她':32,'我不想背負她的生命':33}
   },
-  next:{'black:2':3,'black:3':4,'black:4':5,'black:8':14,'black:9':14,'black:11':14,'black:12':14,'black:13':14,'black:15':17,'black:16':17,'black:17':18,'white:22':23,'white:23':24,'white:24':25,'white:28':34,'white:29':34,'white:31':34,'white:32':34,'white:33':34,'white:35':37,'white:36':37,'white:37':38},
+  next:{'black:2':3,'black:3':4,'black:4':5,'black:8':14,'black:9':14,'black:11':14,'black:12':14,'black:13':14,'black:15':17,'black:16':17,'black:17':18,'black:19':21,'black:20':21,'white:23':24,'white:24':25,'white:25':26,'white:29':35,'white:30':35,'white:32':35,'white:33':35,'white:34':35,'white:36':38,'white:37':38,'white:38':39,'white:40':42,'white:41':42},
   conditions:[
     {route:'black',from:14,flag:'joined',equals:true,to:15,otherwise:16},{route:'black',from:18,scoreMax:2,to:19,otherwise:20},
-    {route:'white',from:34,flag:'joined',equals:true,to:35,otherwise:36},{route:'white',from:38,scoreMin:1,to:39,otherwise:40}
+    {route:'white',from:35,flag:'joined',equals:true,to:36,otherwise:37},{route:'white',from:39,scoreMin:1,to:40,otherwise:41}
   ]
 };
 function storyRefreshRuntimeConfig(){
@@ -8069,16 +8085,8 @@ function storyRefreshRuntimeConfig(){
       const fallback=DEFAULT_STORY_STAGE_DEFS[route].find(s=>s.number===0);
       defs.unshift(JSON.parse(JSON.stringify(fallback)));
     }
-    // 舊設定的Boss關同時包含結尾與結語分段：拆成「尾聲1／尾聲2」兩個獨立關卡。
-    // 只在單一關卡同時持有結尾閘門與結局分段（傳統41分段版面）時觸發，不動自訂結構。
-    const epilogue=route==='white'?{gate:38,endings:[39,40]}:{gate:18,endings:[19,20]};
-    const host=defs.find(s=>{const bs=(s.blocks||[]).map(Number);return bs.includes(epilogue.gate)&&bs.includes(epilogue.endings[0]);});
-    if(host){
-      host.blocks=host.blocks.filter(b=>Number(b)!==epilogue.gate&&!epilogue.endings.includes(Number(b)));
-      const insertAt=defs.indexOf(host)+1;
-      const ep1=DEFAULT_STORY_STAGE_DEFS[route].find(s=>s.shortTitle==='尾聲1'),ep2=DEFAULT_STORY_STAGE_DEFS[route].find(s=>s.shortTitle==='尾聲2');
-      if(ep1&&ep2)defs.splice(insertAt,0,JSON.parse(JSON.stringify(ep1)),JSON.parse(JSON.stringify(ep2)));
-    }
+    // （2026-07-19 移除舊「尾聲拆分」遷移：D1 從未成功保存 stageDefs（伺服器白名單bug），
+    //  不存在需要遷移的舊設定；保留反而會誤拆管理者日後自訂的合併關卡。）
     // 關卡角色(role)：舊設定依編號推斷（0序章、3分支、4Boss）；編號一律以列表順序重編，
     // 讓後台可自由增刪關卡。
     defs.forEach((stage,index)=>{
@@ -8091,6 +8099,10 @@ function storyRefreshRuntimeConfig(){
   });
   if(!globalStoryModeConfig.flow)globalStoryModeConfig.flow=JSON.parse(JSON.stringify(DEFAULT_STORY_FLOW));
   if(!globalStoryModeConfig.battles||typeof globalStoryModeConfig.battles!=='object')globalStoryModeConfig.battles={};
+  // 預設戰鬥配置：兩線的兩場一般遭遇戰（第一節、第三節救援）都是單挑一頭荒野孤狼(m003)。
+  // 後台已另存設定的戰鬥鍵不覆蓋；型態沿用 boss 生成路徑以支援「單一怪物」對手。
+  const DEFAULT_STORY_BATTLES={'3:0':{kind:'boss',bossMonsterId:'m003'},'6:0':{kind:'boss',bossMonsterId:'m003'},'24:0':{kind:'boss',bossMonsterId:'m003'},'27:0':{kind:'boss',bossMonsterId:'m003'}};
+  Object.keys(DEFAULT_STORY_BATTLES).forEach(key=>{if(!globalStoryModeConfig.battles[key])globalStoryModeConfig.battles[key]=JSON.parse(JSON.stringify(DEFAULT_STORY_BATTLES[key]));});
 }
 storyRefreshRuntimeConfig();
 let storyBlocks=null,storyRun=null,storyBattleTimer=null,storyTextTimer=null,storyReveal=null,storyPreviewMode=false,storyPreviewSkipBattles=true;
@@ -8121,6 +8133,8 @@ function storyStageByRole(route,role){return (STORY_STAGE_DEFS[route]||[]).find(
 function storyBranchStage(route){return storyStageByRole(route,'branch');}
 function storyFinalStage(route){const defs=STORY_STAGE_DEFS[route]||[];return storyStageByRole(route,'boss')||defs[defs.length-1]||null;}
 function storyLastStage(route){const defs=STORY_STAGE_DEFS[route]||[];return defs[defs.length-1]||null;}
+// 「結局關卡」＝涵蓋節點包含命運結局分段的那一關（合併後為尾聲1）；結局收錄與結局圖鑑掛在這裡。
+function storyEndingStage(route){const endings=storyBranchOutcomeList(route,'ending');if(!endings.length)return null;return (STORY_STAGE_DEFS[route]||[]).find(s=>(s.blocks||[]).some(b=>endings.includes(Number(b))))||null;}
 function storyStageIsFinal(route,stageNumber){const last=storyLastStage(route);return !!last&&Number(last.number)===Number(stageNumber);}
 function storyStageLabel(route,stageNumber){
   const stage=storyStageDef(route,stageNumber);
@@ -8134,10 +8148,10 @@ function storyFirstUnclearedStage(route,cleared){const defs=STORY_STAGE_DEFS[rou
 function storyCurrentStageNumber(run){const n=Number(run&&run.stageNumber);if(run&&run.stageNumber!=null&&Number.isFinite(n))return n;const stage=run?storyStageForBlock(run.route,run.block):null;return stage?Number(stage.number):1;}
 function saveStoryStageProgress(data){try{if(!storyPreviewMode){localStorage.setItem(STORY_STAGE_PROGRESS_KEY,JSON.stringify(data));if(window.__queueAccountStorySync)window.__queueAccountStorySync();}}catch(e){}}
 function storyRouteStateSnapshot(run){return {score:Number(run&&run.score)||0,flags:Object.assign({helped:null,joined:false},run&&run.flags||{}),choices:Object.assign({},run&&run.choices||{}),applied:Object.assign({},run&&run.applied||{})};}
-let STORY_BLOCK_IDS={black:{2:'opening',3:'stage1',4:'stage2',5:'rescue',6:'accept',7:'promise',8:'responsible',9:'abandon',10:'refuse',11:'no_capacity',12:'weak',13:'no_help',14:'boss',15:'boss_joined',16:'boss_alone',17:'boss_common',18:'ending_gate',19:'ending_low',20:'ending_high'},white:{22:'opening',23:'stage1',24:'stage2',25:'protect',26:'accept',27:'promise',28:'promised',29:'uncertain',30:'refuse',31:'unsuitable',32:'burden',33:'no_help',34:'boss',35:'boss_joined',36:'boss_no_help',37:'boss_common',38:'ending_gate',39:'ending_hope',40:'ending_regret'}};
-let STORY_BRANCH_OUTCOMES={black:{3:[8,9,11,12,13],4:[19,20]},white:{3:[28,29,31,32,33],4:[39,40]}};
-let STORY_FATE_CHOICES={black:{3:[{block:5,title:'是否伸出援手',choices:[['幫忙',6],['不幫',13]]},{block:6,title:'是否讓她加入',choices:[['同意',7],['不同意',10]]},{block:7,title:'承諾的方式',choices:[['我會負責',8],['拖累就丟下',9]]},{block:10,title:'拒絕的理由',choices:[['我的隊伍沒有餘力',11],['弱者只會拖累我',12]]}]},white:{3:[{block:25,title:'是否伸出援手',choices:[['幫忙',26],['不幫',33]]},{block:26,title:'是否讓她加入',choices:[['同意',27],['不同意',30]]},{block:27,title:'給她的回答',choices:[['我答應妳',28],['我不能保證',29]]},{block:30,title:'拒絕的理由',choices:[['我的隊伍不適合她',31],['我不想背負她的生命',32]]}]}};
-let STORY_OUTCOME_LABELS={8:'承諾負責',9:'必要時放棄',11:'隊伍沒有餘力',12:'弱者只會拖累',13:'選擇旁觀',19:'求生結局',20:'同伴結局',28:'許下承諾',29:'不作保證',31:'隊伍不適合她',32:'拒絕背負生命',33:'選擇旁觀',39:'守護結局',40:'遺憾結局'};
+let STORY_BLOCK_IDS={black:{2:'opening',3:'stage1',4:'stage2',5:'rescue',6:'accept',7:'promise',8:'responsible',9:'abandon',10:'refuse',11:'no_capacity',12:'weak',13:'no_help',14:'boss',15:'boss_joined',16:'boss_alone',17:'boss_common',18:'ending_gate',19:'ending_low',20:'ending_high',21:'king_scene'},white:{23:'opening',24:'stage1',25:'stage2',26:'protect',27:'accept',28:'promise',29:'promised',30:'uncertain',31:'refuse',32:'unsuitable',33:'burden',34:'no_help',35:'boss',36:'boss_joined',37:'boss_no_help',38:'boss_common',39:'ending_gate',40:'ending_hope',41:'ending_regret',42:'king_scene'}};
+let STORY_BRANCH_OUTCOMES={black:{3:[8,9,11,12,13],4:[19,20]},white:{3:[29,30,32,33,34],4:[40,41]}};
+let STORY_FATE_CHOICES={black:{3:[{block:5,title:'是否伸出援手',choices:[['幫忙',6],['不幫',13]]},{block:6,title:'是否讓她加入',choices:[['同意',7],['不同意',10]]},{block:7,title:'承諾的方式',choices:[['我會負責',8],['拖累就丟下',9]]},{block:10,title:'拒絕的理由',choices:[['我的隊伍沒有餘力',11],['弱者只會拖累我',12]]}]},white:{3:[{block:26,title:'是否伸出援手',choices:[['幫忙',27],['不幫',34]]},{block:27,title:'是否讓她加入',choices:[['同意',28],['不同意',31]]},{block:28,title:'給她的回答',choices:[['我答應妳',29],['我不能保證',30]]},{block:31,title:'拒絕的理由',choices:[['我的隊伍不適合她',32],['我不想背負她的生命',33]]}]}};
+let STORY_OUTCOME_LABELS={8:'承諾負責',9:'必要時放棄',11:'隊伍沒有餘力',12:'弱者只會拖累',13:'選擇旁觀',19:'求生結局',20:'同伴結局',29:'許下承諾',30:'不作保證',32:'隊伍不適合她',33:'拒絕背負生命',34:'選擇旁觀',40:'守護結局',41:'遺憾結局'};
 const DEFAULT_STORY_FATE_CONFIG={blockIds:JSON.parse(JSON.stringify(STORY_BLOCK_IDS)),branchOutcomes:JSON.parse(JSON.stringify(STORY_BRANCH_OUTCOMES)),choiceMap:JSON.parse(JSON.stringify(STORY_FATE_CHOICES)),outcomeLabels:JSON.parse(JSON.stringify(STORY_OUTCOME_LABELS))};
 function storyRefreshFateConfig(){const fate=globalStoryModeConfig.fate&&typeof globalStoryModeConfig.fate==='object'?globalStoryModeConfig.fate:DEFAULT_STORY_FATE_CONFIG;STORY_BLOCK_IDS=JSON.parse(JSON.stringify(fate.blockIds||DEFAULT_STORY_FATE_CONFIG.blockIds));STORY_BRANCH_OUTCOMES=JSON.parse(JSON.stringify(fate.branchOutcomes||DEFAULT_STORY_FATE_CONFIG.branchOutcomes));STORY_FATE_CHOICES=JSON.parse(JSON.stringify(fate.choiceMap||DEFAULT_STORY_FATE_CONFIG.choiceMap));STORY_OUTCOME_LABELS=JSON.parse(JSON.stringify(fate.outcomeLabels||DEFAULT_STORY_FATE_CONFIG.outcomeLabels));
   // 內部一律使用 {branch,ending}／{branch}：舊設定用關卡編號 3／4 當 key，載入時轉換。
@@ -8175,7 +8189,7 @@ function storyMarkBlockVisited(route,block){if(storyPreviewMode)return;const dat
 function storyRecordChoice(route,block,choice){if(storyPreviewMode)return;const data=loadStoryDiscovery(),r=data.routes[route],id=storyStableBlockId(route,block);if(!Array.isArray(r.choices[id]))r.choices[id]=[];if(!r.choices[id].includes(choice))r.choices[id].push(choice);saveStoryDiscovery(data);}
 function storyWasBlockVisited(route,block,data){const d=data||loadStoryDiscovery();return d.routes[route].visitedBlocks.includes(storyStableBlockId(route,block));}
 function storyWasChoiceVisited(route,block,choice,data){const d=data||loadStoryDiscovery(),list=d.routes[route].choices[storyStableBlockId(route,block)]||[];return list.includes(choice);}
-function storyExploration(route,stageNumber){const stage=storyStageDef(route,stageNumber),targets=stage&&stage.role==='branch'?storyBranchOutcomeList(route,'branch'):(stage&&storyStageIsFinal(route,stageNumber)&&storyBranchStage(route)?storyBranchOutcomeList(route,'ending'):[]),data=loadStoryDiscovery(),seen=targets.filter(block=>storyWasBlockVisited(route,block,data)).length;return {seen,total:targets.length};}
+function storyExploration(route,stageNumber){const stage=storyStageDef(route,stageNumber),endingHost=storyBranchStage(route)?storyEndingStage(route):null,targets=stage&&stage.role==='branch'?storyBranchOutcomeList(route,'branch'):(stage&&endingHost&&Number(endingHost.number)===Number(stageNumber)?storyBranchOutcomeList(route,'ending'):[]),data=loadStoryDiscovery(),seen=targets.filter(block=>storyWasBlockVisited(route,block,data)).length;return {seen,total:targets.length};}
 function storyOutcomeBlockForState(route,state){
   // 依命運棋譜設定的選擇樹推導：從根節點沿著已記錄的選擇走，走到不再是選擇節點的區塊即為命運結果。
   const choices=state&&state.choices||{},defs=storyFateChoiceDefs(route);
@@ -8190,7 +8204,7 @@ function storyOutcomeBlockForState(route,state){
   return null;
 }
 function storyRememberBranchState(route,state,block){if(storyPreviewMode)return;const terminal=storyBranchOutcomeList(route,'branch'),outcome=terminal.includes(Number(block))?Number(block):storyOutcomeBlockForState(route,state);if(!outcome)return;const data=loadStoryDiscovery(),r=data.routes[route],snapshot=storyRouteStateSnapshot(state),id=storyStableBlockId(route,outcome);r.branchStates[id]=snapshot;if(!r.visitedBlocks.includes(id))r.visitedBlocks.push(id);storyMergeSnapshotDiscovery(route,snapshot,data);saveStoryDiscovery(data);}
-function storySavedBranchStates(route,existingData){const data=existingData||loadStoryDiscovery(),r=data.routes[route],progress=loadStoryStageProgress(),routeData=progress.routes[route],branchStage=storyBranchStage(route),finalStage=storyLastStage(route),branchNumber=branchStage?Number(branchStage.number):null,canonical=branchNumber!=null&&(routeData.checkpoints&&routeData.checkpoints[branchNumber]||routeData.cleared.includes(branchNumber)&&routeData.state)||null,outcome=storyOutcomeBlockForState(route,canonical),id=outcome?storyStableBlockId(route,outcome):null;let changed=false;if(canonical&&id&&!r.branchStates[id]){r.branchStates[id]=storyRouteStateSnapshot(canonical);changed=true;}if(storyMergeSnapshotDiscovery(route,canonical,data))changed=true;if(id&&!r.visitedBlocks.includes(id)){r.visitedBlocks.push(id);changed=true;}if(id&&finalStage&&routeData.cleared.includes(Number(finalStage.number))&&!r.endingPaths[id]){r.endingPaths[id]=storyEndingBlockForState(route,routeData.state||canonical);changed=true;}Object.keys(r.branchStates).forEach(branchId=>{const snapshot=r.branchStates[branchId];if(!r.visitedBlocks.includes(branchId)){r.visitedBlocks.push(branchId);changed=true;}if(storyMergeSnapshotDiscovery(route,snapshot,data))changed=true;});Object.keys(r.endingPaths).forEach(branchId=>{const ending=Number(r.endingPaths[branchId]);if(!r.visitedBlocks.includes(branchId)){r.visitedBlocks.push(branchId);changed=true;}if(ending){const endingId=storyStableBlockId(route,ending);if(!r.visitedBlocks.includes(endingId)){r.visitedBlocks.push(endingId);changed=true;}if(!r.endings.includes(endingId)){r.endings.push(endingId);changed=true;}}});if(changed)saveStoryDiscovery(data);return r.branchStates;}
+function storySavedBranchStates(route,existingData){const data=existingData||loadStoryDiscovery(),r=data.routes[route],progress=loadStoryStageProgress(),routeData=progress.routes[route],branchStage=storyBranchStage(route),finalStage=storyEndingStage(route)||storyLastStage(route),branchNumber=branchStage?Number(branchStage.number):null,canonical=branchNumber!=null&&(routeData.checkpoints&&routeData.checkpoints[branchNumber]||routeData.cleared.includes(branchNumber)&&routeData.state)||null,outcome=storyOutcomeBlockForState(route,canonical),id=outcome?storyStableBlockId(route,outcome):null;let changed=false;if(canonical&&id&&!r.branchStates[id]){r.branchStates[id]=storyRouteStateSnapshot(canonical);changed=true;}if(storyMergeSnapshotDiscovery(route,canonical,data))changed=true;if(id&&!r.visitedBlocks.includes(id)){r.visitedBlocks.push(id);changed=true;}if(id&&finalStage&&routeData.cleared.includes(Number(finalStage.number))&&!r.endingPaths[id]){r.endingPaths[id]=storyEndingBlockForState(route,routeData.state||canonical);changed=true;}Object.keys(r.branchStates).forEach(branchId=>{const snapshot=r.branchStates[branchId];if(!r.visitedBlocks.includes(branchId)){r.visitedBlocks.push(branchId);changed=true;}if(storyMergeSnapshotDiscovery(route,snapshot,data))changed=true;});Object.keys(r.endingPaths).forEach(branchId=>{const ending=Number(r.endingPaths[branchId]);if(!r.visitedBlocks.includes(branchId)){r.visitedBlocks.push(branchId);changed=true;}if(ending){const endingId=storyStableBlockId(route,ending);if(!r.visitedBlocks.includes(endingId)){r.visitedBlocks.push(endingId);changed=true;}if(!r.endings.includes(endingId)){r.endings.push(endingId);changed=true;}}});if(changed)saveStoryDiscovery(data);return r.branchStates;}
 function storyEndingBlockForState(route,state){
   // 依流程規則(conditions)中「兩個目的地都是結局」的那條規則判定結局，後台改寫流程也能生效。
   const endings=storyBranchOutcomeList(route,'ending'),flow=globalStoryModeConfig.flow||DEFAULT_STORY_FLOW;
@@ -8199,15 +8213,23 @@ function storyEndingBlockForState(route,state){
   const score=Number(state&&state.score)||0;
   return route==='black'?(score<=2?19:20):(score>0?39:40);
 }
-function storyRememberEndingPath(route,state,sourceBranch,endingBlock){if(storyPreviewMode)return;const branch=Number(sourceBranch)||storyOutcomeBlockForState(route,state),ending=Number(endingBlock)||storyEndingBlockForState(route,state);if(!branch||!ending)return;const data=loadStoryDiscovery(),r=data.routes[route],snapshot=storyRouteStateSnapshot(state),branchId=storyStableBlockId(route,branch),endingId=storyStableBlockId(route,ending);r.endingPaths[branchId]=ending;if(!r.branchStates[branchId])r.branchStates[branchId]=snapshot;if(!r.visitedBlocks.includes(branchId))r.visitedBlocks.push(branchId);if(!r.visitedBlocks.includes(endingId))r.visitedBlocks.push(endingId);if(!r.endings.includes(endingId))r.endings.push(endingId);storyMergeSnapshotDiscovery(route,snapshot,data);saveStoryDiscovery(data);}
+function storyRememberEndingPath(route,state,sourceBranch,endingBlock){if(storyPreviewMode)return;const branch=Number(sourceBranch)||storyOutcomeBlockForState(route,state),endingList=storyBranchOutcomeList(route,'ending'),ending=(endingList.includes(Number(endingBlock))?Number(endingBlock):null)||storyEndingBlockForState(route,state);if(!branch||!ending)return;const data=loadStoryDiscovery(),r=data.routes[route],snapshot=storyRouteStateSnapshot(state),branchId=storyStableBlockId(route,branch),endingId=storyStableBlockId(route,ending);r.endingPaths[branchId]=ending;if(!r.branchStates[branchId])r.branchStates[branchId]=snapshot;if(!r.visitedBlocks.includes(branchId))r.visitedBlocks.push(branchId);if(!r.visitedBlocks.includes(endingId))r.visitedBlocks.push(endingId);if(!r.endings.includes(endingId))r.endings.push(endingId);storyMergeSnapshotDiscovery(route,snapshot,data);saveStoryDiscovery(data);}
 function storySavedTeamId(){try{return localStorage.getItem(STORY_TEAM_KEY)||'';}catch(e){return '';}}
 function storySetSavedTeamId(id){try{localStorage.setItem(STORY_TEAM_KEY,id||'');}catch(e){}}
 async function storyEnsureSource(){
   if(storyBlocks)return storyBlocks;
   const msg=document.getElementById('storyLoadMessage');if(msg)msg.textContent='讀取故事文本中…';
-  let raw=String(globalStoryModeConfig.chapter1Text||'');
-  if(!raw.trim()){const res=await fetch('story/chapter1.txt?v=20260718',{cache:'no-store'});if(!res.ok)throw new Error('故事文本讀取失敗（HTTP '+res.status+'）');raw=await res.text();}
+  const fetchBundled=async()=>{const res=await fetch('story/chapter1.txt?v=20260719',{cache:'no-store'});if(!res.ok)throw new Error('故事文本讀取失敗（HTTP '+res.status+'）');return res.text();};
+  let raw=String(globalStoryModeConfig.chapter1Text||'');const usedOverride=!!raw.trim();
+  if(!usedOverride)raw=await fetchBundled();
   storyBlocks=raw.split(/^_{5,}\s*$/m).map(s=>s.trim()).filter(Boolean);
+  // D1 可能還存著舊版分段數的文本：若關卡定義引用的節點超出文本範圍，改用 Git 內建新文本，
+  // 避免整條路線壞掉。後台「從 Git 重新載入文本」並儲存後就不會再走到這裡。
+  const maxRef=Math.max(0,...[].concat(STORY_STAGE_DEFS.black||[],STORY_STAGE_DEFS.white||[]).flatMap(s=>(s.blocks||[]).map(Number)));
+  if(usedOverride&&maxRef>=storyBlocks.length){
+    raw=await fetchBundled();
+    storyBlocks=raw.split(/^_{5,}\s*$/m).map(s=>s.trim()).filter(Boolean);
+  }
   if(storyBlocks.length<3)throw new Error('故事文本格式不完整。');if(msg)msg.textContent='';return storyBlocks;
 }
 function storyBuildTeamOptions(){
@@ -8256,9 +8278,9 @@ function storyRenderStageMap(route){
     const exploreLabel=stage.role==='branch'?'分支探索':'結局收集';
     // Boss卡顯示「出發沿用哪條命運＋已解鎖分支數」（沿此命運出發的起點）；
     // 最後一關（尾聲2）顯示「本次結局沿用哪條命運」（結局由它與最終分數決定）。
-    const lastStageDef=storyLastStage(route);
+    const endingCardDef=storyEndingStage(route)||storyLastStage(route);
     const isBossCard=!!(branchStage&&bossOnly&&Number(stage.number)===Number(bossOnly.number));
-    const isLastCard=!!(branchStage&&lastStageDef&&Number(stage.number)===Number(lastStageDef.number)&&(!bossOnly||Number(lastStageDef.number)!==Number(bossOnly.number)));
+    const isLastCard=!!(branchStage&&endingCardDef&&Number(stage.number)===Number(endingCardDef.number)&&(!bossOnly||Number(endingCardDef.number)!==Number(bossOnly.number)));
     let source='';
     if(isBossCard)source=currentBranch?'<span class="story-stage-source"><b>'+(activeCarry?'進行中的挑戰':'本次挑戰沿用')+'</b>'+escHtml(branchTitle)+'「'+escHtml(currentBranchLabel)+'」<span class="story-stage-source-count">已解鎖 '+Object.keys(branches).length+'／'+branchTargets.length+'</span></span>':'<span class="story-stage-source locked">完成「'+escHtml(branchTitle)+'」後，將在這裡顯示本次沿用的命運節點</span>';
     else if(isLastCard)source=currentBranch?'<span class="story-stage-source"><b>本次結局沿用</b>「'+escHtml(currentBranchLabel)+'」的命運與分數</span>':'<span class="story-stage-source locked">完成「'+escHtml(branchTitle)+'」後，將在這裡顯示本次結局沿用的命運</span>';
@@ -8353,8 +8375,8 @@ function storyOpenFateMap(route,stageNumber){
   const stage=storyStageDef(route,stageNumber);
   overlay.dataset.route=route;overlay.dataset.stage=stageNumber;
   document.getElementById('storyFateTitle').textContent=(isBranchView?'命運棋譜｜':'結局圖鑑｜')+(stage?stage.title:'分支回顧');
-  const replayEntry=storyFinalStage(route),lastStageDef=storyLastStage(route);
-  const chainHint=!isBranchView&&replayEntry&&lastStageDef&&Number(replayEntry.number)!==Number(lastStageDef.number)?'　・　「沿此命運出發」從「'+replayEntry.shortTitle+'」重新打起，通關後沿回溯結果走到「'+lastStageDef.shortTitle+'」收錄結局':'';
+  const replayEntry=storyFinalStage(route),endingHostDef=storyEndingStage(route)||storyLastStage(route);
+  const chainHint=!isBranchView&&replayEntry&&endingHostDef&&Number(replayEntry.number)!==Number(endingHostDef.number)?'　・　「沿此命運出發」從「'+replayEntry.shortTitle+'」重新打起，通關後沿回溯結果走到「'+endingHostDef.shortTitle+'」收錄結局':'';
   document.getElementById('storyFateSummary').textContent=(isBranchView?'探索 ':'收集 ')+explore.seen+'／'+explore.total+'　・　綠色連線代表已走過的命運'+chainHint;
   const backBtn=document.getElementById('storyFateBackBtn');backBtn.classList.toggle('hidden',isBranchView);backBtn.onclick=()=>storyOpenFateMap(route,branchNumber);
   graph.innerHTML=isBranchView?storyFateVisualHtml(route,data):storyEndingVisualHtml(route,data);overlay.classList.remove('hidden');
@@ -8537,22 +8559,23 @@ function storyCompleteStage(stageNumber){
   const route=storyRun.route,progress=loadStoryStageProgress(),routeData=progress.routes[route];
   const snapshot=storyRouteStateSnapshot(storyRun);
   const branchStage=storyBranchStage(route),isBranch=!!branchStage&&Number(stageNumber)===Number(branchStage.number),isFinal=storyStageIsFinal(route,stageNumber);
+  const endingHost=branchStage?storyEndingStage(route):null,isEndingHost=!!endingHost&&Number(endingHost.number)===Number(stageNumber);
   const branchTitle=branchStage?branchStage.title:'分支關卡';
   const completedBranch=isBranch?(storyBranchOutcomeList(route,'branch').includes(Number(storyRun.block))?Number(storyRun.block):storyOutcomeBlockForState(route,snapshot)):null;
   const completedBranchId=completedBranch?storyStableBlockId(route,completedBranch):null,completedBranchLabel=completedBranch?(STORY_OUTCOME_LABELS[completedBranch]||'已探索命運'):'';
   const branchWasKnown=!!(completedBranchId&&loadStoryDiscovery().routes[route].branchStates[completedBranchId]);
   const completionMessage=storyPreviewMode?'預覽完成'+storyStageLabel(route,stageNumber):isBranch?(branchWasKnown?'「'+branchTitle+'」通關：「'+completedBranchLabel+'」已探索過，沒有新增命運分支':'「'+branchTitle+'」通關：已解鎖新的命運分支「'+completedBranchLabel+'」'):storyStageLabel(route,stageNumber)+'通關，下一關已解鎖';
   if(isBranch)storyRememberBranchState(route,snapshot,storyRun.block);
-  if(isFinal&&branchStage)storyRememberEndingPath(route,snapshot,storyRun.sourceBranch,storyRun.block);
+  if(isEndingHost)storyRememberEndingPath(route,snapshot,storyRun.sourceBranch,storyRun.block);
   if(storyRun.replayMode){
     const discovery=loadStoryDiscovery();
     // 回溯時間線：從分支關起，每完成一關就把狀態存進 replayState，讓「繼續回溯」能一路
-    // 走到最後一關（結局收錄後歸零）。分支關之前的關卡回溯不影響時間線。
+    // 走到結局關卡（結局收錄後歸零）。分支關之前的關卡回溯不影響時間線。
     if(branchStage&&Number(stageNumber)>=Number(branchStage.number)){
-      if(isFinal)discovery.routes[route].replayState=null;
+      if(isFinal||isEndingHost)discovery.routes[route].replayState=null;
       else discovery.routes[route].replayState=Object.assign({fromStage:Number(stageNumber)},snapshot);
     }
-    saveStoryDiscovery(discovery);storyRun.active=false;storyRun.stageCompleted=stageNumber;saveStoryProgress();storyDialogueLog=[];storyShowMenu('stages',route);storyFlash(isBranch?(branchWasKnown?'回溯完成：「'+completedBranchLabel+'」已探索過，沒有新增命運分支':'回溯完成：已解鎖新的命運分支「'+completedBranchLabel+'」'):(isFinal?'回溯完成，新的結局已收入命運棋譜':'回溯完成，可沿回溯結果挑戰下一關'),isBranch?6000:2600);return;
+    saveStoryDiscovery(discovery);storyRun.active=false;storyRun.stageCompleted=stageNumber;saveStoryProgress();storyDialogueLog=[];storyShowMenu('stages',route);storyFlash(isBranch?(branchWasKnown?'回溯完成：「'+completedBranchLabel+'」已探索過，沒有新增命運分支':'回溯完成：已解鎖新的命運分支「'+completedBranchLabel+'」'):((isFinal||isEndingHost)?'回溯完成，新的結局已收入命運棋譜':'回溯完成，可沿回溯結果挑戰下一關'),isBranch?6000:2600);return;
   }
   if(!routeData.cleared.includes(stageNumber))routeData.cleared.push(stageNumber);routeData.cleared.sort((a,b)=>a-b);routeData.state=snapshot;routeData.checkpoints=routeData.checkpoints||{};routeData.checkpoints[stageNumber]=snapshot;saveStoryStageProgress(progress);
   if(isFinal){if(!storyRun.completed)storyRun.completed={};storyRun.completed[route]=true;}
@@ -8573,7 +8596,9 @@ function storyLaunchStage(route,stage,options){
   let entryBlock=Number(opts.startBlock)||stage.startBlock;
   if(!opts.startBlock&&storyBranchStage(route)){
     const endings=storyBranchOutcomeList(route,'ending'),stageBlocks=(stage.blocks||[]).map(Number);
-    if(stageBlocks.some(b=>endings.includes(b))){
+    // 只有「起始節點本身就是結局分段」的關卡才需要動態起點；
+    // 合併後的尾聲1（起點是結尾閘門，結局分段在關卡中段）走正常流程即可。
+    if(endings.includes(Number(stage.startBlock))){
       const computed=Number(storyEndingBlockForState(route,carry));
       if(endings.includes(computed)&&stageBlocks.includes(computed))entryBlock=computed;
     }
@@ -10607,7 +10632,7 @@ function collectAdminStoryStageProgress(){
 }
 const ADMIN_TUTORIAL_STORY_FIELDS = [
   ['pickIntro','選擇第一枚棋子前'],['afterPick','選完初始棋子後'],
-  ['battleIntro','第一場 1v1 戰鬥前'],['afterBattleWin','教學戰鬥勝利'],['afterBattleLose','教學戰鬥失敗'],['returnLobby','引導返回大廳'],
+  ['battleIntro','第一場 1v1 戰鬥前'],['suitGuide','劍槍法願花色教學（每行一頁）'],['afterBattleWin','教學戰鬥勝利'],['afterBattleLose','教學戰鬥失敗'],['returnLobby','引導返回大廳'],
   ['goldIntro','金幣召喚說明'],['goldOffer','贈送金幣召喚'],['afterGold','金幣召喚完成'],
   ['diamondIntro','鑽石召喚說明'],['diamondOffer','贈送鑽石召喚'],['afterDiamond','鑽石召喚完成'],
   ['teamIntro','隊伍教學開始'],['teamPick3','選擇三位棋子'],['teamDeck','編輯十張卡組'],['afterTeam','隊伍完成'],
@@ -11506,8 +11531,12 @@ const TUTORIAL_LINES = {
     white:'很好。一支隊伍，已經初具雛形。',
   },
   battleIntro: {
-    black:'{name}，真正的戰場開始了。這次是 1v1：用你剛選擇的棋子擊敗對手。棋子會依照速度行動，選擇技能、攻擊敵人、施放能力。只要活到最後，就是贏家。',
-    white:'{name}，接下來是第一場 1v1 戰鬥。你剛選擇的棋子已經在隊伍中，善用技能與屬性取得勝利吧。請放心，我會陪你完成第一場戰鬥。',
+    black:'{name}，該學著出手了。我在訓練場立了一個稻草人——它不會反擊，正好讓你把出招流程練熟。',
+    white:'{name}，接下來是你的第一場練習。對面是一個訓練稻草人，它不會反擊，請放心，跟著我一步一步來。',
+  },
+  suitGuide: {
+    black:'看到下面那排手牌了吧？【劍・槍・法・願】四種花色卡，就是你出招的本錢。\n劍砍近的、槍捅遠的；法拿來強化自己或給對面找麻煩；願最貴——但也最狠。\n輪到你的棋子時，先決定要不要移動站位，再點一個招式。招式上標著要消耗幾張對應花色卡，卡不夠或還在冷卻就點不了。選好之後，按右邊的 OK 出手。\n那個稻草人不會還手。把劍、槍、法、願全部試過一遍——記住手感。之後的對手，可不會站著讓你砍。',
+    white:'先看畫面下方的手牌：【劍・槍・法・願】四種花色卡，是使用招式的資源。\n劍是近身攻擊、槍能攻擊遠處；法多半用來強化與控場；願的力量最強大，需要的卡也最多。\n輪到你的棋子時，先選擇要不要移動，再點選想用的招式——招式上會標明需要幾張對應花色卡，數量不足或冷卻中的招式會暗掉。確認後按右邊的 OK 出手。\n這個稻草人不會反擊，別緊張。請把劍、槍、法、願各試一次，感受它們的差別吧。',
   },
   battlePickTeam: {
     black:'選這支剛組好的隊伍，然後按「確認」開戰。',
@@ -12081,8 +12110,9 @@ function tutorialSayAfterTeam(){
 
 function tutorialBattleStep(){
   if(tutorialReplayMode){ tutorialGoldGachaStep(); return; }
-  tutorialSay([TUTORIAL_LINES.battleIntro[tutorialFaction]], function(){
-    window.__tutorialFixedOpponentIds = [TUTORIAL_OPPONENT_IDS[0]];
+  const suitPages=String(TUTORIAL_LINES.suitGuide&&TUTORIAL_LINES.suitGuide[tutorialFaction]||'').split('\n').map(function(s){return s.trim();}).filter(Boolean);
+  tutorialSay([TUTORIAL_LINES.battleIntro[tutorialFaction]].concat(suitPages), function(){
+    window.__tutorialFixedOpponentIds = [MONSTER_BY_ID['m004']?'m004':TUTORIAL_OPPONENT_IDS[0]];
     window.__tutorialBattleReturnRequired = true;
     currentMatchSize=1; twoPlayerMode=false; pendingMode='single1v1';
     state.selectedIds=[ownedCharIds[0]]; state.selectedIdsB=[];
