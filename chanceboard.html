@@ -8368,7 +8368,13 @@ function storyShowMenu(view,route){
 async function openStoryMode(preview){const opts=preview&&typeof preview==='object'?preview:null;storyPreviewMode=preview===true||!!(opts&&opts.preview);storyPreviewSkipBattles=opts?opts.skipBattles!==false:true;storyAutoMode=false;storySpeed=1;storyDialogueLog=[];storyUpdateAutoButton();showTopScreen('screen-story');storyShowMenu('chapters');const msg=document.getElementById('storyLoadMessage');msg.textContent='';try{await storyEnsureSource();if(storyPreviewMode)msg.textContent='🧪 後台預覽模式：不儲存進度、不發放獎勵，'+(storyPreviewSkipBattles?'戰鬥會自動跳過。':'戰鬥將正常進行。');}catch(e){msg.textContent='❌ '+e.message;}}
 function storyExit(){storyHidePresentation();storyCancelAuto();saveStoryProgress();storyPreviewMode=false;storyPreviewSkipBattles=true;document.body.classList.remove('story-battle-mode');goToLobby();}
 function storyAllStageTitles(){return [].concat(STORY_STAGE_DEFS.black||[],STORY_STAGE_DEFS.white||[]).map(s=>String(s.title||'')).filter(Boolean);}
-function storyBlockHeader(blockIndex){const first=(storyBlocks[blockIndex]||'').split(/\r?\n/).map(s=>s.trim()).find(Boolean)||'';return (/^第.+節|結尾$/.test(first)||storyAllStageTitles().includes(first))?first:globalStoryModeConfig.chapterTitle;}
+function storyBlockHeader(blockIndex){
+  const first=(storyBlocks[blockIndex]||'').split(/\r?\n/).map(s=>s.trim()).find(Boolean)||'';
+  if(!(/^第.+節|結尾$/.test(first)||storyAllStageTitles().includes(first)))return globalStoryModeConfig.chapterTitle;
+  // 標題以後台「關卡設定」的完整名稱為準；文本第一行只當作段落識別（改名不用動劇情文本）。
+  const stage=storyRun&&storyRun.route?storyStageForBlock(storyRun.route,blockIndex):null;
+  return stage&&Number(stage.startBlock)===Number(blockIndex)&&stage.title?stage.title:first;
+}
 function storyIsSpeaker(lines,i){return i+1<lines.length&&/^「/.test(lines[i+1])&&!/^「/.test(lines[i]);}
 function storyStripQuote(line){return line.replace(/^「/,'').replace(/」$/,'');}
 function storySplitDialogue(text){const parts=String(text||'').match(/[^。！？!?]+[。！？!?]+|[^。！？!?]+$/g);return (parts||[text]).map(s=>s.trim()).filter(Boolean);}
