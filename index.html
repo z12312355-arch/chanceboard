@@ -107,6 +107,9 @@
   /* Spatial fate graph: the fixed canvas makes choice-to-result causality visible. */
   .story-fate-visual-scroll{overflow-x:auto;overflow-y:hidden;margin:12px -5px 18px;padding:5px 5px 18px;scrollbar-color:#d3a83f rgba(255,255,255,.08)}.story-fate-visual-scroll::-webkit-scrollbar{height:12px}.story-fate-visual-scroll::-webkit-scrollbar-track{border-radius:999px;background:rgba(255,255,255,.07)}.story-fate-visual-scroll::-webkit-scrollbar-thumb{border:3px solid transparent;border-radius:999px;background:#d3a83f padding-box}.story-fate-canvas{position:relative;width:1100px;height:610px;border:1px solid rgba(122,139,181,.28);border-radius:16px;background:radial-gradient(circle at 12% 50%,rgba(242,193,78,.08),transparent 22%),linear-gradient(135deg,rgba(15,20,34,.95),rgba(8,11,20,.98));overflow:hidden}.story-fate-svg{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}.story-fate-link{fill:none;stroke:#47516c;stroke-width:2}.story-fate-link.seen{stroke:#75d897;stroke-width:3;filter:drop-shadow(0 0 4px rgba(117,216,151,.35))}.story-fate-edge-label{position:absolute;z-index:2;transform:translate(-50%,-50%);max-width:130px;border:1px solid #4d5874;border-radius:999px;padding:4px 9px;background:#101522;color:#78839d;font-size:10px;white-space:nowrap}.story-fate-edge-label.seen{border-color:rgba(117,216,151,.65);background:#12251d;color:#b9f0ca}.story-fate-visual-node{position:absolute;z-index:3;width:220px;min-height:128px;border:1px solid #47516d;border-radius:13px;padding:12px;background:linear-gradient(145deg,rgba(28,34,52,.98),rgba(13,17,29,.98));color:#7f899f;box-shadow:0 12px 26px rgba(0,0,0,.32)}.story-fate-visual-node.discovered{border-color:rgba(242,193,78,.58);color:#e8edf9}.story-fate-visual-node.outcome.discovered{border-color:rgba(117,216,151,.55);background:linear-gradient(145deg,rgba(24,50,38,.96),rgba(12,24,21,.98))}.story-fate-visual-node-title{font-size:14px;font-weight:900;color:inherit}.story-fate-visual-node-meta{margin-top:6px;color:#8f9ab4;font-size:10px;line-height:1.5}.story-fate-visual-node.discovered .story-fate-visual-node-meta{color:#c6cee1}.story-fate-visual-node .story-fate-replay{width:100%;margin-top:9px;padding:6px 8px;font-size:10px}.story-fate-column-label{position:absolute;top:14px;z-index:1;color:#79849f;font-size:10px;font-weight:850;letter-spacing:.14em}.story-fate-scroll-note{color:#909ab3;font-size:10px;text-align:center;margin-top:-10px}
   .story-fate-visual-scroll.story-fate-ending-scroll{overflow-x:hidden;padding-bottom:0;scrollbar-width:none}.story-fate-ending-scroll::-webkit-scrollbar{display:none}
+  /* Boss關的「戰前台詞」視圖：只有兩張並排卡片，不需要棋盤式畫布，直接用flex排版即可。 */
+  .story-boss-variant-list{display:flex;flex-wrap:wrap;gap:16px;padding:6px 2px}
+  .story-boss-variant-list .story-fate-visual-node{position:static;flex:1 1 260px;max-width:340px;min-height:140px;width:auto}
   /* Fate map follows the same one-screen rule as stage selection: horizontal only. */
   #storyFateOverlay{padding:8px}.story-fate-panel{height:min(680px,calc(100vh - 16px));max-height:none;overflow:hidden}.story-fate-head{flex:0 0 auto}.story-fate-graph{flex:1 1 auto;min-height:0;overflow:hidden;padding:12px 16px 14px}.story-fate-visual-scroll{height:100%;margin:0;padding:0 0 14px;overflow-x:auto;overflow-y:hidden}.story-fate-canvas{height:100%;min-height:0}.story-fate-scroll-note,.story-fate-legend{display:none}.story-fate-head .hidden{display:none}
   #storyMenuActions{display:flex;gap:9px;align-items:center;flex-wrap:wrap;margin-top:18px;}
@@ -8135,6 +8138,17 @@ function storyFinalStage(route){const defs=STORY_STAGE_DEFS[route]||[];return st
 function storyLastStage(route){const defs=STORY_STAGE_DEFS[route]||[];return defs[defs.length-1]||null;}
 // 「結局關卡」＝涵蓋節點包含命運結局分段的那一關（合併後為尾聲1）；結局收錄與結局圖鑑掛在這裡。
 function storyEndingStage(route){const endings=storyBranchOutcomeList(route,'ending');if(!endings.length)return null;return (STORY_STAGE_DEFS[route]||[]).find(s=>(s.blocks||[]).some(b=>endings.includes(Number(b))))||null;}
+// Boss關卡的戰前台詞會因第三節的命運（是否有同伴同行）分成兩種版本，玩家單次遊玩只會看到
+// 其中一種。這裡直接讀流程規則(flow.conditions)：只要條件的判斷點正好是Boss關的起始節點，
+// 兩個分支目的地就是「兩種戰前台詞」的節點編號——完全依設定推導，後台改流程或改關卡結構都會自動跟上。
+function storyBossVariantBlocks(route){
+  const bossStage=storyStageByRole(route,'boss');if(!bossStage)return null;
+  const flow=globalStoryModeConfig.flow||DEFAULT_STORY_FLOW;
+  const rule=(flow.conditions||[]).find(item=>item&&item.route===route&&Number(item.from)===Number(bossStage.startBlock));
+  if(!rule)return null;
+  const a=Number(rule.to),b=Number(rule.otherwise);
+  return Number.isFinite(a)&&Number.isFinite(b)?[a,b]:null;
+}
 function storyStageIsFinal(route,stageNumber){const last=storyLastStage(route);return !!last&&Number(last.number)===Number(stageNumber);}
 function storyStageLabel(route,stageNumber){
   const stage=storyStageDef(route,stageNumber);
@@ -8151,7 +8165,7 @@ function storyRouteStateSnapshot(run){return {score:Number(run&&run.score)||0,fl
 let STORY_BLOCK_IDS={black:{2:'opening',3:'stage1',4:'stage2',5:'rescue',6:'accept',7:'promise',8:'responsible',9:'abandon',10:'refuse',11:'no_capacity',12:'weak',13:'no_help',14:'boss',15:'boss_joined',16:'boss_alone',17:'boss_common',18:'ending_gate',19:'ending_low',20:'ending_high',21:'king_scene'},white:{23:'opening',24:'stage1',25:'stage2',26:'protect',27:'accept',28:'promise',29:'promised',30:'uncertain',31:'refuse',32:'unsuitable',33:'burden',34:'no_help',35:'boss',36:'boss_joined',37:'boss_no_help',38:'boss_common',39:'ending_gate',40:'ending_hope',41:'ending_regret',42:'king_scene'}};
 let STORY_BRANCH_OUTCOMES={black:{3:[8,9,11,12,13],4:[19,20]},white:{3:[29,30,32,33,34],4:[40,41]}};
 let STORY_FATE_CHOICES={black:{3:[{block:5,title:'是否伸出援手',choices:[['幫忙',6],['不幫',13]]},{block:6,title:'是否讓她加入',choices:[['同意',7],['不同意',10]]},{block:7,title:'承諾的方式',choices:[['我會負責',8],['拖累就丟下',9]]},{block:10,title:'拒絕的理由',choices:[['我的隊伍沒有餘力',11],['弱者只會拖累我',12]]}]},white:{3:[{block:26,title:'是否伸出援手',choices:[['幫忙',27],['不幫',34]]},{block:27,title:'是否讓她加入',choices:[['同意',28],['不同意',31]]},{block:28,title:'給她的回答',choices:[['我答應妳',29],['我不能保證',30]]},{block:31,title:'拒絕的理由',choices:[['我的隊伍不適合她',32],['我不想背負她的生命',33]]}]}};
-let STORY_OUTCOME_LABELS={8:'承諾負責',9:'必要時放棄',11:'隊伍沒有餘力',12:'弱者只會拖累',13:'選擇旁觀',19:'求生結局',20:'同伴結局',29:'許下承諾',30:'不作保證',32:'隊伍不適合她',33:'拒絕背負生命',34:'選擇旁觀',40:'守護結局',41:'遺憾結局'};
+let STORY_OUTCOME_LABELS={8:'承諾負責',9:'必要時放棄',11:'隊伍沒有餘力',12:'弱者只會拖累',13:'選擇旁觀',15:'同伴同行的台詞',16:'獨自應戰的台詞',19:'求生結局',20:'同伴結局',29:'許下承諾',30:'不作保證',32:'隊伍不適合她',33:'拒絕背負生命',34:'選擇旁觀',36:'同伴同行的台詞',37:'獨自應戰的台詞',40:'守護結局',41:'遺憾結局'};
 const DEFAULT_STORY_FATE_CONFIG={blockIds:JSON.parse(JSON.stringify(STORY_BLOCK_IDS)),branchOutcomes:JSON.parse(JSON.stringify(STORY_BRANCH_OUTCOMES)),choiceMap:JSON.parse(JSON.stringify(STORY_FATE_CHOICES)),outcomeLabels:JSON.parse(JSON.stringify(STORY_OUTCOME_LABELS))};
 function storyRefreshFateConfig(){const fate=globalStoryModeConfig.fate&&typeof globalStoryModeConfig.fate==='object'?globalStoryModeConfig.fate:DEFAULT_STORY_FATE_CONFIG;STORY_BLOCK_IDS=JSON.parse(JSON.stringify(fate.blockIds||DEFAULT_STORY_FATE_CONFIG.blockIds));STORY_BRANCH_OUTCOMES=JSON.parse(JSON.stringify(fate.branchOutcomes||DEFAULT_STORY_FATE_CONFIG.branchOutcomes));STORY_FATE_CHOICES=JSON.parse(JSON.stringify(fate.choiceMap||DEFAULT_STORY_FATE_CONFIG.choiceMap));STORY_OUTCOME_LABELS=JSON.parse(JSON.stringify(fate.outcomeLabels||DEFAULT_STORY_FATE_CONFIG.outcomeLabels));
   // 內部一律使用 {branch,ending}／{branch}：舊設定用關卡編號 3／4 當 key，載入時轉換。
@@ -8189,7 +8203,15 @@ function storyMarkBlockVisited(route,block){if(storyPreviewMode)return;const dat
 function storyRecordChoice(route,block,choice){if(storyPreviewMode)return;const data=loadStoryDiscovery(),r=data.routes[route],id=storyStableBlockId(route,block);if(!Array.isArray(r.choices[id]))r.choices[id]=[];if(!r.choices[id].includes(choice))r.choices[id].push(choice);saveStoryDiscovery(data);}
 function storyWasBlockVisited(route,block,data){const d=data||loadStoryDiscovery();return d.routes[route].visitedBlocks.includes(storyStableBlockId(route,block));}
 function storyWasChoiceVisited(route,block,choice,data){const d=data||loadStoryDiscovery(),list=d.routes[route].choices[storyStableBlockId(route,block)]||[];return list.includes(choice);}
-function storyExploration(route,stageNumber){const stage=storyStageDef(route,stageNumber),endingHost=storyBranchStage(route)?storyEndingStage(route):null,targets=stage&&stage.role==='branch'?storyBranchOutcomeList(route,'branch'):(stage&&endingHost&&Number(endingHost.number)===Number(stageNumber)?storyBranchOutcomeList(route,'ending'):[]),data=loadStoryDiscovery(),seen=targets.filter(block=>storyWasBlockVisited(route,block,data)).length;return {seen,total:targets.length};}
+function storyExploration(route,stageNumber){
+  const stage=storyStageDef(route,stageNumber),endingHost=storyBranchStage(route)?storyEndingStage(route):null;
+  let targets=[];
+  if(stage&&stage.role==='branch')targets=storyBranchOutcomeList(route,'branch');
+  else if(stage&&stage.role==='boss')targets=storyBossVariantBlocks(route)||[];
+  else if(stage&&endingHost&&Number(endingHost.number)===Number(stageNumber))targets=storyBranchOutcomeList(route,'ending');
+  const data=loadStoryDiscovery(),seen=targets.filter(block=>storyWasBlockVisited(route,block,data)).length;
+  return {seen,total:targets.length};
+}
 function storyOutcomeBlockForState(route,state){
   // 依命運棋譜設定的選擇樹推導：從根節點沿著已記錄的選擇走，走到不再是選擇節點的區塊即為命運結果。
   const choices=state&&state.choices||{},defs=storyFateChoiceDefs(route);
@@ -8275,7 +8297,7 @@ function storyRenderStageMap(route){
     const disp=routeHasPrologue?stage.number:stage.number+1;
     const kicker=roleKey==='prologue'?'PROLOGUE':(roleKey==='boss'?'BOSS':roleKey==='epilogue'?'EPILOGUE':'STAGE')+' 01-'+disp;
     const roleTag={prologue:'序章',branch:'分支',boss:'BOSS',epilogue:'尾聲',normal:''}[roleKey];
-    const exploreLabel=stage.role==='branch'?'分支探索':'結局收集';
+    const exploreLabel=stage.role==='branch'?'分支探索':stage.role==='boss'?'戰前台詞':'結局收集';
     // Boss卡顯示「出發沿用哪條命運＋已解鎖分支數」（沿此命運出發的起點）；
     // 最後一關（尾聲2）顯示「本次結局沿用哪條命運」（結局由它與最終分數決定）。
     const endingCardDef=storyEndingStage(route)||storyLastStage(route);
@@ -8284,7 +8306,7 @@ function storyRenderStageMap(route){
     let source='';
     if(isBossCard)source=currentBranch?'<span class="story-stage-source"><b>'+(activeCarry?'進行中的挑戰':'本次挑戰沿用')+'</b>'+escHtml(branchTitle)+'「'+escHtml(currentBranchLabel)+'」<span class="story-stage-source-count">已解鎖 '+Object.keys(branches).length+'／'+branchTargets.length+'</span></span>':'<span class="story-stage-source locked">完成「'+escHtml(branchTitle)+'」後，將在這裡顯示本次沿用的命運節點</span>';
     else if(isLastCard)source=currentBranch?'<span class="story-stage-source"><b>本次結局沿用</b>「'+escHtml(currentBranchLabel)+'」的命運與分數</span>':'<span class="story-stage-source locked">完成「'+escHtml(branchTitle)+'」後，將在這裡顯示本次結局沿用的命運</span>';
-    return '<div class="story-stage-row '+(done?'path-complete':'path-pending')+'"><button type="button" class="story-stage-node role-'+roleKey+' '+(done?'cleared ':'')+(current?'current':'')+'" data-story-stage="'+stage.number+'"><span class="story-stage-index">'+(done?'✓':(stage.role==='prologue'?'序':String(disp).padStart(2,'0')))+'</span><span class="story-stage-info"><span class="story-stage-kicker">'+kicker+(roleTag?'<span class="story-stage-role-tag tag-'+roleKey+'">'+roleTag+'</span>':'')+'</span><span class="story-stage-title">'+escHtml(stage.shortTitle)+'</span><span class="story-stage-desc">'+escHtml(stage.description)+'</span>'+(hasBranches?'<span class="story-stage-explore">'+exploreLabel+' '+explore.seen+'／'+explore.total+'</span>':'')+source+'</span><span class="story-stage-state">'+(done?'重播':current?'挑戰':'未解鎖')+'</span></button>'+(done&&hasBranches?'<button type="button" class="story-fate-btn" data-story-fate-stage="'+stage.number+'">'+(stage.role==='branch'?'⌘ 命運棋譜　':'⌘ 結局圖鑑　')+explore.seen+'／'+explore.total+'</button>':'')+'</div>';
+    return '<div class="story-stage-row '+(done?'path-complete':'path-pending')+'"><button type="button" class="story-stage-node role-'+roleKey+' '+(done?'cleared ':'')+(current?'current':'')+'" data-story-stage="'+stage.number+'"><span class="story-stage-index">'+(done?'✓':(stage.role==='prologue'?'序':String(disp).padStart(2,'0')))+'</span><span class="story-stage-info"><span class="story-stage-kicker">'+kicker+(roleTag?'<span class="story-stage-role-tag tag-'+roleKey+'">'+roleTag+'</span>':'')+'</span><span class="story-stage-title">'+escHtml(stage.shortTitle)+'</span><span class="story-stage-desc">'+escHtml(stage.description)+'</span>'+(hasBranches?'<span class="story-stage-explore">'+exploreLabel+' '+explore.seen+'／'+explore.total+'</span>':'')+source+'</span><span class="story-stage-state">'+(done?'重播':current?'挑戰':'未解鎖')+'</span></button>'+(done&&hasBranches?'<button type="button" class="story-fate-btn" data-story-fate-stage="'+stage.number+'">'+(stage.role==='branch'?'⌘ 命運棋譜　':stage.role==='boss'?'⌘ 戰前台詞　':'⌘ 結局圖鑑　')+explore.seen+'／'+explore.total+'</button>':'')+'</div>';
   }).join('');
   map.querySelectorAll('[data-story-stage]').forEach(btn=>btn.onclick=async()=>{try{await storyEnsureSource();storyOpenStage(route,Number(btn.dataset.storyStage));}catch(e){document.getElementById('storyLoadMessage').textContent='❌ '+e.message;}});
   map.querySelectorAll('[data-story-fate-stage]').forEach(btn=>btn.onclick=e=>{e.stopPropagation();storyOpenFateMap(route,Number(btn.dataset.storyFateStage));});
@@ -8364,23 +8386,35 @@ function storyEndingVisualHtml(route,data){
   }).join('');
   return '<div class="story-fate-visual-scroll story-fate-ending-scroll"><div class="story-fate-canvas story-fate-ending-map" style="width:'+canvasW+'px;height:'+canvasH+'px"><span class="story-fate-column-label" style="left:'+branchX+'px">「'+escHtml((storyBranchStage(route)||{}).shortTitle||'分支')+'」命運</span><span class="story-fate-column-label" style="left:'+endingX+'px">「'+escHtml((storyLastStage(route)||{}).shortTitle||'結局')+'」結局</span>'+svg+branchNodes+endingNodes+'</div></div>';
 }
+// Boss關卡沒有自己的分支選項（不是玩家在Boss關做的選擇），只有「兩種戰前台詞」需要讓玩家
+// 知道並能重播。畫面比命運棋譜／結局圖鑑簡單：兩張並排卡片＋各自的重播鈕，
+// 重播直接沿用 storyStartReplay 既有的「該節點首次造訪快照」機制，不需要額外的狀態管理。
+function storyBossVariantVisualHtml(route,data){
+  const variants=storyBossVariantBlocks(route)||[];
+  return '<div class="story-fate-visual-scroll"><div class="story-boss-variant-list">'+variants.map(block=>{
+    const seen=storyWasBlockVisited(route,block,data);
+    return '<div class="story-fate-visual-node outcome '+(seen?'discovered':'')+'"><div class="story-fate-visual-node-title">'+(seen?escHtml(STORY_OUTCOME_LABELS[block]||'戰前台詞'):'？？？')+'</div><div class="story-fate-visual-node-meta">'+(seen?'已看過這段對話':'尚未看過，需先在第三節走到對應命運並打到Boss')+'</div>'+(seen?'<button type="button" class="story-fate-replay" data-story-replay-block="'+block+'">重播這段對話</button>':'')+'</div>';
+  }).join('')+'</div></div>';
+}
 function storyOpenFateMap(route,stageNumber){
   const overlay=document.getElementById('storyFateOverlay'),graph=document.getElementById('storyFateGraph'),data=loadStoryDiscovery();
   const branchStage=storyBranchStage(route),branchNumber=branchStage?Number(branchStage.number):null;
   if(branchNumber==null){storyFlash('這條路線沒有分支關卡，命運棋譜未啟用');return;}
-  const isBranchView=Number(stageNumber)===branchNumber;
-  if(!isBranchView)storySavedBranchStates(route,data);
-  const targets=storyBranchOutcomeList(route,isBranchView?'branch':'ending');
-  const explore={seen:targets.filter(block=>storyWasBlockVisited(route,block,data)).length,total:targets.length};
   const stage=storyStageDef(route,stageNumber);
+  const isBranchView=Number(stageNumber)===branchNumber,isBossView=!isBranchView&&!!stage&&stage.role==='boss';
+  const mode=isBranchView?'branch':isBossView?'boss':'ending';
+  if(mode!=='boss')storySavedBranchStates(route,data);
+  const targets=mode==='branch'?storyBranchOutcomeList(route,'branch'):mode==='boss'?(storyBossVariantBlocks(route)||[]):storyBranchOutcomeList(route,'ending');
+  const explore={seen:targets.filter(block=>storyWasBlockVisited(route,block,data)).length,total:targets.length};
   overlay.dataset.route=route;overlay.dataset.stage=stageNumber;
-  document.getElementById('storyFateTitle').textContent=(isBranchView?'命運棋譜｜':'結局圖鑑｜')+(stage?stage.title:'分支回顧');
+  document.getElementById('storyFateTitle').textContent=(mode==='branch'?'命運棋譜｜':mode==='boss'?'戰前台詞｜':'結局圖鑑｜')+(stage?stage.title:'分支回顧');
   const replayEntry=storyFinalStage(route),endingHostDef=storyEndingStage(route)||storyLastStage(route);
-  const chainHint=!isBranchView&&replayEntry&&endingHostDef&&Number(replayEntry.number)!==Number(endingHostDef.number)?'　・　「沿此命運出發」從「'+replayEntry.shortTitle+'」重新打起，通關後沿回溯結果走到「'+endingHostDef.shortTitle+'」收錄結局':'';
-  document.getElementById('storyFateSummary').textContent=(isBranchView?'探索 ':'收集 ')+explore.seen+'／'+explore.total+'　・　綠色連線代表已走過的命運'+chainHint;
-  const backBtn=document.getElementById('storyFateBackBtn');backBtn.classList.toggle('hidden',isBranchView);backBtn.onclick=()=>storyOpenFateMap(route,branchNumber);
-  graph.innerHTML=isBranchView?storyFateVisualHtml(route,data):storyEndingVisualHtml(route,data);overlay.classList.remove('hidden');
-  graph.querySelectorAll('[data-story-replay-block]').forEach(btn=>btn.onclick=()=>storyStartReplay(route,branchNumber,Number(btn.dataset.storyReplayBlock)));
+  const chainHint=mode==='ending'&&replayEntry&&endingHostDef&&Number(replayEntry.number)!==Number(endingHostDef.number)?'　・　「沿此命運出發」從「'+replayEntry.shortTitle+'」重新打起，通關後沿回溯結果走到「'+endingHostDef.shortTitle+'」收錄結局':'';
+  const bossHint=mode==='boss'?'　・　兩種台詞分別對應第三節「有無同伴同行」的命運，只要通關過一次就能重播另一種':'';
+  document.getElementById('storyFateSummary').textContent=(mode==='branch'?'探索 ':mode==='boss'?'看過 ':'收集 ')+explore.seen+'／'+explore.total+'　・　綠色連線代表已走過的命運'+chainHint+bossHint;
+  const backBtn=document.getElementById('storyFateBackBtn');backBtn.classList.toggle('hidden',mode==='branch');backBtn.onclick=()=>storyOpenFateMap(route,branchNumber);
+  graph.innerHTML=mode==='branch'?storyFateVisualHtml(route,data):mode==='boss'?storyBossVariantVisualHtml(route,data):storyEndingVisualHtml(route,data);overlay.classList.remove('hidden');
+  graph.querySelectorAll('[data-story-replay-block]').forEach(btn=>btn.onclick=()=>storyStartReplay(route,Number(stageNumber),Number(btn.dataset.storyReplayBlock)));
   graph.querySelectorAll('[data-story-replay-stage]').forEach(btn=>btn.onclick=()=>storyStartReplay(route,Number(btn.dataset.storyReplayStage)));
   graph.querySelectorAll('[data-story-open-fate]').forEach(btn=>btn.onclick=()=>storyOpenFateMap(route,Number(btn.dataset.storyOpenFate)));
   graph.querySelectorAll('[data-story-fourth-branch]').forEach(btn=>btn.onclick=()=>storyStartFourthFromBranch(route,Number(btn.dataset.storyFourthBranch)));
