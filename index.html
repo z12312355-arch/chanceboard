@@ -85,14 +85,16 @@
   #storyMotto{position:absolute;inset:0;z-index:14;display:flex;align-items:center;justify-content:center;padding:34px;
     background:radial-gradient(ellipse at center,rgba(10,12,20,.82) 0%,rgba(3,4,8,.97) 72%);cursor:pointer;}
   #storyMotto.hidden{display:none;}
-  .story-motto-inner{width:min(760px,100%);text-align:center;}
+  .story-motto-inner{width:min(1040px,100%);text-align:center;}
   .story-motto-kicker{color:rgba(242,193,78,.72);font-size:10px;font-weight:900;letter-spacing:.44em;
     opacity:0;animation:mottoKicker .9s ease .15s forwards;}
   .story-motto-rule{height:1px;margin:16px auto;width:0;
     background:linear-gradient(90deg,transparent,rgba(242,193,78,.85),transparent);
     animation:mottoRule 1.15s cubic-bezier(.22,.61,.36,1) .3s forwards;}
   .story-motto-rule.bottom{animation-delay:.42s;}
-  .story-motto-text{color:#fff;font-size:clamp(19px,3.1vw,32px);font-weight:800;line-height:2;letter-spacing:.2em;
+  /* 標語要盡量排成一行（換行會把一句話拆斷，讀起來很散）。實際字級由 fitStoryMotto() 量完
+     寬度後決定；真的太長排不下才允許換行，並用 text-wrap:balance 讓兩行長度接近。 */
+  .story-motto-text{text-wrap:balance;color:#fff;font-size:clamp(19px,3.1vw,32px);font-weight:800;line-height:2;letter-spacing:.2em;
     text-shadow:0 2px 18px rgba(0,0,0,.9),0 0 34px rgba(242,193,78,.22);}
   /* 逐字浮現：每個字元一個 span，由 JS 依序指定 --i 當延遲倍數 */
   .story-motto-text span{display:inline-block;opacity:0;transform:translateY(14px);filter:blur(5px);
@@ -8613,7 +8615,9 @@ function storyBuildTeamOptions(){
 // 使用者要求「選擇隊伍時多顯示隊伍的角色圖片」：把出戰角色畫成一排小立繪。同一份 HTML
 // 也給戰敗結算頁重用（storyShowDefeat），兩邊的隊伍呈現保持一致。
 function storyTeamFacesHtml(team,limit){
-  const ids=(team&&team.characterIds||[]).slice(0,limit||3);
+  // 先取實際出戰的前 N 位，再反轉順序顯示：跟隊伍挑選卡片（renderTeamList／renderTeamPick）
+  // 與跨網房間的隊伍預覽用同一套「戰鬥站位視覺順序」，只影響呈現，不動 characterIds 資料本身。
+  const ids=(team&&team.characterIds||[]).slice(0,limit||3).reverse();
   if(!ids.length)return '<div class="story-team-face empty" title="尚未編成">＋</div>';
   return ids.map(function(id){
     const c=CHAR_BY_ID[id];if(!c)return '';
@@ -8992,6 +8996,34 @@ function storyOpenFateMap(route){
   graph.querySelectorAll('[data-story-replay-block]').forEach(btn=>btn.onclick=()=>storyStartReplay(route,Number(branchStage.number),Number(btn.dataset.storyReplayBlock)));
   graph.querySelectorAll('[data-story-fourth-branch]').forEach(btn=>btn.onclick=()=>storyStartFourthFromBranch(route,Number(btn.dataset.storyFourthBranch)));
 }
+// 章節標語盡量排成一行：先假設不換行，量出實際寬度後把字級一路縮到塞得下為止。
+// 縮到下限還是塞不下（極長的標語、或很窄的手機）才放行換行，並交給 text-wrap:balance
+// 讓兩行長度接近，不會出現「第二行只有兩個字」那種難看的斷法。
+// 使用者反應「電腦版上會換行，有點醜」——桌機寬度其實放得下，是容器上限太窄造成的。
+function fitStoryMotto(){
+  const box=document.getElementById('storyMottoText');
+  if(!box||typeof box.scrollWidth!=='number')return;
+  box.style.whiteSpace='nowrap';
+  box.style.fontSize='';
+  const base=parseFloat(window.getComputedStyle?window.getComputedStyle(box).fontSize:'')||32;
+  // 下限不能訂太低：這是全螢幕的演出字，硬擠成一行卻縮到很小反而更難看。
+  // 縮到 70% 還排不下就認賠換行——兩行等長（text-wrap:balance）比一行小字好讀。
+  const floor=Math.max(18,base*.7);
+  let size=base;
+  while(size>floor&&box.scrollWidth>box.clientWidth+0.5){
+    size-=1;
+    box.style.fontSize=size+'px';
+  }
+  if(box.scrollWidth>box.clientWidth+0.5){
+    box.style.whiteSpace='normal';
+    // 換行時不要沿用剛才縮到底的字級，回到接近原本大小，讓兩行仍有份量。
+    box.style.fontSize=Math.max(floor,base*.85)+'px';
+  }
+}
+window.addEventListener('resize',function(){
+  const motto=document.getElementById('storyMotto');
+  if(motto&&!motto.classList.contains('hidden'))fitStoryMotto();
+});
 function storyCloseFateMap(){document.getElementById('storyFateOverlay').classList.add('hidden');}
 let storyFateResizeTimer=null;
 window.addEventListener('resize',function(){
@@ -9182,6 +9214,7 @@ function storyRenderCurrent(){
       ? '<span class="space" style="--i:'+idx+'"></span>'
       : '<span style="--i:'+idx+'">'+escHtml(ch)+'</span>').join('');
     motto.classList.remove('hidden');
+    fitStoryMotto();
     // 逐字動畫跑完再讓自動模式往下走，免得標語還沒浮現完就被翻頁。
     storyScheduleAuto((1500+Array.from(String(text||'')).length*55)/storySpeed);
     return;
