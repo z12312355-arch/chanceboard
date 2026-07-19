@@ -81,6 +81,28 @@
   .story-top-btn{flex:0 0 auto;white-space:nowrap;border:1px solid rgba(255,255,255,.28);background:rgba(8,10,18,.74);color:#fff;border-radius:8px;padding:7px 11px;cursor:pointer;}
   #storyDialog{position:absolute;z-index:4;left:50%;bottom:22px;transform:translateX(-50%);width:min(1080px,calc(100% - 32px));min-height:128px;padding:17px 26px 19px;border:1px solid rgba(184,199,239,.3);border-radius:14px;background:linear-gradient(150deg,rgba(15,18,29,.38),rgba(7,9,16,.5));box-shadow:0 18px 60px rgba(0,0,0,.48),inset 0 1px rgba(255,255,255,.06);cursor:pointer;backdrop-filter:blur(4px);}
   #storyDialog::before{content:'';position:absolute;left:0;top:18px;bottom:18px;width:3px;border-radius:0 4px 4px 0;background:linear-gradient(#fff0,#f2c14e,#fff0);box-shadow:0 0 12px rgba(242,193,78,.55);}
+  /* ---- 章節結束（落幕）：整片壓黑 → 章名浮現 → 副標 → 提示，節奏刻意比標語慢 ---- */
+  #storyComplete{position:absolute;inset:0;z-index:15;display:flex;align-items:center;justify-content:center;padding:32px;
+    background:#020306;opacity:0;animation:completeCurtain 1.5s ease forwards;cursor:pointer;}
+  #storyComplete.hidden{display:none;}
+  .story-complete-inner{text-align:center;max-width:min(900px,100%);}
+  .story-complete-title{color:#f4efe2;font-weight:900;font-size:clamp(26px,4.4vw,46px);letter-spacing:.5em;text-indent:.5em;
+    white-space:nowrap;opacity:0;transform:scale(1.06);
+    animation:completeTitle 2.3s cubic-bezier(.19,1,.22,1) .95s forwards;
+    text-shadow:0 0 44px rgba(244,239,226,.24);}
+  .story-complete-rule{width:0;height:1px;margin:24px auto 0;background:linear-gradient(90deg,transparent,rgba(244,239,226,.55),transparent);
+    animation:completeRule 1.9s cubic-bezier(.22,.61,.36,1) 2.5s forwards;}
+  .story-complete-sub{margin-top:26px;color:#9aa2b8;font-size:clamp(12px,1.5vw,15px);letter-spacing:.16em;line-height:2;
+    opacity:0;animation:completeFade 1.7s ease 3s forwards;}
+  .story-complete-hint{margin-top:38px;color:#6b7288;font-size:11px;letter-spacing:.2em;
+    opacity:0;animation:completeFade 1.4s ease 4.4s forwards,tutorialBlink 2s 5.6s infinite;}
+  @keyframes completeCurtain{to{opacity:1;}}
+  @keyframes completeTitle{to{opacity:1;transform:none;}}
+  @keyframes completeRule{to{width:min(420px,70%);}}
+  @keyframes completeFade{to{opacity:1;}}
+  @media(max-width:700px){#storyComplete{padding:20px;}.story-complete-title{letter-spacing:.32em;text-indent:.32em;}.story-complete-sub{margin-top:18px;}.story-complete-hint{margin-top:26px;}}
+  @media(max-height:500px) and (orientation:landscape){#storyComplete{padding:14px;}.story-complete-title{font-size:clamp(20px,3vw,30px);letter-spacing:.34em;text-indent:.34em;}.story-complete-rule{margin-top:12px;}.story-complete-sub{margin-top:12px;line-height:1.7;}.story-complete-hint{margin-top:16px;}}
+  @media(prefers-reduced-motion:reduce){#storyComplete,.story-complete-title,.story-complete-sub,.story-complete-hint{animation:none!important;opacity:1!important;transform:none!important;}.story-complete-rule{animation:none!important;width:min(420px,70%);}}
   /* ---- 章節標語的全螢幕演出 ---- */
   #storyMotto{position:absolute;inset:0;z-index:14;display:flex;align-items:center;justify-content:center;padding:34px;
     background:radial-gradient(ellipse at center,rgba(10,12,20,.82) 0%,rgba(3,4,8,.97) 72%);cursor:pointer;}
@@ -2313,6 +2335,17 @@
     <!-- 章節標語：使用者覺得原本「借用普通對話框、speaker 寫『章節標語』」不夠特別。
          參考手遊（原神章節卡、FGO 章末、明日方舟章節標題）的共同語言：整個畫面接管、
          上下細線向兩側展開、標語逐字浮現、大字距、留白多、節奏慢。 -->
+    <!-- 章節結束：刻意與章節標語用不同的語言。標語是「篇中的題辭」（逐字浮現、細線展開）；
+         這裡是「落幕」——整片壓黑當幕布，大字距的章名整句一起浮現並輕微收束，副標與繼續提示
+         都刻意延後，重點在停頓與留白。兩者相隔不到一關，用同一套演出會互相稀釋。 -->
+    <div id="storyComplete" class="hidden" role="button" tabindex="0" aria-label="完成章節">
+      <div class="story-complete-inner">
+        <div class="story-complete-title" id="storyCompleteTitle">第一章　完</div>
+        <div class="story-complete-rule"></div>
+        <div class="story-complete-sub" id="storyCompleteSub"></div>
+        <div class="story-complete-hint">點擊完成章節 ◆</div>
+      </div>
+    </div>
     <div id="storyMotto" class="hidden" role="button" tabindex="0" aria-label="繼續故事">
       <div class="story-motto-inner">
         <div class="story-motto-kicker">CHAPTER MOTTO</div>
@@ -9189,8 +9222,8 @@ function storySetSpeakerAvatar(speaker){
 function storyRenderCurrent(){
   if(!storyRun||!storyRun.active)return storyShowMenu();storyCancelReveal();storyCancelAuto();document.getElementById('storyMenu').classList.add('hidden');document.getElementById('storyChapterTitle').textContent=storyBlockHeader(storyRun.block);document.getElementById('storyRouteBadge').textContent=storyRouteText(storyRun.route)+(storyPreviewMode?'・預覽':storyRun.replayMode?'・命運回溯':'');
   storyMarkBlockVisited(storyRun.route,storyRun.block);
-  const dialog=document.getElementById('storyDialog'),choices=document.getElementById('storyChoices'),cinematic=document.getElementById('storyCinematic'),narration=document.getElementById('storyNarration'),playerLine=document.getElementById('storyPlayerLine'),splash=document.getElementById('storyChapterSplash'),motto=document.getElementById('storyMotto');
-  [dialog,choices,cinematic,narration,playerLine,splash,motto].forEach(el=>el.classList.add('hidden'));dialog.classList.remove('context-narration');document.getElementById('storySpeakerRow').classList.remove('hidden');cinematic.innerHTML='';narration.innerHTML='';playerLine.innerHTML='';
+  const dialog=document.getElementById('storyDialog'),choices=document.getElementById('storyChoices'),cinematic=document.getElementById('storyCinematic'),narration=document.getElementById('storyNarration'),playerLine=document.getElementById('storyPlayerLine'),splash=document.getElementById('storyChapterSplash'),motto=document.getElementById('storyMotto'),complete=document.getElementById('storyComplete');
+  [dialog,choices,cinematic,narration,playerLine,splash,motto,complete].forEach(el=>el.classList.add('hidden'));dialog.classList.remove('context-narration');document.getElementById('storySpeakerRow').classList.remove('hidden');cinematic.innerHTML='';narration.innerHTML='';playerLine.innerHTML='';
   if(storyRun.showChapterTitle||storyRun.pendingSplash){const info=storyRun.pendingSplash||{kicker:'CHAPTER',title:globalStoryModeConfig.chapterTitle};document.getElementById('storyChapterSplashKicker').textContent=info.kicker||'SECTION';document.getElementById('storyChapterSplashName').textContent=info.title||globalStoryModeConfig.chapterTitle;splash.classList.remove('hidden');['storyCg','storyCgBlur'].forEach(id=>document.getElementById(id).classList.remove('show'));['storyActorLeft','storyActorRight'].forEach(id=>document.getElementById(id).classList.remove('visible','active'));storyScheduleAuto(1500/storySpeed);return;}
   // 一定要先取得 beat 再決定 CG。原本 storySetCg() 寫在前面，於是「這一段的 beat 已經播完、
   // 正要換到下一段」的那一次 render（beat===undefined）會被判定成「沒有CG」，把 CG 連 src 一起
@@ -9205,6 +9238,18 @@ function storyRenderCurrent(){
   else if(beat.type==='reward'){speaker='角色加入';text='獲得角色：'+beat.name;hint='點擊領取並繼續 ◆';}
   else if(beat.type==='score'){speaker='選擇的影響';text=beat.label+(beat.amount>=0?'＋':'－')+Math.abs(beat.amount);}
   else if(beat.type==='complete'){speaker='第一章　完';text=storyRun.route==='white'?'願每一枚棋子，都不被忘記。':'願望不會停止，棋局仍將繼續。';hint='點擊完成章節 ◆';}
+  // 章節結束：全螢幕落幕演出，不走底部對話框。點擊由 #screen-story 的 onclick 轉給
+  // storyAdvance()，那裡的 beat.type==='complete' 分支會呼叫 storyCompleteChapter()，
+  // 完成流程完全不變，這裡只換呈現方式。
+  if(beat.type==='complete'){
+    storyAppendLog(beat,speaker,text);
+    document.getElementById('storyCompleteTitle').textContent=speaker;
+    document.getElementById('storyCompleteSub').textContent=text;
+    complete.classList.remove('hidden');
+    // 動畫全部跑完（幕布1.5s＋章名2.3s＋副標3s＋提示4.4s）才讓自動模式翻頁。
+    storyScheduleAuto(6200/storySpeed);
+    return;
+  }
   // 章節標語：全螢幕接管演出（逐字浮現），不走底部對話框。
   if(beat.type==='motto'){
     storyAppendLog(beat,'章節標語',text);
