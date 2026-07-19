@@ -8306,8 +8306,11 @@ let STORY_STAGE_DEFS={
     {number:2,role:'normal',title:'第二節　另一位玩家',shortTitle:'另一位玩家',startBlock:4,blocks:[4],description:'遭遇另一名玩家，理解黑方世界的生存法則。'},
     {number:3,role:'branch',title:'第三節　拯救',shortTitle:'拯救',startBlock:5,blocks:[5,6,7,8,9,10,11,12,13],description:'你的選擇將決定圖卡勒絲的命運。'},
     {number:4,role:'boss',title:'第四節　無名戰士',shortTitle:'無名戰士',startBlock:14,blocks:[14,15,16,17],description:'突破守關無名戰士。'},
-    {number:5,role:'normal',title:'尾聲1　第一章結尾',shortTitle:'尾聲1',startBlock:18,blocks:[18,19,20],description:'戰死者化作光點升空，小黑依你的求生意志給出臨別評價。'},
-    {number:6,role:'normal',title:'尾聲2　注視的目光',shortTitle:'尾聲2',startBlock:21,blocks:[21],description:'黑白交錯的國王棋緩緩旋轉，有誰正注視著棋盤。'}
+    // cg：整個關卡共用的 CG。尾聲1 橫跨三個段落（18＝結尾、19/20＝依求生意志分歧），
+    // 只在文本裡逐段標記【CG：…】太容易漏掉一段、演到一半就跳回場景底圖，因此改成掛在關卡上，
+    // 段落怎麼切都不會斷。文本內的【CG：…】仍可覆寫（Boss關戰後換圖就是靠它）。
+    {number:5,role:'normal',title:'尾聲1　第一章結尾',shortTitle:'尾聲1',startBlock:18,blocks:[18,19,20],cg:'story/01_05_01.png',description:'戰死者化作光點升空，小黑依你的求生意志給出臨別評價。'},
+    {number:6,role:'normal',title:'尾聲2　注視的目光',shortTitle:'尾聲2',startBlock:21,blocks:[21],cg:{src:'story/01_06.png',marquee:true},description:'黑白交錯的國王棋緩緩旋轉，有誰正注視著棋盤。'}
   ],
   white:[
     {number:0,role:'prologue',title:'序章　開幕',shortTitle:'序章',startBlock:23,blocks:[23],description:'化作棋子的光點，小白訴說願望的規則。'},
@@ -8315,8 +8318,8 @@ let STORY_STAGE_DEFS={
     {number:2,role:'normal',title:'第二節　另一位玩家',shortTitle:'另一位玩家',startBlock:25,blocks:[25],description:'遭遇另一名玩家，理解白方肩負的責任。'},
     {number:3,role:'branch',title:'第三節　守護',shortTitle:'守護',startBlock:26,blocks:[26,27,28,29,30,31,32,33,34],description:'你的選擇將決定梅朵與村莊的命運。'},
     {number:4,role:'boss',title:'第四節　無名戰士',shortTitle:'無名戰士',startBlock:35,blocks:[35,36,37,38],description:'突破守關無名戰士。'},
-    {number:5,role:'normal',title:'尾聲1　第一章結尾',shortTitle:'尾聲1',startBlock:39,blocks:[39,40,41],description:'初心荒野歸於平靜，小白依你的守護之心留下話語。'},
-    {number:6,role:'normal',title:'尾聲2　注視的目光',shortTitle:'尾聲2',startBlock:42,blocks:[42],description:'黑白交錯的國王棋緩緩轉動，有誰正注視著棋盤。'}
+    {number:5,role:'normal',title:'尾聲1　第一章結尾',shortTitle:'尾聲1',startBlock:39,blocks:[39,40,41],cg:'story/01_05_02.png',description:'初心荒野歸於平靜，小白依你的守護之心留下話語。'},
+    {number:6,role:'normal',title:'尾聲2　注視的目光',shortTitle:'尾聲2',startBlock:42,blocks:[42],cg:{src:'story/01_06.png',marquee:true},description:'黑白交錯的國王棋緩緩轉動，有誰正注視著棋盤。'}
   ]
 };
 const DEFAULT_STORY_STAGE_DEFS=JSON.parse(JSON.stringify(STORY_STAGE_DEFS));
@@ -8347,6 +8350,13 @@ function storyRefreshRuntimeConfig(){
     //  不存在需要遷移的舊設定；保留反而會誤拆管理者日後自訂的合併關卡。）
     // 關卡角色(role)：舊設定依編號推斷（0序章、3分支、4Boss）；編號一律以列表順序重編，
     // 讓後台可自由增刪關卡。
+    // 後台存進 D1 的關卡設定不會有後來才加的 cg 欄位，補上預設值，使用者不必回後台重存。
+    // 只在完全沒有這個欄位時補（null 代表管理者刻意設成「沒有CG」，要尊重）。
+    defs.forEach(stage=>{
+      if(stage.cg!==undefined)return;
+      const fallback=(DEFAULT_STORY_STAGE_DEFS[route]||[]).find(d=>Number(d.number)===Number(stage.number));
+      if(fallback&&fallback.cg!==undefined)stage.cg=JSON.parse(JSON.stringify(fallback.cg));
+    });
     defs.forEach((stage,index)=>{
       if(!stage.role)stage.role=Number(stage.number)===0?'prologue':Number(stage.number)===3?'branch':Number(stage.number)===4?'boss':'normal';
       if(!stage.id)stage.id=route+'-'+(stage.role==='normal'?'s'+stage.number:stage.role);
@@ -8428,6 +8438,22 @@ function storyIsOpeningBlock(blockIndex){if(!storyBlocks)return false;const firs
 //   【CG：story/01_04.png】 → 顯示指定 CG、隱藏立繪
 //   【CG：story/01_06.png｜跑馬燈】 → 再加上跑馬燈式的逐行浮現（storyPlayCinematic）
 // 路徑可以省略 story/ 與 .png（【CG：01_04】等同 story/01_04.png），方便編劇直接寫編號。
+// 關卡層級的 CG：整關共用，段落怎麼切都不會中斷。值可以是字串或 {src,marquee}。
+function storyNormalizeCg(value){
+  if(!value)return null;
+  if(typeof value==='string'){
+    let src=value.trim();if(!src)return null;
+    if(!/[\/.]/.test(src))src='story/'+src+'.png';else if(!/\.\w+$/.test(src))src=src+'.png';
+    return {src:src,marquee:false};
+  }
+  if(typeof value==='object'&&value.src)return {src:String(value.src),marquee:!!value.marquee};
+  return null;
+}
+function storyStageCgFor(blockIndex){
+  const route=storyRun&&storyRun.route||storyMenuRoute||'black';
+  const stage=storyStageForBlock(route,blockIndex);
+  return stage?storyNormalizeCg(stage.cg):null;
+}
 function storyBlockCgDirective(blockIndex){
   if(!storyBlocks)return null;
   // 掃描開頭兩行非空行：編劇習慣把 CG 指令寫在段落標題（例如「尾聲1　結尾」）的下一行，
@@ -8445,7 +8471,8 @@ function storyBlockCgDirective(blockIndex){
     else if(!/\.\w+$/.test(src))src=src+'.png';
     return {src:src,marquee:/跑馬燈|marquee|cinematic/i.test(m[2]||'')};
   }
-  return null;
+  // 文本裡沒有指令時，退回這一段所屬關卡的 CG（尾聲1／尾聲2 就是靠這個，不依賴逐段標記）。
+  return storyStageCgFor(blockIndex);
 }
 function storyIsCgBlock(blockIndex){return !!storyBlockCgDirective(blockIndex);}
 function storyMaxStageNumber(route){const defs=STORY_STAGE_DEFS[route]||[];return defs.length?Number(defs[defs.length-1].number):4;}
@@ -8564,6 +8591,10 @@ function storyPreloadCgs(){
   const seen={},queue=[];
   const add=function(src){if(src&&!seen[src]){seen[src]=true;queue.push(src);}};
   const opening=globalStoryModeConfig.openingCg||{};['black','white'].forEach(route=>add(opening[route]));
+  // 關卡層級的 CG（尾聲1／尾聲2）不在文本裡，要另外掃一遍才會被預載。
+  ['black','white'].forEach(route=>(STORY_STAGE_DEFS[route]||[]).forEach(stage=>{
+    const cg=storyNormalizeCg(stage.cg);if(cg)add(cg.src);
+  }));
   storyBlocks.forEach(block=>String(block||'').split(/\r?\n/).forEach(line=>{
     const m=line.trim().match(/^【CG[：:]\s*([^｜|】]+?)\s*(?:[｜|]\s*([^】]*?)\s*)?】$/);
     if(!m)return;let src=m[1].trim();
@@ -9001,7 +9032,8 @@ function storyParseBlock(blockIndex){
 function storySetCg(){
   const img=document.getElementById('storyCg'),blur=document.getElementById('storyCgBlur');
   // CG 依「目前這一拍」的狀態，而不是整個段落——同一段落裡 Boss 戰前後可以是不同的 CG。
-  const beat=storyRun?storyParseBlock(storyRun.block)[storyRun.beat]:null;
+  // beat 由呼叫端傳入（storyRenderCurrent 已經解析過），避免重複解析、也確保兩邊看到同一拍。
+  const beat=arguments.length?arguments[0]:(storyRun?storyParseBlock(storyRun.block)[storyRun.beat]:null);
   const directive=beat&&beat.cg||null,src=directive&&directive.src||'';
   const clear=function(){[img,blur].forEach(el=>{el.classList.remove('show');el.removeAttribute('src');});};
   // 有沒有 CG 這件事在圖片載好之前就要反映到背景上，否則載入空檔會露出場景底圖（兵的圖）。
@@ -9094,8 +9126,12 @@ function storyRenderCurrent(){
   const dialog=document.getElementById('storyDialog'),choices=document.getElementById('storyChoices'),cinematic=document.getElementById('storyCinematic'),narration=document.getElementById('storyNarration'),playerLine=document.getElementById('storyPlayerLine'),splash=document.getElementById('storyChapterSplash'),motto=document.getElementById('storyMotto');
   [dialog,choices,cinematic,narration,playerLine,splash,motto].forEach(el=>el.classList.add('hidden'));dialog.classList.remove('context-narration');document.getElementById('storySpeakerRow').classList.remove('hidden');cinematic.innerHTML='';narration.innerHTML='';playerLine.innerHTML='';
   if(storyRun.showChapterTitle||storyRun.pendingSplash){const info=storyRun.pendingSplash||{kicker:'CHAPTER',title:globalStoryModeConfig.chapterTitle};document.getElementById('storyChapterSplashKicker').textContent=info.kicker||'SECTION';document.getElementById('storyChapterSplashName').textContent=info.title||globalStoryModeConfig.chapterTitle;splash.classList.remove('hidden');['storyCg','storyCgBlur'].forEach(id=>document.getElementById(id).classList.remove('show'));['storyActorLeft','storyActorRight'].forEach(id=>document.getElementById(id).classList.remove('visible','active'));storyScheduleAuto(1500/storySpeed);return;}
-  storySetCg();
-  const beat=storyParseBlock(storyRun.block)[storyRun.beat];if(!beat){storyGoNextBlock();return;}storyApplyBeatEvent(beat);
+  // 一定要先取得 beat 再決定 CG。原本 storySetCg() 寫在前面，於是「這一段的 beat 已經播完、
+  // 正要換到下一段」的那一次 render（beat===undefined）會被判定成「沒有CG」，把 CG 連 src 一起
+  // 清掉、也拿掉 cg-scene 底色；接著換段落重新載入圖，而預載的 onload 是非同步的，中間那段
+  // 空窗期就會露出場景底圖（兵的圖）。尾聲1 橫跨 18→19/20 兩個段落，正好卡在演出中間。
+  const beat=storyParseBlock(storyRun.block)[storyRun.beat];if(!beat){storyGoNextBlock();return;}
+  storySetCg(beat);storyApplyBeatEvent(beat);
   storyRenderStage(beat);
   if(beat.type==='choice'){const ctx=storyRun.lastContext;if(ctx&&ctx.text){dialog.classList.remove('hidden');dialog.classList.toggle('context-narration',ctx.type==='narration');const row=document.getElementById('storySpeakerRow');row.classList.toggle('hidden',!ctx.speaker);document.getElementById('storySpeaker').textContent=ctx.speaker||'';storySetSpeakerAvatar(ctx.speaker||'');document.getElementById('storyText').textContent=ctx.text;document.getElementById('storyContinueHint').textContent='請選擇回應';}choices.classList.remove('hidden');const revealState=storyRun.replayMode||loadStoryStageProgress().routes[storyRun.route].cleared.includes(storyRun.stageNumber);choices.innerHTML=beat.choices.map(c=>{const seen=storyWasChoiceVisited(storyRun.route,storyRun.block,c);return '<button type="button" class="story-choice '+(revealState?(seen?'seen':'unseen'):'')+'" data-choice="'+escHtml(c)+'">'+escHtml(c)+(revealState?'<span class="story-choice-state">'+(seen?'✓ 已探索':'◇ 未探索')+'</span>':'')+'</button>';}).join('');choices.querySelectorAll('.story-choice').forEach(btn=>btn.onclick=e=>{e.stopPropagation();storyChoose(btn.dataset.choice);});return;}
   let speaker=beat.speaker||'',text=beat.text||'',hint='點擊任意位置繼續 ◆';
