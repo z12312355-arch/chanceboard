@@ -8812,33 +8812,83 @@ function storyFateVisualHtml(route,data){
   const laneSeen={};
   links.forEach(link=>{const key=Math.round(link.y1/12)+'@'+Math.round(link.x1/40);laneSeen[key]=(laneSeen[key]||0)+1;link.lane=laneSeen[key]-1;});
   const marker='storyArrow'+route,arrowSize=small?7:9,arrowMid=arrowSize/2;
+  // 所有卡片的矩形，供「這條線／這個標籤會不會壓到卡片」的判定使用。
+  const cardRects=[];nodePos.forEach(pos=>cardRects.push({x:pos.x,y:pos.y,w:nodeW,h:pos.h}));
+  const PAD=5; // 卡片周圍再留一點餘裕，線不要貼著邊擦過去
+  const hitsCard=function(x,y,skip){
+    return cardRects.some(function(rc){
+      if(skip&&(rc===skip.a||rc===skip.b))return false;
+      return x>rc.x-PAD&&x<rc.x+rc.w+PAD&&y>rc.y-PAD&&y<rc.y+rc.h+PAD;
+    });
+  };
+  // 取樣一段直線，判斷中途是否穿過任何卡片（兩端自己的卡片不算）。
+  const straightIsClear=function(link){
+    const skip={a:link.from,b:link.to},steps=24;
+    for(let i=1;i<steps;i++){
+      const t=i/steps,x=link.x1+(link.x2-link.x1)*t,y=link.y1+(link.y2-link.y1)*t;
+      if(hitsCard(x,y,skip))return false;
+    }
+    return true;
+  };
   // 跨欄的長邊走底部走線道。不能用單一條三次貝茲把控制點壓到底就算數——貝茲不會經過控制點，
   // 而且 x 前進得比 y 回升快，曲線仍會在中途切進卡片。改成「下降圓角 → 水平直線 → 上升圓角」
   // 的三段式路徑：中間那段確實壓在所有卡片下緣之下，升降只發生在欄與欄的空隙裡。
   const nodesBottom=canvasH-lanePad;
+  // 使用者要求「不會被卡片蓋住就優先走直線，不要繞路」：先試最短的直線，只有真的會穿過
+  // 卡片時才退回曲線／底部走線道。同高度的節點之間因此都是筆直的一條，讀起來乾淨很多。
   const linkPath=function(link){
+    // 直線優先，且不分長短——跨欄的長邊只要中途沒有卡片擋著，一樣直接拉直，
+    // 不必為了「它很長」就一律繞到底部走線道（那才是多餘的繞路）。
+    if(straightIsClear(link)){
+      link.shape='line';
+      return 'M '+link.x1+' '+link.y1+' L '+link.x2+' '+link.y2;
+    }
     if(link.longSpan){
+      link.shape='lane';
       const laneY=nodesBottom+8-link.lane*7,turn=Math.min(80,(link.x2-link.x1)/4);
       return 'M '+link.x1+' '+link.y1
         +' C '+(link.x1+turn/2)+' '+link.y1+', '+(link.x1+turn/2)+' '+laneY+', '+(link.x1+turn)+' '+laneY
         +' L '+(link.x2-turn)+' '+laneY
         +' C '+(link.x2-turn/2)+' '+laneY+', '+(link.x2-turn/2)+' '+link.y2+', '+link.x2+' '+link.y2;
     }
+    link.shape='curve';
     const span=link.x2-link.x1,c1=link.x1+span*.5+link.lane*8,c2=link.x2-span*.5-link.lane*8;
+    link.ctrl=[c1,c2];
     return 'M '+link.x1+' '+link.y1+' C '+c1+' '+link.y1+', '+c2+' '+link.y2+', '+link.x2+' '+link.y2;
   };
   const svg='<svg class="story-fate-svg" viewBox="0 0 '+canvasW+' '+canvasH+'" preserveAspectRatio="none"><defs><marker id="'+marker+'" markerUnits="userSpaceOnUse" markerWidth="'+arrowSize+'" markerHeight="'+arrowSize+'" refX="'+(arrowSize-.5)+'" refY="'+arrowMid+'" orient="auto"><path d="M0,0 L'+arrowSize+','+arrowMid+' L0,'+arrowSize+' z" fill="#65718f"/></marker><marker id="'+marker+'Seen" markerUnits="userSpaceOnUse" markerWidth="'+arrowSize+'" markerHeight="'+arrowSize+'" refX="'+(arrowSize-.5)+'" refY="'+arrowMid+'" orient="auto"><path d="M0,0 L'+arrowSize+','+arrowMid+' L0,'+arrowSize+' z" fill="#75d897"/></marker></defs>'+links.map(link=>'<path class="story-fate-link '+(link.seen?'seen':'')+'" marker-end="url(#'+marker+(link.seen?'Seen':'')+')" d="'+linkPath(link)+'"/>').join('')+'</svg>';
   // 只有選擇邊需要文字（那是玩家真的做過的選項）；鏈狀的後段由欄位標題就看得懂，不再掛標籤。
-  const labelBoxes=[];
-  const edgeLabels=links.filter(link=>link.labeled).map(link=>{
-    const lx=link.x1+(link.x2-link.x1)*.5;
-    let ly=(link.y1+link.y2)/2;
-    for(let guard=0;guard<12;guard++){
-      if(!labelBoxes.some(b=>Math.abs(b.x-lx)<74&&Math.abs(b.y-ly)<20))break;
-      ly+=21;
+  // 使用者反應「綠線中的字會被卡片擋住」：標籤原本固定放在兩端的中點，只跟其他標籤閃避，
+  // 完全沒有考慮卡片。改成沿著「實際畫出來的那條路徑」取樣，挑第一個既不壓到卡片、
+  // 也不撞到其他標籤的位置（從中點往兩側找），全都不行才退回中點並垂直推開。
+  const pointOnLink=function(link,t){
+    if(link.shape==='curve'&&link.ctrl){
+      const u=1-t,[c1,c2]=link.ctrl;
+      return {x:u*u*u*link.x1+3*u*u*t*c1+3*u*t*t*c2+t*t*t*link.x2,
+              y:u*u*u*link.y1+3*u*u*t*link.y1+3*u*t*t*link.y2+t*t*t*link.y2};
     }
-    labelBoxes.push({x:lx,y:ly});
-    return '<span class="story-fate-edge-label '+(link.seen?'seen':'')+'" style="left:'+lx+'px;top:'+ly+'px">'+(link.seen?escHtml(link.text):'？？？')+'</span>';
+    return {x:link.x1+(link.x2-link.x1)*t,y:link.y1+(link.y2-link.y1)*t};
+  };
+  const labelBoxes=[];
+  const labelClear=function(x,y){
+    if(hitsCard(x,y,null))return false;
+    return !labelBoxes.some(b=>Math.abs(b.x-x)<74&&Math.abs(b.y-y)<20);
+  };
+  const edgeLabels=links.filter(link=>link.labeled).map(link=>{
+    // 由中點往外找：0.5, 0.42, 0.58, 0.34, 0.66 …
+    const offsets=[0,-.08,.08,-.16,.16,-.24,.24,-.32,.32];
+    let spot=null;
+    for(const off of offsets){
+      const t=.5+off;if(t<=.08||t>=.92)continue;
+      const p=pointOnLink(link,t);
+      if(labelClear(p.x,p.y)){spot=p;break;}
+    }
+    if(!spot){
+      spot=pointOnLink(link,.5);
+      for(let guard=0;guard<14&&!labelClear(spot.x,spot.y);guard++)spot={x:spot.x,y:spot.y+21};
+    }
+    labelBoxes.push({x:spot.x,y:spot.y});
+    return '<span class="story-fate-edge-label '+(link.seen?'seen':'')+'" style="left:'+spot.x+'px;top:'+spot.y+'px">'+(link.seen?escHtml(link.text):'？？？')+'</span>';
   }).join('');
   const choiceNodes=defs.map(node=>{const pos=nodePos.get(Number(node.block)),seen=storyWasBlockVisited(route,node.block,data),incoming=storyFateIncoming(route,node.block);return '<div class="story-fate-visual-node '+(seen?'discovered':'')+'" style="left:'+pos.x+'px;top:'+pos.y+'px"><div class="story-fate-visual-node-title">'+(seen?escHtml(node.title):'？？？')+'</div><div class="story-fate-visual-node-meta">'+(seen?(incoming?'由「'+escHtml(incoming.parent.title)+'」選擇「'+escHtml(incoming.choice)+'」抵達':'分支起點'):'尚未探索此選擇點')+'</div><button type="button" class="story-fate-replay" data-story-replay-block="'+node.block+'" '+(seen?'':'disabled')+'>從此節點回溯</button></div>';}).join('');
   // 「沿此命運出發」固定從 Boss 關重打——使用者要求拿掉直接跳尾聲1的捷徑，
@@ -12216,7 +12266,9 @@ function tutorialInjectStyle(){
     +"body.tutorial-action-lock button{pointer-events:none!important;opacity:.3!important;filter:grayscale(.75);}"
     +"body.tutorial-action-lock button.tutorial-highlight,body.tutorial-action-lock .tutorial-allowed,body.tutorial-action-lock .tutorial-allowed button{pointer-events:auto!important;opacity:1!important;filter:none!important;}"
     +"@keyframes tutorialPulse{0%,100%{box-shadow:0 0 0 4px #ffd35a,0 0 18px 4px rgba(255,211,90,.7);}50%{box-shadow:0 0 0 6px #ffd35a,0 0 30px 10px rgba(255,211,90,.95);}}"
-    +".movebtn.tutorial-suit-target{position:relative;z-index:2;animation:tutorialSuitPulse 1.1s infinite;}"
+    // 選擇器不能綁死 .movebtn——站位按鈕（.slotbtn）也會被指定成「這一步要點的目標」，
+    // 原本只寫 .movebtn 導致站位鈕拿到 class 卻沒有任何高亮，玩家根本看不出要先移動。
+    +".tutorial-suit-target{position:relative;z-index:2;animation:tutorialSuitPulse 1.1s infinite;}"
     +"@keyframes tutorialSuitPulse{0%,100%{box-shadow:0 0 0 3px #ffd35a,0 0 14px 3px rgba(255,211,90,.6);}50%{box-shadow:0 0 0 5px #ffd35a,0 0 24px 8px rgba(255,211,90,.9);}}"
     +".tutorial-starter-note{margin:0;color:#b8bfd3;font-size:12px;line-height:1.55;}"
     +"#tutorialStarterGrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-top:14px;}"
@@ -12250,7 +12302,11 @@ function tutorialInjectStyle(){
     +".tutorial-crawl-line.show{opacity:1;}"
     +"#tutorialCrawlHint{position:fixed;bottom:36px;left:50%;transform:translateX(-50%);color:#9aa0b4;font-size:13px;animation:tutorialBlink 1.2s infinite;z-index:3;pointer-events:none;}"
     +"#tutorialCrawlHint.hidden{display:none;}"
-    +"#tutorialClickCatcher{position:fixed;inset:0;z-index:999997;pointer-events:none;}";
+    +"#tutorialClickCatcher{position:fixed;inset:0;z-index:999997;pointer-events:none;}"
+    // 手機直向時對話框固定在畫面底部，剛好蓋住「確定 / 儲存隊伍」這類也在底部的操作鈕，
+    // 玩家被要求去點某顆按鈕卻點不到（使用者回報：組隊伍時按不到按鈕）。
+    // .avoid-bottom 由 tutorialAvoidOverlap() 在偵測到重疊時掛上，把對話框移到畫面上方讓路。
+    +"#tutorialBox.avoid-bottom{bottom:auto;top:14px;}";
   const styleEl = document.createElement('style');
   styleEl.id = 'tutorialStyle';
   styleEl.textContent = css;
@@ -12351,6 +12407,7 @@ function tutorialHighlight(elOrId, allowedIds){
   document.body.classList.add('tutorial-action-lock');
 }
 function tutorialClearHighlight(){
+  const box=document.getElementById('tutorialBox');if(box)box.classList.remove('avoid-bottom');
   if(tutorialHighlightEl){ tutorialHighlightEl.classList.remove('tutorial-highlight'); tutorialHighlightEl = null; }
   tutorialAllowedEls.forEach(function(allowed){allowed.classList.remove('tutorial-allowed');});
   tutorialAllowedEls=[];
@@ -12365,10 +12422,23 @@ document.addEventListener('click',function(e){
 },true);
 // 等玩家真的點擊某個按鈕才推進教學流程。用捕獲階段多加一個一次性監聽，不覆蓋/取代按鈕
 // 原本的onclick，原有功能完全不受影響，純粹多監聽一次藉此知道「玩家點了」。
+// 對話框固定在畫面底部，手機上常常正好蓋住玩家被要求點的那顆按鈕（組隊伍的「確定」「儲存隊伍」
+// 都在底部）。等待點擊前先量一次：真的重疊才把對話框讓到上方，桌機或沒重疊時完全不動。
+function tutorialAvoidOverlap(el){
+  const box=document.getElementById('tutorialBox');
+  if(!box||!el||typeof el.getBoundingClientRect!=='function')return;
+  box.classList.remove('avoid-bottom');
+  const target=el.getBoundingClientRect(),rect=box.getBoundingClientRect();
+  if(!target.width&&!target.height)return;
+  const overlaps=target.left<rect.right&&target.right>rect.left&&target.top<rect.bottom&&target.bottom>rect.top;
+  // 讓到上方之後若反而蓋住目標（目標本來就在畫面頂端）就維持原位，至少不會更糟。
+  if(overlaps&&target.top>rect.height+24)box.classList.add('avoid-bottom');
+}
 function tutorialWaitForClick(elId, cb, consumeClick, allowedIds){
   const el = document.getElementById(elId);
   if(!el){ cb(); return; }
   tutorialHighlight(el,allowedIds);
+  tutorialAvoidOverlap(el);
   function handler(e){
     // consumeClick=true：教學自己已經完整處理了這次點擊該做的事（例如金幣/鑽石免費召喚，
     // 見 tutorialGoldGachaStep()/tutorialDiamondGachaStep()），這次點擊就不能再讓按鈕原本
@@ -12851,7 +12921,12 @@ function tutorialSuitTutorPrompt(){
   tutor.requiredSlot=tutorialRequiredSlot(unit,tutor.current,tutor.queue[1]);
   if(tutor.requiredSlot!=null)state.actMoveTarget=null;
   render();
-  tutorialBattleSay([tutor.lines[TUTORIAL_STEP_INDEX[tutor.current]]||tutorialStepHint(tutor.current)]);
+  // 使用者反應「不知道自己應該要移動」：劇本裡雖然寫了「往後退一格」，但那是固定文案，
+  // 玩家不一定對得起來。這裡依實際算出來的目標格再補一句明確指令（含這一格的名稱），
+  // 站位鈕本身也會脈動高亮（見 .tutorial-suit-target），兩邊一起說同一件事。
+  let line=tutor.lines[TUTORIAL_STEP_INDEX[tutor.current]]||tutorialStepHint(tutor.current);
+  if(tutor.requiredSlot!=null)line+='\n（先點亮起的「'+slotDistLabel(unit.side,tutor.requiredSlot)+'」移動過去，再選招式。）';
+  tutorialBattleSay([line]);
 }
 
 function tutorialWatchForBattleEnd(){
