@@ -2284,8 +2284,8 @@
         </div>
         <div class="story-menu-panel hidden" id="storyRoutePanel">
           <div class="story-route-grid">
-            <button type="button" class="story-route-card black" data-story-route="black"><span class="story-route-name">執黑</span><span class="story-route-desc">與小黑同行，學會在殘酷棋盤中求生。</span><span class="story-route-progress" data-story-route-progress="black">0／4 關</span></button>
-            <button type="button" class="story-route-card white" data-story-route="white"><span class="story-route-name">執白</span><span class="story-route-desc">與小白同行，守護每一枚棋子的願望。</span><span class="story-route-progress" data-story-route-progress="white">0／4 關</span></button>
+            <button type="button" class="story-route-card black" data-story-route="black"><span class="story-route-name">執黑</span><span class="story-route-desc">與小黑同行，學會在殘酷棋盤中求生。</span><span class="story-route-progress" data-story-route-progress="black">0／5 關</span></button>
+            <button type="button" class="story-route-card white" data-story-route="white"><span class="story-route-name">執白</span><span class="story-route-desc">與小白同行，守護每一枚棋子的願望。</span><span class="story-route-progress" data-story-route-progress="white">0／5 關</span></button>
           </div>
         </div>
         <div class="story-menu-panel hidden" id="storyStagePanel">
@@ -8019,13 +8019,15 @@ const STORY_DISCOVERY_KEY='chanceboard_story_discovery_v1';
 const STORY_REPLAY_KEY='chanceboard_story_replay_v1';
 let STORY_STAGE_DEFS={
   black:[
-    {number:1,title:'第一節　初心荒野',shortTitle:'初心荒野',startBlock:2,blocks:[2,3],description:'穿過荒野，第一次面對棋盤上的戰鬥。'},
+    {number:0,title:'序章　開幕',shortTitle:'序章',startBlock:2,blocks:[2],description:'墜落的人群與王座上的小黑，新的棋局開始了。'},
+    {number:1,title:'第一節　初心荒野',shortTitle:'初心荒野',startBlock:3,blocks:[3],description:'穿過荒野，第一次面對棋盤上的戰鬥。'},
     {number:2,title:'第二節　另一位玩家',shortTitle:'另一位玩家',startBlock:4,blocks:[4],description:'遭遇另一名玩家，理解黑方世界的生存法則。'},
     {number:3,title:'第三節　拯救',shortTitle:'拯救',startBlock:5,blocks:[5,6,7,8,9,10,11,12,13],description:'你的選擇將決定圖卡勒絲的命運。'},
     {number:4,title:'第四節　Boss：無名戰士',shortTitle:'無名戰士',startBlock:14,blocks:[14,15,16,17,18,19,20],description:'突破守關戰士，完成黑方第一章。'}
   ],
   white:[
-    {number:1,title:'第一節　初心荒野',shortTitle:'初心荒野',startBlock:22,blocks:[22,23],description:'穿過荒野，第一次面對棋盤上的戰鬥。'},
+    {number:0,title:'序章　開幕',shortTitle:'序章',startBlock:22,blocks:[22],description:'化作棋子的光點，小白訴說願望的規則。'},
+    {number:1,title:'第一節　初心荒野',shortTitle:'初心荒野',startBlock:23,blocks:[23],description:'穿過荒野，第一次面對棋盤上的戰鬥。'},
     {number:2,title:'第二節　另一位玩家',shortTitle:'另一位玩家',startBlock:24,blocks:[24],description:'遭遇另一名玩家，理解白方肩負的責任。'},
     {number:3,title:'第三節　守護',shortTitle:'守護',startBlock:25,blocks:[25,26,27,28,29,30,31,32,33],description:'你的選擇將決定梅朵與村莊的命運。'},
     {number:4,title:'第四節　Boss：無名戰士',shortTitle:'無名戰士',startBlock:34,blocks:[34,35,36,37,38,39,40],description:'突破守關戰士，完成白方第一章。'}
@@ -8046,6 +8048,16 @@ const DEFAULT_STORY_FLOW={
 function storyRefreshRuntimeConfig(){
   const configured=globalStoryModeConfig&&globalStoryModeConfig.stageDefs;
   STORY_STAGE_DEFS=JSON.parse(JSON.stringify(configured&&configured.black&&configured.white?configured:DEFAULT_STORY_STAGE_DEFS));
+  // 舊版後台儲存的關卡設定沒有「序章」：把開場CG從第一節拆出來，自動補上序章關卡。
+  ['black','white'].forEach(route=>{
+    const defs=STORY_STAGE_DEFS[route]||[];
+    if(defs.length&&!defs.some(s=>Number(s.number)===0)){
+      const cgBlock=route==='white'?22:2,first=defs.find(s=>(s.blocks||[]).includes(cgBlock));
+      if(first){first.blocks=first.blocks.filter(b=>Number(b)!==cgBlock);if(Number(first.startBlock)===cgBlock)first.startBlock=cgBlock+1;}
+      const fallback=DEFAULT_STORY_STAGE_DEFS[route].find(s=>s.number===0);
+      defs.unshift(JSON.parse(JSON.stringify(fallback)));
+    }
+  });
   if(!globalStoryModeConfig.flow)globalStoryModeConfig.flow=JSON.parse(JSON.stringify(DEFAULT_STORY_FLOW));
   if(!globalStoryModeConfig.battles||typeof globalStoryModeConfig.battles!=='object')globalStoryModeConfig.battles={};
 }
@@ -8061,16 +8073,22 @@ function storyDefaultStageProgress(){return {version:2,routes:{black:{cleared:[]
 function loadStoryStageProgress(){
   let data=null;try{data=JSON.parse(localStorage.getItem(STORY_STAGE_PROGRESS_KEY)||'null');}catch(e){}
   if(!data||!data.routes)data=storyDefaultStageProgress();
-  ['black','white'].forEach(route=>{if(!data.routes[route])data.routes[route]={cleared:[],state:null,checkpoints:{}};if(!Array.isArray(data.routes[route].cleared))data.routes[route].cleared=[];if(!data.routes[route].checkpoints||typeof data.routes[route].checkpoints!=='object')data.routes[route].checkpoints={};data.routes[route].cleared=Array.from(new Set(data.routes[route].cleared.map(Number).filter(n=>n>=1&&n<=4))).sort((a,b)=>a-b);});
-  // 舊版只有一條連續進度：依目前所在block推回已完成的前置關卡，完整通關者直接標記四關。
+  ['black','white'].forEach(route=>{if(!data.routes[route])data.routes[route]={cleared:[],state:null,checkpoints:{}};if(!Array.isArray(data.routes[route].cleared))data.routes[route].cleared=[];if(!data.routes[route].checkpoints||typeof data.routes[route].checkpoints!=='object')data.routes[route].checkpoints={};data.routes[route].cleared=Array.from(new Set(data.routes[route].cleared.map(Number).filter(n=>n>=0&&n<=4))).sort((a,b)=>a-b);});
+  // 舊版只有一條連續進度：依目前所在block推回已完成的前置關卡，完整通關者直接標記全部關卡。
   const old=loadStoryProgress();
   if(old&&old.route&&data.routes[old.route]){
-    if(old.completed&&old.completed[old.route])data.routes[old.route].cleared=[1,2,3,4];
-    else if(old.active){const stage=storyStageForBlock(old.route,old.block);if(stage)for(let n=1;n<stage.number;n++)if(!data.routes[old.route].cleared.includes(n))data.routes[old.route].cleared.push(n);}
+    if(old.completed&&old.completed[old.route])data.routes[old.route].cleared=[0,1,2,3,4];
+    else if(old.active){const stage=storyStageForBlock(old.route,old.block);if(stage)for(let n=0;n<stage.number;n++)if(!data.routes[old.route].cleared.includes(n))data.routes[old.route].cleared.push(n);}
     if(!data.routes[old.route].state)data.routes[old.route].state=storyRouteStateSnapshot(old);
   }
+  // 「序章」是後來才拆出的關卡：舊存檔通過第一節時已看過開場CG，自動視為序章通關。
+  ['black','white'].forEach(route=>{const cleared=data.routes[route].cleared;if(cleared.includes(1)&&!cleared.includes(0)){cleared.push(0);cleared.sort((a,b)=>a-b);}});
   return data;
 }
+function storyStageLabel(stageNumber){return Number(stageNumber)===0?'序章':'第 '+stageNumber+' 關';}
+function storyMaxStageNumber(route){const defs=STORY_STAGE_DEFS[route]||[];return defs.length?Number(defs[defs.length-1].number):4;}
+function storyFirstUnclearedStage(route,cleared){const defs=STORY_STAGE_DEFS[route]||[];for(const stage of defs){if(!cleared.includes(Number(stage.number)))return Number(stage.number);}return storyMaxStageNumber(route);}
+function storyCurrentStageNumber(run){const n=Number(run&&run.stageNumber);if(run&&run.stageNumber!=null&&Number.isFinite(n))return n;const stage=run?storyStageForBlock(run.route,run.block):null;return stage?Number(stage.number):1;}
 function saveStoryStageProgress(data){try{if(!storyPreviewMode){localStorage.setItem(STORY_STAGE_PROGRESS_KEY,JSON.stringify(data));if(window.__queueAccountStorySync)window.__queueAccountStorySync();}}catch(e){}}
 function storyRouteStateSnapshot(run){return {score:Number(run&&run.score)||0,flags:Object.assign({helped:null,joined:false},run&&run.flags||{}),choices:Object.assign({},run&&run.choices||{}),applied:Object.assign({},run&&run.applied||{})};}
 let STORY_BLOCK_IDS={black:{2:'opening',3:'stage1',4:'stage2',5:'rescue',6:'accept',7:'promise',8:'responsible',9:'abandon',10:'refuse',11:'no_capacity',12:'weak',13:'no_help',14:'boss',15:'boss_joined',16:'boss_alone',17:'boss_common',18:'ending_gate',19:'ending_low',20:'ending_high'},white:{22:'opening',23:'stage1',24:'stage2',25:'protect',26:'accept',27:'promise',28:'promised',29:'uncertain',30:'refuse',31:'unsuitable',32:'burden',33:'no_help',34:'boss',35:'boss_joined',36:'boss_no_help',37:'boss_common',38:'ending_gate',39:'ending_hope',40:'ending_regret'}};
@@ -8144,17 +8162,18 @@ function storyHidePresentation(){
 }
 function storyUpdateChapterStatus(){
   const progress=loadStoryStageProgress(),black=progress.routes.black.cleared.length,white=progress.routes.white.cleared.length,total=black+white;
-  const el=document.getElementById('storyChapter1Status');if(el)el.textContent=total>=8?'✓ 全路線完成':total?('進度 '+total+'／8 關'):'尚未開始';
-  document.querySelectorAll('[data-story-route-progress]').forEach(el=>{const route=el.dataset.storyRouteProgress,count=progress.routes[route].cleared.length;el.textContent=count>=4?'✓ 路線完成':count+'／4 關';});
+  const blackTotal=(STORY_STAGE_DEFS.black||[]).length||5,whiteTotal=(STORY_STAGE_DEFS.white||[]).length||5,grandTotal=blackTotal+whiteTotal;
+  const el=document.getElementById('storyChapter1Status');if(el)el.textContent=total>=grandTotal?'✓ 全路線完成':total?('進度 '+total+'／'+grandTotal+' 關'):'尚未開始';
+  document.querySelectorAll('[data-story-route-progress]').forEach(el=>{const route=el.dataset.storyRouteProgress,count=progress.routes[route].cleared.length,routeTotal=(STORY_STAGE_DEFS[route]||[]).length||5;el.textContent=count>=routeTotal?'✓ 路線完成':count+'／'+routeTotal+' 關';});
 }
 function storyRenderStageMap(route){
   const map=document.getElementById('storyStageMap'),progress=loadStoryStageProgress(),routeData=progress.routes[route],cleared=routeData.cleared;
-  const highestVisible=storyPreviewMode?4:Math.min(4,Math.max(1,cleared.length+1));
+  const highestVisible=storyPreviewMode?storyMaxStageNumber(route):storyFirstUnclearedStage(route,cleared);
   const savedRun=loadStoryProgress(),activeFourth=!!(savedRun&&savedRun.active&&savedRun.route===route&&Number(savedRun.stageNumber)===4),branchTargets=(STORY_BRANCH_OUTCOMES[route]&&STORY_BRANCH_OUTCOMES[route][3])||[],branches=storySavedBranchStates(route),canonical=routeData.checkpoints&&routeData.checkpoints[3]||routeData.cleared.includes(3)&&routeData.state||null,currentBranch=activeFourth?(Number(savedRun.sourceBranch)||storyOutcomeBlockForState(route,savedRun)):storyOutcomeBlockForState(route,canonical),currentBranchLabel=currentBranch?(STORY_OUTCOME_LABELS[currentBranch]||'已探索命運'):'';
   map.innerHTML=(STORY_STAGE_DEFS[route]||[]).filter(stage=>stage.number<=highestVisible).map(stage=>{
     const done=cleared.includes(stage.number),current=!done&&stage.number===highestVisible,explore=storyExploration(route,stage.number),hasBranches=explore.total>0;
     const source=stage.number===4?(currentBranch?'<span class="story-stage-source"><b>'+(activeFourth?'進行中的第四節':'本次挑戰沿用')+'</b>第三節「'+escHtml(currentBranchLabel)+'」<span class="story-stage-source-count">已解鎖 '+Object.keys(branches).length+'／'+branchTargets.length+'</span></span>':'<span class="story-stage-source locked">完成第三節後，將在這裡顯示本次沿用的命運節點</span>'):'';
-    return '<div class="story-stage-row '+(done?'path-complete':'path-pending')+'"><button type="button" class="story-stage-node '+(done?'cleared ':'')+(current?'current':'')+'" data-story-stage="'+stage.number+'"><span class="story-stage-index">'+(done?'✓':String(stage.number).padStart(2,'0'))+'</span><span class="story-stage-info"><span class="story-stage-kicker">STAGE 01-'+stage.number+'</span><span class="story-stage-title">'+escHtml(stage.shortTitle)+'</span><span class="story-stage-desc">'+escHtml(stage.description)+'</span>'+(hasBranches?'<span class="story-stage-explore">分支探索 '+explore.seen+'／'+explore.total+'</span>':'')+source+'</span><span class="story-stage-state">'+(done?'重播':current?'挑戰':'未解鎖')+'</span></button>'+(done&&hasBranches?'<button type="button" class="story-fate-btn" data-story-fate-stage="'+stage.number+'">⌘ 命運棋譜　'+explore.seen+'／'+explore.total+'</button>':'')+'</div>';
+    return '<div class="story-stage-row '+(done?'path-complete':'path-pending')+'"><button type="button" class="story-stage-node '+(done?'cleared ':'')+(current?'current':'')+'" data-story-stage="'+stage.number+'"><span class="story-stage-index">'+(done?'✓':(stage.number===0?'序':String(stage.number).padStart(2,'0')))+'</span><span class="story-stage-info"><span class="story-stage-kicker">'+(stage.number===0?'PROLOGUE':'STAGE 01-'+stage.number)+'</span><span class="story-stage-title">'+escHtml(stage.shortTitle)+'</span><span class="story-stage-desc">'+escHtml(stage.description)+'</span>'+(hasBranches?'<span class="story-stage-explore">分支探索 '+explore.seen+'／'+explore.total+'</span>':'')+source+'</span><span class="story-stage-state">'+(done?'重播':current?'挑戰':'未解鎖')+'</span></button>'+(done&&hasBranches?'<button type="button" class="story-fate-btn" data-story-fate-stage="'+stage.number+'">⌘ 命運棋譜　'+explore.seen+'／'+explore.total+'</button>':'')+'</div>';
   }).join('');
   map.querySelectorAll('[data-story-stage]').forEach(btn=>btn.onclick=async()=>{try{await storyEnsureSource();storyOpenStage(route,Number(btn.dataset.storyStage));}catch(e){document.getElementById('storyLoadMessage').textContent='❌ '+e.message;}});
   map.querySelectorAll('[data-story-fate-stage]').forEach(btn=>btn.onclick=e=>{e.stopPropagation();storyOpenFateMap(route,Number(btn.dataset.storyFateStage));});
@@ -8164,7 +8183,7 @@ function storyRenderStageMap(route){
   setTimeout(function(){const focus=map.querySelector('.story-stage-node.current')||map.querySelector('.story-stage-node:last-of-type');if(focus){const row=focus.closest('.story-stage-row');scroller.scrollLeft=Math.max(0,(row?row.offsetLeft:focus.offsetLeft)-(scroller.clientWidth-focus.offsetWidth)/2);}},0);
   const continueBtn=document.getElementById('storyContinueBtn');
   const canResume=!storyPreviewMode&&savedRun&&savedRun.active&&savedRun.route===route;
-  continueBtn.classList.toggle('hidden',!canResume);if(canResume){const stage=savedRun.stageNumber||((storyStageForBlock(savedRun.route,savedRun.block)||{}).number);continueBtn.textContent='繼續第 '+stage+' 關';}
+  continueBtn.classList.toggle('hidden',!canResume);if(canResume){const stage=storyCurrentStageNumber(savedRun);continueBtn.textContent='繼續'+storyStageLabel(stage);}
   const replayBtn=document.getElementById('storyReplayContinueBtn'),replayState=loadStoryDiscovery().routes[route].replayState;replayBtn.classList.toggle('hidden',!(replayState&&replayState.fromStage===3));if(replayState)replayBtn.dataset.route=route;
 }
 function storyFateVisualHtml(route,data){
@@ -8400,13 +8419,13 @@ function storyNextBlockIndex(){
 }
 function storyGoNextBlock(){
   const next=storyNextBlockIndex();if(next==null){storyCompleteChapter();return;}
-  const currentStage=storyRun.stageNumber||((storyStageForBlock(storyRun.route,storyRun.block)||{}).number)||1;
+  const currentStage=storyCurrentStageNumber(storyRun);
   const nextStage=(storyStageForBlock(storyRun.route,next)||{}).number;
-  if(nextStage&&nextStage!==currentStage){storyCompleteStage(currentStage);return;}
+  if(nextStage!=null&&nextStage!==currentStage){storyCompleteStage(currentStage);return;}
   storyRun.block=next;storyRun.beat=0;storyRun.lastNpcLine=null;storyRun.lastContext=null;const header=storyBlockHeader(next);if(/^(第一節|第二節|第三節|第四節)/.test(header))storyRun.pendingSplash={kicker:'SECTION',title:header};saveStoryProgress();storyRenderCurrent();
 }
 async function storyAdvance(){if(!storyRun||!storyRun.active)return;storyCancelAuto();if(storyRun.showChapterTitle||storyRun.pendingSplash){storyRun.showChapterTitle=false;storyRun.pendingSplash=null;saveStoryProgress();storyRenderCurrent();return;}if(storyFinishReveal())return;const beat=storyParseBlock(storyRun.block)[storyRun.beat];if(!beat||beat.type==='choice')return;if(beat.type==='battle'){if(storyPreviewMode&&storyPreviewSkipBattles){storyRun.beat++;storyFlash('預覽模式：已跳過戰鬥');saveStoryProgress();storyRenderCurrent();}else storyStartBattle(beat);return;}if(beat.type==='reward')await storyClaimReward(beat.name);if(beat.type==='complete'){storyCompleteChapter();return;}if(beat.type==='dialogue'){const normalized=storyNormalizeSpeaker(beat.speaker||''),isPlayer=normalized===(playerName||'玩家')||normalized==='玩家';if(isPlayer){storyRun.lastContext={type:'player',speaker:beat.speaker||'玩家',text:beat.text||''};storyRun.lastNpcLine=null;}}storyRun.beat++;saveStoryProgress();storyRenderCurrent();}
-function storySkipToBattle(){if(!storyRun||!storyRun.active)return;storyCancelReveal();storyCancelAuto();storyRun.showChapterTitle=false;storyRun.pendingSplash=null;for(let guard=0;guard<500;guard++){const beats=storyParseBlock(storyRun.block),beat=beats[storyRun.beat];if(!beat){const next=storyNextBlockIndex();if(next==null){storyFlash('後面沒有戰鬥');storyRenderCurrent();return;}const currentStage=storyRun.stageNumber||((storyStageForBlock(storyRun.route,storyRun.block)||{}).number)||1,nextStage=(storyStageForBlock(storyRun.route,next)||{}).number;if(nextStage&&nextStage!==currentStage){storyCompleteStage(currentStage);return;}storyRun.block=next;storyRun.beat=0;storyRun.lastNpcLine=null;storyRun.lastContext=null;continue;}if(beat.type==='battle'){saveStoryProgress();storyRenderCurrent();storyFlash('已跳到戰鬥前，點擊後開始戰鬥');return;}if(beat.type==='choice'){saveStoryProgress();storyRenderCurrent();storyFlash('請先選擇路線，再繼續 SKIP');return;}if(beat.type==='reward'||beat.type==='complete'){saveStoryProgress();storyRenderCurrent();storyFlash('請先處理目前的章節事件');return;}if(beat.type==='dialogue'||beat.type==='narration'){const speaker=beat.speaker||'',text=beat.text||'';storyAppendLog(beat,speaker,text);if(beat.type==='narration')storyRun.lastContext={type:'narration',speaker:'',text};else{const normalized=storyNormalizeSpeaker(speaker),isPlayer=normalized===(playerName||'玩家')||normalized==='玩家';if(isPlayer){storyRun.lastNpcLine=null;storyRun.lastContext={type:'player',speaker,text};}else{storyRun.lastNpcLine={speaker,text};storyRun.lastContext={type:'dialogue',speaker,text};}}}storyApplyBeatEvent(beat);storyRun.beat++;}storyRenderCurrent();}
+function storySkipToBattle(){if(!storyRun||!storyRun.active)return;storyCancelReveal();storyCancelAuto();storyRun.showChapterTitle=false;storyRun.pendingSplash=null;for(let guard=0;guard<500;guard++){const beats=storyParseBlock(storyRun.block),beat=beats[storyRun.beat];if(!beat){const next=storyNextBlockIndex();if(next==null){storyFlash('後面沒有戰鬥');storyRenderCurrent();return;}const currentStage=storyCurrentStageNumber(storyRun),nextStage=(storyStageForBlock(storyRun.route,next)||{}).number;if(nextStage!=null&&nextStage!==currentStage){storyCompleteStage(currentStage);return;}storyRun.block=next;storyRun.beat=0;storyRun.lastNpcLine=null;storyRun.lastContext=null;continue;}if(beat.type==='battle'){saveStoryProgress();storyRenderCurrent();storyFlash('已跳到戰鬥前，點擊後開始戰鬥');return;}if(beat.type==='choice'){saveStoryProgress();storyRenderCurrent();storyFlash('請先選擇路線，再繼續 SKIP');return;}if(beat.type==='reward'||beat.type==='complete'){saveStoryProgress();storyRenderCurrent();storyFlash('請先處理目前的章節事件');return;}if(beat.type==='dialogue'||beat.type==='narration'){const speaker=beat.speaker||'',text=beat.text||'';storyAppendLog(beat,speaker,text);if(beat.type==='narration')storyRun.lastContext={type:'narration',speaker:'',text};else{const normalized=storyNormalizeSpeaker(speaker),isPlayer=normalized===(playerName||'玩家')||normalized==='玩家';if(isPlayer){storyRun.lastNpcLine=null;storyRun.lastContext={type:'player',speaker,text};}else{storyRun.lastNpcLine={speaker,text};storyRun.lastContext={type:'dialogue',speaker,text};}}}storyApplyBeatEvent(beat);storyRun.beat++;}storyRenderCurrent();}
 async function storyClaimReward(name){const charId=storyRun.route==='white'?'009':'005',key=storyRun.block+':'+storyRun.beat;if(storyRun.applied&&storyRun.applied[key])return;if(storyPreviewMode){storyRun.applied[key]=true;storyFlash('預覽模式：模擬獲得角色 '+name);return;}try{if(window.__accountMode&&typeof window.__adminAccountApi==='function'){const d=await window.__adminAccountApi('story-reward',{route:storyRun.route});if(d&&d.state&&window.__applyAccountState)window.__applyAccountState(d.state);}else if(!ownedCharIds.includes(charId)){ownedCharIds.push(charId);charStars[charId]=1;saveOwnedChars();saveCharStars();}storyRun.applied[key]=true;saveStoryProgress();storyFlash('獲得角色：'+name);}catch(e){alert('角色獎勵尚未領取成功：'+e.message);throw e;}}
 function storyCompleteStage(stageNumber){
   const route=storyRun.route,progress=loadStoryStageProgress(),routeData=progress.routes[route];
@@ -8414,7 +8433,7 @@ function storyCompleteStage(stageNumber){
   const completedBranch=stageNumber===3?((STORY_BRANCH_OUTCOMES[route]&&STORY_BRANCH_OUTCOMES[route][3]||[]).includes(Number(storyRun.block))?Number(storyRun.block):storyOutcomeBlockForState(route,snapshot)):null;
   const completedBranchId=completedBranch?storyStableBlockId(route,completedBranch):null,completedBranchLabel=completedBranch?(STORY_OUTCOME_LABELS[completedBranch]||'已探索命運'):'';
   const branchWasKnown=!!(completedBranchId&&loadStoryDiscovery().routes[route].branchStates[completedBranchId]);
-  const completionMessage=storyPreviewMode?'預覽完成第 '+stageNumber+' 關':stageNumber===3?(branchWasKnown?'第三節通關：「'+completedBranchLabel+'」已探索過，沒有新增第四節分支':'第三節通關：已解鎖新的第四節分支「'+completedBranchLabel+'」'):'第 '+stageNumber+' 關通關，下一關已解鎖';
+  const completionMessage=storyPreviewMode?'預覽完成'+storyStageLabel(stageNumber):stageNumber===3?(branchWasKnown?'第三節通關：「'+completedBranchLabel+'」已探索過，沒有新增第四節分支':'第三節通關：已解鎖新的第四節分支「'+completedBranchLabel+'」'):storyStageLabel(stageNumber)+'通關，下一關已解鎖';
   if(stageNumber===3)storyRememberBranchState(route,snapshot,storyRun.block);
   if(stageNumber>=4)storyRememberEndingPath(route,snapshot,storyRun.sourceBranch,storyRun.block);
   if(storyRun.replayMode){
@@ -8431,21 +8450,21 @@ function storyCompleteStage(stageNumber){
 function storyCompleteChapter(){storyCompleteStage(storyRun.stageNumber||4);}
 function storyCarryForStage(routeData,stageNumber,override){
   const blank={score:0,flags:{helped:null,joined:false},choices:{},applied:{}},checkpoint=routeData.checkpoints&&routeData.checkpoints[stageNumber-1];
-  const source=override||checkpoint||(stageNumber===1?blank:routeData.state)||blank,carry=storyRouteStateSnapshot(source);
+  const source=override||checkpoint||(stageNumber<=1?blank:routeData.state)||blank,carry=storyRouteStateSnapshot(source);
   carry.applied=Object.assign({},routeData.state&&routeData.state.applied||{},carry.applied||{});return carry;
 }
 function storyLaunchStage(route,stage,options){
   const opts=options||{},progress=loadStoryStageProgress(),routeData=progress.routes[route],old=loadStoryProgress(),carry=storyCarryForStage(routeData,stage.number,opts.carry||null);storyDialogueLog=[];
-  storyRun={active:true,replayMode:!!opts.replayMode,route,chapterId:'chapter1',stageNumber:stage.number,stageId:route+'-'+stage.number,sourceBranch:Number(opts.sourceBranch)||storyOutcomeBlockForState(route,carry)||null,block:Number(opts.startBlock)||stage.startBlock,beat:0,showChapterTitle:stage.number===1&&!opts.startBlock,pendingSplash:opts.startBlock?null:(stage.number===1?null:{kicker:'SECTION',title:stage.title}),lastNpcLine:null,lastContext:null,score:Number(carry.score)||0,flags:Object.assign({helped:null,joined:false},carry.flags||{}),choices:Object.assign({},carry.choices||{}),applied:Object.assign({},carry.applied||{}),completed:old&&old.completed||{}};
+  storyRun={active:true,replayMode:!!opts.replayMode,route,chapterId:'chapter1',stageNumber:stage.number,stageId:route+'-'+stage.number,sourceBranch:Number(opts.sourceBranch)||storyOutcomeBlockForState(route,carry)||null,block:Number(opts.startBlock)||stage.startBlock,beat:0,showChapterTitle:stage.number===0&&!opts.startBlock,pendingSplash:opts.startBlock?null:(stage.number===0?null:{kicker:'SECTION',title:stage.title}),lastNpcLine:null,lastContext:null,score:Number(carry.score)||0,flags:Object.assign({helped:null,joined:false},carry.flags||{}),choices:Object.assign({},carry.choices||{}),applied:Object.assign({},carry.applied||{}),completed:old&&old.completed||{}};
   saveStoryProgress();storyCloseFateMap();document.getElementById('storyMenu').classList.add('hidden');storyRenderCurrent();
 }
 function storyOpenStage(route,stageNumber){
   const defs=STORY_STAGE_DEFS[route]||[],stage=defs.find(item=>item.number===stageNumber);if(!stage)return;
-  const progress=loadStoryStageProgress(),routeData=progress.routes[route],highest=storyPreviewMode?4:Math.min(4,routeData.cleared.length+1);if(stageNumber>highest){storyFlash('請先完成前一關');return;}
+  const progress=loadStoryStageProgress(),routeData=progress.routes[route],highest=storyPreviewMode?storyMaxStageNumber(route):storyFirstUnclearedStage(route,routeData.cleared);if(stageNumber>highest){storyFlash('請先完成前一關');return;}
   const replayMode=!storyPreviewMode&&routeData.cleared.includes(stageNumber);
   const old=loadStoryProgress();
   if(!replayMode&&!storyPreviewMode&&old&&old.active){
-    const oldStage=old.stageNumber||((storyStageForBlock(old.route,old.block)||{}).number);
+    const oldStage=storyCurrentStageNumber(old);
     if(old.route===route&&oldStage===stageNumber){storyResumeSaved();return;}
     if(!confirm('開始這一關會取代目前進行中的故事關卡，確定嗎？'))return;
   }
@@ -8456,7 +8475,7 @@ function storyContinueReplayTimeline(route){const discovery=loadStoryDiscovery()
 function storyStartFourthFromBranch(route,branchBlock){const progress=loadStoryStageProgress(),routeData=progress.routes[route],stage=(STORY_STAGE_DEFS[route]||[]).find(s=>s.number===4),branches=storySavedBranchStates(route),carry=branches[storyStableBlockId(route,branchBlock)];if(!stage||!carry){storyFlash('請先完成這條第三節分支');return;}if(!routeData.cleared.includes(3)){storyFlash('請先完成第三節');return;}storyLaunchStage(route,stage,{replayMode:routeData.cleared.includes(4),carry,sourceBranch:branchBlock});}
 // 保留舊函式名稱供既有後台／舊書籤呼叫，但新流程只會進入路線的關卡地圖。
 function storyStartRoute(route){storyShowMenu('stages',route);}
-function storyResumeSaved(){const saved=loadStoryProgress();if(!saved||!saved.active)return;storyRun=saved;storyRun.flags=storyRun.flags||{};storyRun.choices=storyRun.choices||{};storyRun.applied=storyRun.applied||{};storyRun.stageNumber=storyRun.stageNumber||((storyStageForBlock(storyRun.route,storyRun.block)||{}).number)||1;document.getElementById('storyMenu').classList.add('hidden');storyRenderCurrent();}
+function storyResumeSaved(){const saved=loadStoryProgress();if(!saved||!saved.active)return;storyRun=saved;storyRun.flags=storyRun.flags||{};storyRun.choices=storyRun.choices||{};storyRun.applied=storyRun.applied||{};storyRun.stageNumber=storyCurrentStageNumber(storyRun);document.getElementById('storyMenu').classList.add('hidden');storyRenderCurrent();}
 function storySelectedTeam(){const id=document.getElementById('storyTeamSelect').value||storySavedTeamId();return teams.find(t=>t.id===id)||teams[0]||null;}
 function storyStartBattle(beat){const config=beat&&typeof beat==='object'?beat:{boss:!!beat},isBoss=config.kind?config.kind==='boss':!!config.boss,team=storySelectedTeam();if(!team){alert('故事戰鬥需要一支隊伍。請先到大廳的「隊伍」建立隊伍，再回故事繼續。');storyExit();goToTeamList();return;}storyHidePresentation();storyCancelAuto();storySetSavedTeamId(team.id);storyRun.battlePending={block:storyRun.block,beat:storyRun.beat,boss:isBoss,battleKey:config.battleKey||''};saveStoryProgress();state=newState();const requestedSize=Number(config.teamSize)||team.characterIds.length;currentMatchSize=Math.max(1,Math.min(3,requestedSize,team.characterIds.length));twoPlayerMode=false;pendingMode='story';state.selectedIds=team.characterIds.slice(0,currentMatchSize);state.customDeck=expandDeckDraft(team.deck);state.customDeckOrder=shuffle(state.customDeck.map((_,i)=>i));state.selectedIdsB=[];window.__storyBossMonsterId=isBoss?(config.bossMonsterId||'m001'):null;window.__storyFixedOpponentIds=isBoss?null:(Array.isArray(config.opponentIds)&&config.opponentIds.length?config.opponentIds:['020','018','008']).slice(0,currentMatchSize);window.__storyBattleKind=isBoss?'boss':'normal';window.__storyPieceType=config.pieceType||'兵(Pawn)';window.__storyUnlimitedTime=config.unlimitedTime!==false;document.body.classList.add('story-battle-mode');startGame();storyWatchBattle();}
 function storyWatchBattle(){if(storyBattleTimer)clearInterval(storyBattleTimer);storyBattleTimer=setInterval(function(){if(state.phase!=='end')return;clearInterval(storyBattleTimer);storyBattleTimer=null;const won=state.winner==='A';setTimeout(()=>storyReturnFromBattle(won),650);},250);}
@@ -10440,7 +10459,8 @@ function adminStoryStageEditorValue(value){
   if(!data.routes)data.routes={};
   ['black','white'].forEach(function(route){
     const current=data.routes[route]&&typeof data.routes[route]==='object'?data.routes[route]:{};
-    current.cleared=Array.from(new Set((Array.isArray(current.cleared)?current.cleared:[]).map(Number).filter(function(n){return n>=1&&n<=4;}))).sort();
+    current.cleared=Array.from(new Set((Array.isArray(current.cleared)?current.cleared:[]).map(Number).filter(function(n){return n>=0&&n<=4;}))).sort();
+    if(current.cleared.includes(1)&&!current.cleared.includes(0)){current.cleared.push(0);current.cleared.sort();}
     if(!current.checkpoints||typeof current.checkpoints!=='object')current.checkpoints={};
     if(!('state' in current))current.state=null;
     data.routes[route]=current;
@@ -10452,7 +10472,7 @@ function adminStoryStageCheckboxes(value){
   const data=adminStoryStageEditorValue(value);
   return ['black','white'].map(function(route){
     const label=route==='black'?'執黑':'執白';
-    return '<div style="padding:9px;border:1px solid var(--line);border-radius:8px"><b style="font-size:13px">'+label+'</b><div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:6px">'+[1,2,3,4].map(function(stage){return '<label style="font-size:12px"><input type="checkbox" class="managed-story-stage" data-route="'+route+'" data-stage="'+stage+'" '+(data.routes[route].cleared.includes(stage)?'checked':'')+'> 第 '+stage+' 節</label>';}).join('')+'</div></div>';
+    return '<div style="padding:9px;border:1px solid var(--line);border-radius:8px"><b style="font-size:13px">'+label+'</b><div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:6px">'+[0,1,2,3,4].map(function(stage){return '<label style="font-size:12px"><input type="checkbox" class="managed-story-stage" data-route="'+route+'" data-stage="'+stage+'" '+(data.routes[route].cleared.includes(stage)?'checked':'')+'> '+(stage===0?'序章':'第 '+stage+' 節')+'</label>';}).join('')+'</div></div>';
   }).join('');
 }
 function collectAdminStoryStageProgress(){
@@ -10495,7 +10515,7 @@ function adminStorySplitBlocks(text){return String(text||'').split(/^_{5,}\s*$/m
 function adminStoryJoinBlocks(blocks){return (blocks||[]).map(function(s){return String(s||'').trim();}).join('\n________________________________________\n');}
 function adminStoryBlockLabel(index,block){
   const first=String(block||'').split(/\r?\n/).map(function(s){return s.trim();}).find(Boolean)||('節點 '+index),route=index>=22?'白':'黑',stage=(STORY_STAGE_DEFS[index>=22?'white':'black']||[]).find(function(s){return (s.blocks||[]).includes(index);});
-  return route+'｜'+(stage?stage.number+'-'+index:index)+'　'+first.slice(0,28);
+  return route+'｜'+(stage?(Number(stage.number)===0?'序':stage.number)+'-'+index:index)+'　'+first.slice(0,28);
 }
 function adminStoryCommitNode(){const field=document.getElementById('admin-storymode-node-text');if(field&&adminStoryDraftBlocks.length)adminStoryDraftBlocks[adminStoryDraftIndex]=field.value.trim();}
 function adminStorySelectNode(index){adminStoryCommitNode();adminStoryDraftIndex=Number(index);const field=document.getElementById('admin-storymode-node-text');if(field)field.value=adminStoryDraftBlocks[adminStoryDraftIndex]||'';document.querySelectorAll('.admin-story-node-btn').forEach(function(btn){btn.classList.toggle('active',Number(btn.dataset.storyBlock)===adminStoryDraftIndex);});const label=document.getElementById('admin-storymode-node-label');if(label)label.textContent=adminStoryBlockLabel(adminStoryDraftIndex,adminStoryDraftBlocks[adminStoryDraftIndex]);}
@@ -10504,8 +10524,8 @@ const ADMIN_STORY_EVENT_TEMPLATES={
   narration:'旁白文字。',dialogue:'角色名稱\n「角色台詞。」',player:'玩家\n「玩家台詞。」',choice:'選項\n【選項一】\n【選項二】',battle:'【進入戰鬥】',boss:'【Boss戰】',reward:'【獲得角色：角色名稱】',score:'【求生意志＋1】',cg:'【開場CG】\n（畫面：CG描述。）\n（CG結束）',complete:'【第一章　完】'
 };
 function adminStoryInsertTemplate(type){const field=document.getElementById('admin-storymode-node-text'),template=ADMIN_STORY_EVENT_TEMPLATES[type];if(!field||!template)return;const start=field.selectionStart==null?field.value.length:field.selectionStart,end=field.selectionEnd==null?start:field.selectionEnd,prefix=start&&field.value[start-1]!=='\n'?'\n':'';field.setRangeText(prefix+template+'\n',start,end,'end');field.focus();adminStoryCommitNode();}
-function adminStageEditorHtml(defs){return ['black','white'].map(function(route){return '<div><b style="display:block;margin:4px 0 7px;color:var(--gold)">'+(route==='black'?'執黑':'執白')+'</b><div style="display:grid;gap:7px">'+(defs[route]||[]).map(function(stage,index){const p='admin-stage-'+route+'-'+index+'-';return '<div class="admin-stage-card" data-stage-route="'+route+'" data-stage-index="'+index+'"><div style="font-weight:700;margin-bottom:6px">第 '+stage.number+' 節</div><div class="admin-grid">'+adminManagerField('完整名稱',p+'title','text',stage.title)+adminManagerField('卡片短名',p+'short','text',stage.shortTitle)+adminManagerField('起始節點',p+'start','number',stage.startBlock)+adminManagerField('包含節點（逗號）',p+'blocks','text',(stage.blocks||[]).join(','))+'</div>'+adminStoryTextarea('關卡說明',p+'desc',stage.description||'',2)+'</div>';}).join('')+'</div></div>';}).join('');}
-function adminCollectStageDefs(){const result={black:[],white:[]};['black','white'].forEach(function(route){document.querySelectorAll('[data-stage-route="'+route+'"]').forEach(function(card){const i=card.dataset.stageIndex,p='admin-stage-'+route+'-'+i+'-',read=function(s){return document.getElementById(p+s).value.trim();},blocks=read('blocks').split(/[,，\s]+/).map(Number).filter(Number.isInteger);result[route].push({number:Number(i)+1,title:read('title'),shortTitle:read('short'),startBlock:Number(read('start')),blocks:blocks,description:read('desc')});});});return result;}
+function adminStageEditorHtml(defs){return ['black','white'].map(function(route){return '<div><b style="display:block;margin:4px 0 7px;color:var(--gold)">'+(route==='black'?'執黑':'執白')+'</b><div style="display:grid;gap:7px">'+(defs[route]||[]).map(function(stage,index){const p='admin-stage-'+route+'-'+index+'-';return '<div class="admin-stage-card" data-stage-route="'+route+'" data-stage-index="'+index+'" data-stage-number="'+stage.number+'"><div style="font-weight:700;margin-bottom:6px">'+(Number(stage.number)===0?'序章':'第 '+stage.number+' 節')+'</div><div class="admin-grid">'+adminManagerField('完整名稱',p+'title','text',stage.title)+adminManagerField('卡片短名',p+'short','text',stage.shortTitle)+adminManagerField('起始節點',p+'start','number',stage.startBlock)+adminManagerField('包含節點（逗號）',p+'blocks','text',(stage.blocks||[]).join(','))+'</div>'+adminStoryTextarea('關卡說明',p+'desc',stage.description||'',2)+'</div>';}).join('')+'</div></div>';}).join('');}
+function adminCollectStageDefs(){const result={black:[],white:[]};['black','white'].forEach(function(route){document.querySelectorAll('[data-stage-route="'+route+'"]').forEach(function(card){const i=card.dataset.stageIndex,p='admin-stage-'+route+'-'+i+'-',read=function(s){return document.getElementById(p+s).value.trim();},blocks=read('blocks').split(/[,，\s]+/).map(Number).filter(Number.isInteger);const stageNumber=card.dataset.stageNumber==null||card.dataset.stageNumber===''?Number(i)+1:Number(card.dataset.stageNumber);result[route].push({number:stageNumber,title:read('title'),shortTitle:read('short'),startBlock:Number(read('start')),blocks:blocks,description:read('desc')});});});return result;}
 function adminDetectedBattles(){adminStoryCommitNode();const rows=[];adminStoryDraftBlocks.forEach(function(block,index){let ordinal=0;String(block||'').split(/\r?\n/).forEach(function(line){line=line.trim();if(/^【進入戰鬥/.test(line)||line==='【Boss戰】'){rows.push({key:index+':'+ordinal++,block:index,boss:line==='【Boss戰】'});}});});return rows;}
 function adminBattleEditorHtml(){const stored=globalStoryModeConfig.battles||{},rows=adminDetectedBattles();if(!rows.length)return '<p style="color:var(--muted)">目前劇本沒有戰鬥標記。</p>';return '<div style="display:grid;gap:8px">'+rows.map(function(row){const c=stored[row.key]||{},kind=c.kind||(row.boss?'boss':'normal'),ids=(c.opponentIds||['020','018','008']).join(','),bossId=c.bossMonsterId||'m001',piece=c.pieceType||'兵(Pawn)',unlimited=c.unlimitedTime!==false;return '<div class="admin-battle-card" data-battle-key="'+row.key+'"><b>'+escHtml(adminStoryBlockLabel(row.block,adminStoryDraftBlocks[row.block]))+'｜戰鬥 '+(Number(row.key.split(':')[1])+1)+'</b><div class="admin-grid" style="margin-top:7px"><label>類型<select class="admin-battle-kind"><option value="normal" '+(kind==='normal'?'selected':'')+'>一般戰鬥</option><option value="boss" '+(kind==='boss'?'selected':'')+'>Boss 戰</option></select></label><label>一般敵人 ID（逗號）<input class="admin-battle-opponents" value="'+escHtml(ids)+'"></label><label>Boss 怪物 ID<input class="admin-battle-boss" value="'+escHtml(bossId)+'"></label><label>公牌類型<input class="admin-battle-piece" value="'+escHtml(piece)+'"></label><label>玩家出戰人數（0＝隊伍）<input type="number" min="0" max="3" class="admin-battle-size" value="'+(Number(c.teamSize)||0)+'"></label><label style="display:flex;align-items:center;gap:6px"><input type="checkbox" class="admin-battle-unlimited" '+(unlimited?'checked':'')+'> 不限100秒</label></div></div>';}).join('')+'</div>';}
 function adminCollectBattles(){const result={};document.querySelectorAll('[data-battle-key]').forEach(function(card){result[card.dataset.battleKey]={kind:card.querySelector('.admin-battle-kind').value,opponentIds:card.querySelector('.admin-battle-opponents').value.split(/[,，\s]+/).map(function(s){return s.trim();}).filter(Boolean),bossMonsterId:card.querySelector('.admin-battle-boss').value.trim(),pieceType:card.querySelector('.admin-battle-piece').value.trim()||'兵(Pawn)',teamSize:Number(card.querySelector('.admin-battle-size').value)||0,unlimitedTime:card.querySelector('.admin-battle-unlimited').checked};});return result;}
