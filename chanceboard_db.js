@@ -4289,6 +4289,144 @@ window.CHANCEBOARD_DB = {
       ],
       "effectTrigger": "damageRedirect",
       "effectChance": 1
+    },
+    {
+      "id": "m003-sword",
+      "ownerId": "m003",
+      "ownerName": "荒野孤狼",
+      "name": "撕咬",
+      "slot": "劍",
+      "condition": 1,
+      "rangeType": "劍",
+      "scope": "單",
+      "powerRatio": 160,
+      "hitRate": 0.95,
+      "critRate": 0.15,
+      "cooldown": null,
+      "description": "咬住最近的敵人撕扯；命中時有25%機率使對象DEF-15%，持續10秒。",
+      "effectOps": [
+        {
+          "op": "status",
+          "key": "DEF-",
+          "mode": "pct",
+          "target": "target",
+          "chance": 0.25,
+          "value": 0.15,
+          "durSec": 10
+        }
+      ],
+      "effectTrigger": "onHit",
+      "effectChance": 1
+    },
+    {
+      "id": "m003-gun",
+      "ownerId": "m003",
+      "ownerName": "荒野孤狼",
+      "name": "猛撲",
+      "slot": "槍",
+      "condition": 1,
+      "rangeType": "槍",
+      "scope": "單",
+      "powerRatio": 220,
+      "hitRate": 0.9,
+      "critRate": 0.1,
+      "cooldown": null,
+      "description": "壓低身形猛然撲向遠處的敵人；命中時有25%機率將對象撲倒，禁足5秒。",
+      "effectOps": [
+        {
+          "op": "status",
+          "key": "禁足",
+          "mode": "value",
+          "target": "target",
+          "chance": 0.25,
+          "durSec": 5
+        }
+      ],
+      "effectTrigger": "onHit",
+      "effectChance": 1
+    },
+    {
+      "id": "m003-magic",
+      "ownerId": "m003",
+      "ownerName": "荒野孤狼",
+      "name": "月下狼嚎",
+      "slot": "法",
+      "condition": 2,
+      "rangeType": null,
+      "scope": null,
+      "powerRatio": null,
+      "hitRate": null,
+      "critRate": null,
+      "cooldown": 2,
+      "description": "仰首長嚎喚醒野性：自身ATK+20%、SPD+20%，持續15秒。",
+      "effectOps": [
+        {
+          "op": "status",
+          "key": "ATK+",
+          "mode": "pct",
+          "target": "self",
+          "chance": 1,
+          "value": 0.2,
+          "durSec": 15
+        },
+        {
+          "op": "status",
+          "key": "SPD+",
+          "mode": "pct",
+          "target": "self",
+          "chance": 1,
+          "value": 0.2,
+          "durSec": 15
+        }
+      ],
+      "effectTrigger": "postAction",
+      "effectChance": 1
+    },
+    {
+      "id": "m003-wish",
+      "ownerId": "m003",
+      "ownerName": "荒野孤狼",
+      "name": "獵殺本能",
+      "slot": "願",
+      "condition": 3,
+      "rangeType": "劍",
+      "scope": "單",
+      "powerRatio": 320,
+      "hitRate": 0.9,
+      "critRate": 0.3,
+      "cooldown": 4,
+      "description": "鎖定氣息最弱的獵物，發動致命的一擊。",
+      "effectOps": [],
+      "effectTrigger": null,
+      "effectChance": 1
+    },
+    {
+      "id": "m003-passive",
+      "ownerId": "m003",
+      "ownerName": "荒野孤狼",
+      "name": "野性嗅覺",
+      "slot": "被",
+      "condition": null,
+      "rangeType": null,
+      "scope": null,
+      "powerRatio": null,
+      "hitRate": null,
+      "critRate": null,
+      "cooldown": null,
+      "description": "開戰時嗅出獵物的氣味：自身SPD+10%，持續整場戰鬥。",
+      "effectOps": [
+        {
+          "op": "status",
+          "key": "SPD+",
+          "mode": "pct",
+          "target": "self",
+          "chance": 1,
+          "value": 0.1,
+          "durSec": 999
+        }
+      ],
+      "effectTrigger": "battleStart",
+      "effectChance": 1
     }
   ],
   "statuses": [
@@ -5296,6 +5434,30 @@ window.CHANCEBOARD_DB = {
       "spd": 70,
       "assetDir": "monster",
       "description": "回應無名戰士誓約而現身的重裝長槍衛士，負責承受攻勢與牽制敵人。"
+    },
+    {
+      "id": "m003",
+      "name": "荒野孤狼",
+      "title": "初心荒野的獵手",
+      "element": "劍",
+      "hp": 900,
+      "atk": 100,
+      "def": 60,
+      "spd": 130,
+      "assetDir": "monster",
+      "description": "徘徊在初心荒野的灰狼。動作迅捷、皮薄血少，是新踏上棋盤的玩家第一個學會敬畏的對手。"
+    },
+    {
+      "id": "m004",
+      "name": "訓練稻草人",
+      "title": "教學用的木架",
+      "element": "劍",
+      "hp": 600,
+      "atk": 0,
+      "def": 50,
+      "spd": 10,
+      "assetDir": "monster",
+      "description": "插在訓練場上的稻草人。不會攻擊、不會反抗，是練習劍・槍・法・願出手流程的最佳對象。"
     }
   ]
 };
