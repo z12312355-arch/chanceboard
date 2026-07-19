@@ -130,7 +130,7 @@
   /* Stage selection is a one-screen game map: horizontal scrolling only. */
   .story-menu-card.stage-map-mode{height:min(650px,calc(100vh - 24px));max-height:none;overflow:hidden;display:flex;flex-direction:column}.stage-map-mode .story-menu-head{flex:0 0 auto}.stage-map-mode #storyStagePanel:not(.hidden){display:flex;flex:1 1 auto;min-height:0;flex-direction:column;overflow:hidden}.stage-map-mode .story-stage-shell{flex:1 1 auto;min-height:220px;overflow:hidden}.stage-map-mode .story-stage-scroll{height:100%;overflow-x:auto;overflow-y:hidden}.stage-map-mode .story-stage-map,.stage-map-mode .story-stage-row{height:100%}.stage-map-mode .story-stage-row{grid-template-rows:minmax(0,1fr) auto}.stage-map-mode .story-stage-node{height:100%;min-height:0}.stage-map-mode .story-stage-toolbar,.stage-map-mode #storyMenuActions,.stage-map-mode #storyLoadMessage{flex:0 0 auto}
   /* Spatial fate graph: the fixed canvas makes choice-to-result causality visible. */
-  .story-fate-visual-scroll{overflow-x:auto;overflow-y:hidden;margin:12px -5px 18px;padding:5px 5px 18px;scrollbar-color:#d3a83f rgba(255,255,255,.08)}.story-fate-visual-scroll::-webkit-scrollbar{height:12px}.story-fate-visual-scroll::-webkit-scrollbar-track{border-radius:999px;background:rgba(255,255,255,.07)}.story-fate-visual-scroll::-webkit-scrollbar-thumb{border:3px solid transparent;border-radius:999px;background:#d3a83f padding-box}.story-fate-canvas{position:relative;width:1100px;height:610px;border:1px solid rgba(122,139,181,.28);border-radius:16px;background:radial-gradient(circle at 12% 50%,rgba(242,193,78,.08),transparent 22%),linear-gradient(135deg,rgba(15,20,34,.95),rgba(8,11,20,.98));overflow:hidden}.story-fate-svg{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}.story-fate-link{fill:none;stroke:#47516c;stroke-width:2}.story-fate-link.seen{stroke:#75d897;stroke-width:3;filter:drop-shadow(0 0 4px rgba(117,216,151,.35))}.story-fate-link.kind-boss{stroke:#5d6ea0}.story-fate-link.kind-boss.seen{stroke:#7fb4e8}.story-fate-link.kind-ending{stroke-dasharray:7 5}.story-fate-link.kind-ending.seen{stroke:#e0b25c;filter:drop-shadow(0 0 4px rgba(224,178,92,.35))}.story-fate-edge-label.kind-boss.seen{border-color:rgba(127,180,232,.65);background:#111f2e;color:#bcdcfb}.story-fate-edge-label.kind-ending{border-style:dashed}.story-fate-edge-label.kind-ending.seen{border-color:rgba(224,178,92,.7);background:#241d10;color:#ffe0a3}.story-fate-visual-node .story-fate-replay.alt{border-color:rgba(127,180,232,.55);background:rgba(127,180,232,.1);color:#bcdcfb}.story-fate-edge-label{position:absolute;z-index:2;transform:translate(-50%,-50%);max-width:130px;border:1px solid #4d5874;border-radius:999px;padding:4px 9px;background:#101522;color:#78839d;font-size:10px;white-space:nowrap}.story-fate-edge-label.seen{border-color:rgba(117,216,151,.65);background:#12251d;color:#b9f0ca}.story-fate-visual-node{position:absolute;z-index:3;width:220px;min-height:128px;border:1px solid #47516d;border-radius:13px;padding:12px;background:linear-gradient(145deg,rgba(28,34,52,.98),rgba(13,17,29,.98));color:#7f899f;box-shadow:0 12px 26px rgba(0,0,0,.32)}.story-fate-visual-node.discovered{border-color:rgba(242,193,78,.58);color:#e8edf9}.story-fate-visual-node.outcome.discovered{border-color:rgba(117,216,151,.55);background:linear-gradient(145deg,rgba(24,50,38,.96),rgba(12,24,21,.98))}.story-fate-visual-node-title{font-size:14px;font-weight:900;color:inherit}.story-fate-visual-node-meta{margin-top:6px;color:#8f9ab4;font-size:10px;line-height:1.5}.story-fate-visual-node.discovered .story-fate-visual-node-meta{color:#c6cee1}.story-fate-visual-node .story-fate-replay{width:100%;margin-top:9px;padding:6px 8px;font-size:10px}.story-fate-column-label{position:absolute;top:14px;z-index:1;color:#79849f;font-size:10px;font-weight:850;letter-spacing:.14em}.story-fate-scroll-note{color:#909ab3;font-size:10px;text-align:center;margin-top:-10px}
+  .story-fate-visual-scroll{overflow-x:auto;overflow-y:hidden;margin:12px -5px 18px;padding:5px 5px 18px;scrollbar-color:#d3a83f rgba(255,255,255,.08)}.story-fate-visual-scroll::-webkit-scrollbar{height:12px}.story-fate-visual-scroll::-webkit-scrollbar-track{border-radius:999px;background:rgba(255,255,255,.07)}.story-fate-visual-scroll::-webkit-scrollbar-thumb{border:3px solid transparent;border-radius:999px;background:#d3a83f padding-box}.story-fate-canvas{position:relative;width:1100px;height:610px;border:1px solid rgba(122,139,181,.28);border-radius:16px;background:radial-gradient(circle at 12% 50%,rgba(242,193,78,.08),transparent 22%),linear-gradient(135deg,rgba(15,20,34,.95),rgba(8,11,20,.98));overflow:hidden}.story-fate-svg{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}.story-fate-link{fill:none;stroke:#47516c;stroke-width:2}.story-fate-link.seen{stroke:#75d897;stroke-width:3;filter:drop-shadow(0 0 4px rgba(117,216,151,.35))}.story-fate-edge-label{position:absolute;z-index:2;transform:translate(-50%,-50%);max-width:130px;border:1px solid #4d5874;border-radius:999px;padding:4px 9px;background:#101522;color:#78839d;font-size:10px;white-space:nowrap}.story-fate-edge-label.seen{border-color:rgba(117,216,151,.65);background:#12251d;color:#b9f0ca}.story-fate-visual-node{position:absolute;z-index:3;width:220px;min-height:128px;border:1px solid #47516d;border-radius:13px;padding:12px;background:linear-gradient(145deg,rgba(28,34,52,.98),rgba(13,17,29,.98));color:#7f899f;box-shadow:0 12px 26px rgba(0,0,0,.32)}.story-fate-visual-node.discovered{border-color:rgba(242,193,78,.58);color:#e8edf9}.story-fate-visual-node.outcome.discovered{border-color:rgba(117,216,151,.55);background:linear-gradient(145deg,rgba(24,50,38,.96),rgba(12,24,21,.98))}.story-fate-visual-node-title{font-size:14px;font-weight:900;color:inherit}.story-fate-visual-node-meta{margin-top:6px;color:#8f9ab4;font-size:10px;line-height:1.5}.story-fate-visual-node.discovered .story-fate-visual-node-meta{color:#c6cee1}.story-fate-visual-node .story-fate-replay{width:100%;margin-top:9px;padding:6px 8px;font-size:10px}.story-fate-column-label{position:absolute;top:14px;z-index:1;color:#79849f;font-size:10px;font-weight:850;letter-spacing:.14em}.story-fate-scroll-note{color:#909ab3;font-size:10px;text-align:center;margin-top:-10px}
   /* Fate map follows the same one-screen rule as stage selection: horizontal only. */
   #storyFateOverlay{padding:8px}.story-fate-panel{height:min(680px,calc(100vh - 16px));max-height:none;overflow:hidden}.story-fate-head{flex:0 0 auto}.story-fate-graph{flex:1 1 auto;min-height:0;overflow:hidden;padding:12px 16px 14px}.story-fate-visual-scroll{height:100%;margin:0;padding:0 0 14px;overflow-x:auto;overflow-y:hidden}.story-fate-canvas{height:100%;min-height:0}.story-fate-scroll-note,.story-fate-legend{display:none}.story-fate-head .hidden{display:none}
   #storyMenuActions{display:flex;gap:9px;align-items:center;flex-wrap:wrap;margin-top:18px;}
@@ -139,7 +139,6 @@
   .story-team-preview{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
   .story-team-face{position:relative;width:44px;height:56px;border-radius:8px;border:1px solid rgba(242,193,78,.42);background:#0c0f18;overflow:hidden;flex:none}
   .story-team-face img{width:100%;height:100%;object-fit:cover;object-position:center 12%;display:block}
-  .story-team-face .story-team-face-name{position:absolute;left:0;right:0;bottom:0;padding:1px 2px;background:linear-gradient(transparent,rgba(0,0,0,.88));color:#ffe6ac;font-size:8px;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .story-team-face.empty{display:grid;place-items:center;border-style:dashed;border-color:#46506c;color:#5d6884;font-size:16px}
   .story-team-preview .story-team-more{color:#93a0bd;font-size:11px}
   /* 戰敗結算頁 */
@@ -8496,7 +8495,8 @@ function storyTeamFacesHtml(team,limit){
   if(!ids.length)return '<div class="story-team-face empty" title="尚未編成">＋</div>';
   return ids.map(function(id){
     const c=CHAR_BY_ID[id];if(!c)return '';
-    return '<div class="story-team-face" title="'+escHtml(stripParenAlias(c.name))+'"><img src="'+charFullThumbSrc(id)+'" alt="" onerror="'+charFullThumbOnErrorAttr(id)+'"><span class="story-team-face-name">'+escHtml(stripParenAlias(c.name))+'</span></div>';
+    // 卡面不寫名字（使用者要求），改掛 title 讓滑鼠停留時仍看得到是誰。
+    return '<div class="story-team-face" title="'+escHtml(stripParenAlias(c.name))+'"><img src="'+charFullThumbSrc(id)+'" alt="'+escHtml(stripParenAlias(c.name))+'" onerror="'+charFullThumbOnErrorAttr(id)+'"></div>';
   }).join('');
 }
 function storyRenderTeamPreview(){
@@ -8597,75 +8597,94 @@ function storyFateVisualHtml(route,data){
   const colCount=4+(hasBoss?1:0)+(hasEndings?1:0),colGap=small?230:380,marginX=small?20:30;
   const xs=[];for(let i=0;i<colCount;i++)xs.push(marginX+i*colGap);
   const canvasW=xs[colCount-1]+nodeW+marginX,top=compact?24:(narrow?38:45);
+  // 畫布底部保留一條走線道，給「跨越多欄」的長邊繞路用（見 linkPath 的 lane 分支）。
+  const lanePad=compact?26:38;
   const nodePos=new Map([
     [Number(defs[0].block),{x:xs[0],y:(canvasH-nodeH)/2,h:nodeH}],
     [Number(defs[1].block),{x:xs[1],y:top+(canvasH-nodeH-top*2)*.18,h:nodeH}],
     [Number(defs[2].block),{x:xs[2],y:top,h:nodeH}],
     [Number(defs[3].block),{x:xs[2],y:canvasH-top-nodeH,h:nodeH}]
   ]);
-  const directTerminal=defs[0].choices.find(item=>!defs.some(node=>Number(node.block)===Number(item[1])));
-  if(directTerminal)nodePos.set(Number(directTerminal[1]),{x:xs[1],y:canvasH-top-outcomeH,h:outcomeH});
-  const remaining=targets.filter(block=>!nodePos.has(Number(block))),usable=Math.max(0,canvasH-top*2-remaining.length*outcomeH);
-  const resultGap=remaining.length>1?usable/(remaining.length-1):0;
-  remaining.forEach((block,index)=>nodePos.set(Number(block),{x:xs[3],y:top+index*(outcomeH+resultGap),h:outcomeH}));
+  // 所有命運結果一律排在「命運結果」欄。先前把「不幫」這種直接抵達的結果放在第1欄，
+  // 它連往後面欄位的線就得橫越中間兩欄、從其他卡片底下穿過去（使用者反應「有的線會被卡片擋住」）。
+  // 全部收進同一欄之後，每條線都只跨相鄰一欄，不會再從任何卡片下面穿過。
+  const laneReserve=lanePad;
+  const usable=Math.max(0,canvasH-top-laneReserve-targets.length*outcomeH);
+  const resultGap=targets.length>1?usable/(targets.length-1):0;
+  targets.forEach((block,index)=>nodePos.set(Number(block),{x:xs[3],y:top+index*(outcomeH+resultGap),h:outcomeH}));
   const bossColIndex=hasBoss?4:-1;
   if(hasBoss){const usableB=Math.max(0,canvasH-top*2-bossVariants.length*outcomeH),gapB=bossVariants.length>1?usableB/(bossVariants.length-1):0;bossVariants.forEach((block,index)=>nodePos.set(Number(block),{x:xs[bossColIndex],y:top+index*(outcomeH+gapB),h:outcomeH}));}
   const endColIndex=hasEndings?(hasBoss?5:4):-1;
   if(hasEndings){const usableE=Math.max(0,canvasH-top*2-endings.length*outcomeH),gapE=endings.length>1?usableE/(endings.length-1):0;endings.forEach((block,index)=>nodePos.set(Number(block),{x:xs[endColIndex],y:top+index*(outcomeH+gapE),h:outcomeH}));}
-  // 連線分三種：choice＝分支選擇樹的選項邊、boss＝命運結果通往哪一段戰前台詞、
-  // ending＝命運結果最後走到哪個結局。使用者反應「某些節點有兩個箭頭，看不出分別」與
-  // 「箭頭疊在一起難以辨識」，因此三種邊各自有：不同的出入點高度（choice 走節點中線、
-  // boss 走上緣、ending 走下緣）、不同的線條樣式（ending 為虛線），以及必定顯示的文字標籤。
-  // 這樣同一個命運結果射出的兩條線（→戰前台詞、→結局）在視覺與文字上都能分辨。
+  // 命運棋譜是一條「從頭走到尾」的鏈：選擇 → 命運結果 → 戰前台詞 → 結局。
+  // 使用者指出「所有結局都會先到戰前台詞才到結局」，先前卻畫了命運結果直接跳到結局的線，
+  // 那是錯的模型（也是造成長線橫越、被卡片擋住的元凶）。改成命運結果只連到它的戰前台詞，
+  // 再由戰前台詞連到結局；因為多條命運可能共用同一段台詞、卻因分數走到不同結局，
+  // 戰前台詞→結局用「實際走過的組合」去重後畫，能同時保留脈絡與差異。
+  // 線條也統一成同一種樣式（只保留已探索＝綠色的區別），不再有三種顏色與虛線。
   const links=[];
-  defs.forEach(node=>node.choices.forEach(item=>{const from=nodePos.get(Number(node.block)),to=nodePos.get(Number(item[1]));if(from&&to)links.push({from,to,kind:'choice',text:item[0],seen:storyWasChoiceVisited(route,node.block,item[0],data)});}));
-  if(hasBoss)targets.forEach(block=>{const id=storyStableBlockId(route,block),saved=branches[id];if(!saved)return;const bossBlock=storyBossVariantForState(route,saved),from=nodePos.get(Number(block)),to=nodePos.get(Number(bossBlock));if(from&&to)links.push({from,to,kind:'boss',text:'戰前台詞',seen:storyWasBlockVisited(route,bossBlock,data)});});
-  if(hasEndings)targets.forEach(block=>{const id=storyStableBlockId(route,block),saved=branches[id],endingSaved=Number(r.endingPaths[id])||null,destination=saved?storyEndingBlockForState(route,saved):null,from=nodePos.get(Number(block)),to=nodePos.get(Number(endingSaved||destination));if(saved&&from&&to)links.push({from,to,kind:'ending',text:'結局',seen:!!endingSaved});});
-  // 端點高度依邊的種類錯開，避免同一個節點射出的多條線從同一點重疊出發。
-  const anchorRatio={choice:.5,boss:.26,ending:.78};
-  links.forEach(link=>{
-    const ratio=anchorRatio[link.kind];
-    link.x1=link.from.x+nodeW;link.y1=link.from.y+link.from.h*ratio;
-    link.x2=link.to.x;link.y2=link.to.y+link.to.h*(link.kind==='choice'?.5:ratio);
+  defs.forEach(node=>node.choices.forEach(item=>{const from=nodePos.get(Number(node.block)),to=nodePos.get(Number(item[1]));if(from&&to)links.push({from,to,labeled:true,text:item[0],seen:storyWasChoiceVisited(route,node.block,item[0],data)});}));
+  const chainSeen={};
+  targets.forEach(block=>{
+    const id=storyStableBlockId(route,block),saved=branches[id];if(!saved)return;
+    const bossBlock=hasBoss?storyBossVariantForState(route,saved):null;
+    const endingBlock=hasEndings?(Number(r.endingPaths[id])||storyEndingBlockForState(route,saved)):null;
+    const outcomePos=nodePos.get(Number(block));
+    if(bossBlock!=null){
+      const bossPos=nodePos.get(Number(bossBlock));
+      if(outcomePos&&bossPos)links.push({from:outcomePos,to:bossPos,labeled:false,seen:storyWasBlockVisited(route,bossBlock,data)});
+      if(endingBlock!=null){
+        const endPos=nodePos.get(Number(endingBlock)),key=bossBlock+'>'+endingBlock;
+        if(bossPos&&endPos&&!chainSeen[key]){chainSeen[key]=true;links.push({from:bossPos,to:endPos,labeled:false,seen:!!Number(r.endingPaths[id])});}
+      }
+    }else if(endingBlock!=null){
+      // 這條路線沒有Boss台詞分支時，命運結果才直接連結局。
+      const endPos=nodePos.get(Number(endingBlock));
+      if(outcomePos&&endPos)links.push({from:outcomePos,to:endPos,labeled:false,seen:!!Number(r.endingPaths[id])});
+    }
   });
-  // 同一組起點/終點高度相近的線再水平錯開控制點，讓平行的曲線分開而不是黏成一條。
+  links.forEach(link=>{
+    link.x1=link.from.x+nodeW;link.y1=link.from.y+link.from.h/2;
+    link.x2=link.to.x;link.y2=link.to.y+link.to.h/2;
+    // 跨越超過一欄的邊（理論上排版後不該出現）改走底部走線道，絕不從卡片底下穿過。
+    link.longSpan=(link.x2-link.x1)>colGap*1.4;
+  });
+  // 起點高度相同的平行線水平錯開控制點，避免疊成一條。
   const laneSeen={};
-  links.forEach(link=>{
-    const key=link.kind+'@'+Math.round(link.y1/12);
-    laneSeen[key]=(laneSeen[key]||0)+1;
-    link.lane=laneSeen[key]-1;
-  });
+  links.forEach(link=>{const key=Math.round(link.y1/12)+'@'+Math.round(link.x1/40);laneSeen[key]=(laneSeen[key]||0)+1;link.lane=laneSeen[key]-1;});
   const marker='storyArrow'+route,arrowSize=small?7:9,arrowMid=arrowSize/2;
+  // 跨欄的長邊走底部走線道。不能用單一條三次貝茲把控制點壓到底就算數——貝茲不會經過控制點，
+  // 而且 x 前進得比 y 回升快，曲線仍會在中途切進卡片。改成「下降圓角 → 水平直線 → 上升圓角」
+  // 的三段式路徑：中間那段確實壓在所有卡片下緣之下，升降只發生在欄與欄的空隙裡。
+  const nodesBottom=canvasH-lanePad;
   const linkPath=function(link){
-    const span=link.x2-link.x1,bias=link.kind==='ending'?.72:(link.kind==='boss'?.4:.5);
-    const c1=link.x1+span*bias+link.lane*9,c2=link.x2-span*(1-bias)-link.lane*9;
+    if(link.longSpan){
+      const laneY=nodesBottom+8-link.lane*7,turn=Math.min(80,(link.x2-link.x1)/4);
+      return 'M '+link.x1+' '+link.y1
+        +' C '+(link.x1+turn/2)+' '+link.y1+', '+(link.x1+turn/2)+' '+laneY+', '+(link.x1+turn)+' '+laneY
+        +' L '+(link.x2-turn)+' '+laneY
+        +' C '+(link.x2-turn/2)+' '+laneY+', '+(link.x2-turn/2)+' '+link.y2+', '+link.x2+' '+link.y2;
+    }
+    const span=link.x2-link.x1,c1=link.x1+span*.5+link.lane*8,c2=link.x2-span*.5-link.lane*8;
     return 'M '+link.x1+' '+link.y1+' C '+c1+' '+link.y1+', '+c2+' '+link.y2+', '+link.x2+' '+link.y2;
   };
-  const svg='<svg class="story-fate-svg" viewBox="0 0 '+canvasW+' '+canvasH+'" preserveAspectRatio="none"><defs><marker id="'+marker+'" markerUnits="userSpaceOnUse" markerWidth="'+arrowSize+'" markerHeight="'+arrowSize+'" refX="'+(arrowSize-.5)+'" refY="'+arrowMid+'" orient="auto"><path d="M0,0 L'+arrowSize+','+arrowMid+' L0,'+arrowSize+' z" fill="#65718f"/></marker><marker id="'+marker+'Seen" markerUnits="userSpaceOnUse" markerWidth="'+arrowSize+'" markerHeight="'+arrowSize+'" refX="'+(arrowSize-.5)+'" refY="'+arrowMid+'" orient="auto"><path d="M0,0 L'+arrowSize+','+arrowMid+' L0,'+arrowSize+' z" fill="#75d897"/></marker></defs>'+links.map(link=>'<path class="story-fate-link kind-'+link.kind+' '+(link.seen?'seen':'')+'" marker-end="url(#'+marker+(link.seen?'Seen':'')+')" d="'+linkPath(link)+'"/>').join('')+'</svg>';
-  // 標籤位置去碰撞：同一條垂直帶上的標籤依序往下推開，避免文字互相蓋住（尤其是「選擇旁觀」
-  // 這種從起點一路拉到最下方、會橫越其他路線的長邊）。
+  const svg='<svg class="story-fate-svg" viewBox="0 0 '+canvasW+' '+canvasH+'" preserveAspectRatio="none"><defs><marker id="'+marker+'" markerUnits="userSpaceOnUse" markerWidth="'+arrowSize+'" markerHeight="'+arrowSize+'" refX="'+(arrowSize-.5)+'" refY="'+arrowMid+'" orient="auto"><path d="M0,0 L'+arrowSize+','+arrowMid+' L0,'+arrowSize+' z" fill="#65718f"/></marker><marker id="'+marker+'Seen" markerUnits="userSpaceOnUse" markerWidth="'+arrowSize+'" markerHeight="'+arrowSize+'" refX="'+(arrowSize-.5)+'" refY="'+arrowMid+'" orient="auto"><path d="M0,0 L'+arrowSize+','+arrowMid+' L0,'+arrowSize+' z" fill="#75d897"/></marker></defs>'+links.map(link=>'<path class="story-fate-link '+(link.seen?'seen':'')+'" marker-end="url(#'+marker+(link.seen?'Seen':'')+')" d="'+linkPath(link)+'"/>').join('')+'</svg>';
+  // 只有選擇邊需要文字（那是玩家真的做過的選項）；鏈狀的後段由欄位標題就看得懂，不再掛標籤。
   const labelBoxes=[];
-  const edgeLabels=links.map(link=>{
-    const lx=link.x1+(link.x2-link.x1)*(link.kind==='ending'?.62:.5);
+  const edgeLabels=links.filter(link=>link.labeled).map(link=>{
+    const lx=link.x1+(link.x2-link.x1)*.5;
     let ly=(link.y1+link.y2)/2;
     for(let guard=0;guard<12;guard++){
-      const hit=labelBoxes.some(b=>Math.abs(b.x-lx)<74&&Math.abs(b.y-ly)<20);
-      if(!hit)break;
+      if(!labelBoxes.some(b=>Math.abs(b.x-lx)<74&&Math.abs(b.y-ly)<20))break;
       ly+=21;
     }
     labelBoxes.push({x:lx,y:ly});
-    const text=link.kind==='choice'?(link.seen?escHtml(link.text):'？？？'):escHtml(link.text);
-    return '<span class="story-fate-edge-label kind-'+link.kind+' '+(link.seen?'seen':'')+'" style="left:'+lx+'px;top:'+ly+'px">'+text+'</span>';
+    return '<span class="story-fate-edge-label '+(link.seen?'seen':'')+'" style="left:'+lx+'px;top:'+ly+'px">'+(link.seen?escHtml(link.text):'？？？')+'</span>';
   }).join('');
   const choiceNodes=defs.map(node=>{const pos=nodePos.get(Number(node.block)),seen=storyWasBlockVisited(route,node.block,data),incoming=storyFateIncoming(route,node.block);return '<div class="story-fate-visual-node '+(seen?'discovered':'')+'" style="left:'+pos.x+'px;top:'+pos.y+'px"><div class="story-fate-visual-node-title">'+(seen?escHtml(node.title):'？？？')+'</div><div class="story-fate-visual-node-meta">'+(seen?(incoming?'由「'+escHtml(incoming.parent.title)+'」選擇「'+escHtml(incoming.choice)+'」抵達':'分支起點'):'尚未探索此選擇點')+'</div><button type="button" class="story-fate-replay" data-story-replay-block="'+node.block+'" '+(seen?'':'disabled')+'>從此節點回溯</button></div>';}).join('');
-  // 使用者反應「命運棋譜沒辦法讓尾聲1選擇沿用的節點」：原本命運結果節點只有一顆
-  // 「沿此命運出發」，固定從 storyFinalStage（Boss關）重打。尾聲關卡與Boss關拆開之後，
-  // 想單純看某條命運的結局就得整場Boss重打一次。這裡多加一顆直接跳到結局關卡的按鈕，
-  // 沿用同一份命運快照（carry），只有那一關已通關過才會出現。
-  const bossStageDef=storyStageByRole(route,'boss'),epilogueDef=storyEndingStage(route)||storyLastStage(route);
-  const epilogueSeparate=!!(epilogueDef&&(!bossStageDef||Number(epilogueDef.number)!==Number(bossStageDef.number)));
-  const epilogueCleared=epilogueSeparate&&loadStoryStageProgress().routes[route].cleared.includes(Number(epilogueDef.number));
-  const outcomeNodes=targets.map(block=>{const pos=nodePos.get(Number(block)),seen=storyWasBlockVisited(route,block,data),id=storyStableBlockId(route,block),saved=branches[id];return '<div class="story-fate-visual-node outcome '+(seen?'discovered':'')+'" style="left:'+pos.x+'px;top:'+pos.y+'px"><div class="story-fate-visual-node-title">'+(seen?escHtml(STORY_OUTCOME_LABELS[block]||'已探索命運'):'？？？')+'</div><div class="story-fate-visual-node-meta">'+(seen?'已探索命運結果':'尚未探索')+'</div>'+(saved&&hasEndings?'<button type="button" class="story-fate-replay" data-story-fourth-branch="'+block+'">沿此命運出發</button>':'')+(saved&&epilogueCleared?'<button type="button" class="story-fate-replay alt" data-story-epilogue-branch="'+block+'">直接看'+escHtml(epilogueDef.shortTitle)+'</button>':'')+'</div>';}).join('');
+  // 「沿此命運出發」固定從 Boss 關重打——使用者要求拿掉直接跳尾聲1的捷徑，
+  // 因為正確的脈絡本來就是「命運結果 → Boss戰 → 尾聲1」，跳過中間反而看不出整體走向。
+  const outcomeNodes=targets.map(block=>{const pos=nodePos.get(Number(block)),seen=storyWasBlockVisited(route,block,data),id=storyStableBlockId(route,block),saved=branches[id];return '<div class="story-fate-visual-node outcome '+(seen?'discovered':'')+'" style="left:'+pos.x+'px;top:'+pos.y+'px"><div class="story-fate-visual-node-title">'+(seen?escHtml(STORY_OUTCOME_LABELS[block]||'已探索命運'):'？？？')+'</div><div class="story-fate-visual-node-meta">'+(seen?'已探索命運結果':'尚未探索')+'</div>'+(saved&&hasEndings?'<button type="button" class="story-fate-replay" data-story-fourth-branch="'+block+'">沿此命運出發</button>':'')+'</div>';}).join('');
   const bossNodes=hasBoss?bossVariants.map(block=>{const pos=nodePos.get(Number(block)),seen=storyWasBlockVisited(route,block,data);return '<div class="story-fate-visual-node outcome '+(seen?'discovered':'')+'" style="left:'+pos.x+'px;top:'+pos.y+'px"><div class="story-fate-visual-node-title">'+(seen?escHtml(STORY_OUTCOME_LABELS[block]||'戰前台詞'):'？？？')+'</div><div class="story-fate-visual-node-meta">'+(seen?'已看過這段對話':'尚未看過，需先走到對應命運並打到Boss')+'</div>'+(seen?'<button type="button" class="story-fate-replay" data-story-boss-replay="'+block+'">重播這段對話</button>':'')+'</div>';}).join(''):'';
   const endingNodes=hasEndings?endings.map(block=>{const pos=nodePos.get(Number(block)),seen=storyWasBlockVisited(route,block,data);return '<div class="story-fate-visual-node outcome ending '+(seen?'discovered':'')+'" style="left:'+pos.x+'px;top:'+pos.y+'px"><div class="story-fate-visual-node-title">'+(seen?escHtml(STORY_OUTCOME_LABELS[block]||'已探索結局'):'？？？')+'</div><div class="story-fate-visual-node-meta">'+(seen?'已收入命運棋譜':'尚未抵達')+'</div></div>';}).join(''):'';
   const colTitles=['起點','第一次分歧','第二次分歧','命運結果'].concat(hasBoss?['戰前台詞']:[]).concat(hasEndings?['最終結局']:[]);
@@ -8688,7 +8707,6 @@ function storyOpenFateMap(route){
   graph.querySelectorAll('[data-story-replay-block]').forEach(btn=>btn.onclick=()=>storyStartReplay(route,Number(branchStage.number),Number(btn.dataset.storyReplayBlock)));
   graph.querySelectorAll('[data-story-boss-replay]').forEach(btn=>btn.onclick=()=>storyStartReplay(route,Number(bossOnly.number),Number(btn.dataset.storyBossReplay)));
   graph.querySelectorAll('[data-story-fourth-branch]').forEach(btn=>btn.onclick=()=>storyStartFourthFromBranch(route,Number(btn.dataset.storyFourthBranch)));
-  graph.querySelectorAll('[data-story-epilogue-branch]').forEach(btn=>btn.onclick=()=>storyStartFourthFromBranch(route,Number(btn.dataset.storyEpilogueBranch),storyEndingStage(route)||storyLastStage(route)));
 }
 function storyCloseFateMap(){document.getElementById('storyFateOverlay').classList.add('hidden');}
 let storyFateResizeTimer=null;
