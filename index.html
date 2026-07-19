@@ -7143,6 +7143,13 @@ function runLoop(){
     actDiscardPending = []; // 新的一輪出手，理論上 confirmAct() 已經清空過，這裡是保險
     state.phase = 'act';
     render();
+    // 新手教學戰的「逐回合花色引導」：輪到玩家時先顯示這一步的指示（並鎖定指定花色），
+    // 且不能讓自動戰鬥代打——整場教學的意義就是讓玩家親手點。見 tutorialSuitTutorPrompt()。
+    if(next.side==='A' && window.__tutorialSuitTutor && !window.__tutorialSuitTutor.done){
+      scheduleActionDeadline();
+      tutorialSuitTutorPrompt();
+      return;
+    }
     // Each side has its own auto-battle toggle; White's only exists/applies in two-player
     // mode (outside two-player mode White never reaches 'act' at all — see the branch above).
     const autoOnForSide = next.side==='A' ? state.autoBattle : state.autoBattleB;
@@ -7462,6 +7469,23 @@ function confirmAct(){
   if(state.phase!=='act' || !state.actingUnitId) return;
   const unit = getActingUnit();
   if(!unit || !unit.alive){ state.actingUnitId=null; runLoop(); return; }
+  // 新手教學戰的逐回合花色引導（見 tutorialSuitTutorPrompt()）：這一回合必須用指定花色的
+  // 招式才能出手。沒選就按 OK（或 30 秒逾時走到這裡）不結算回合——重新滿上倒數、再提示
+  // 一次，玩家不會因此浪費一回合，也不可能把教學卡死。選對了就把這一步標記完成，推進到
+  // 下一種花色（推進要在結算「前」做：結算途中會清掉 actMovePicked，之後就讀不到了）。
+  const suitTutor=window.__tutorialSuitTutor;
+  if(suitTutor&&!suitTutor.done&&suitTutor.current&&unit.side==='A'){
+    if(state.actMovePicked!==suitTutor.current){
+      actionTimedOutForId=null;actionTimeoutHandledKey=null;
+      state.turnDeadlineAt=Date.now()+ACTION_TIMEOUT_MS;state.turnDeadlineTotalMs=ACTION_TIMEOUT_MS;
+      tutorialBattleSay(['請先點選【'+SLOT_LABEL[suitTutor.current]+'】的招式，再按右邊的 OK 出手。']);
+      render();
+      scheduleActionDeadline();
+      return;
+    }
+    suitTutor.queue.shift();
+    suitTutor.current=null;
+  }
   // 先關掉真實時間倒數，避免確認出手與倒數 callback 在同一瞬間重複結算。
   cancelActionDeadline();
   state.turnDeadlineAt = 0;
@@ -9652,6 +9676,13 @@ function renderBattle(){
       b.disabled = !info.affordable || blocked || isOpponentAiTurn;
       b.innerHTML = info.html;
       b.onclick = ()=> pickActMove(key);
+      // 新手教學戰的逐回合花色引導：這一回合只開放指定花色的招式，其他一律鎖住；
+      // 指定的那顆加上脈動高亮，讓玩家一眼知道要點哪裡。見 tutorialSuitTutorPrompt()。
+      const suitTutor=window.__tutorialSuitTutor;
+      if(suitTutor&&!suitTutor.done&&suitTutor.current&&currentActUnit.side==='A'){
+        if(key!==suitTutor.current)b.disabled=true;
+        else if(!b.disabled)b.classList.add('tutorial-suit-target');
+      }
       wrap.appendChild(b);
       const infoBtn = document.createElement('div');
       infoBtn.className = 'act-infobtn';
@@ -10639,7 +10670,7 @@ function collectAdminStoryStageProgress(){
 }
 const ADMIN_TUTORIAL_STORY_FIELDS = [
   ['pickIntro','選擇第一枚棋子前'],['afterPick','選完初始棋子後'],
-  ['battleIntro','第一場 1v1 戰鬥前'],['suitGuide','劍槍法願花色教學（每行一頁）'],['afterBattleWin','教學戰鬥勝利'],['afterBattleLose','教學戰鬥失敗'],['returnLobby','引導返回大廳'],
+  ['battleIntro','第一場 1v1 戰鬥前'],['suitGuide','劍槍法願逐回合教學（第1~4行＝劍/槍/法/願回合指示，第5行＝完成提示）'],['afterBattleWin','教學戰鬥勝利'],['afterBattleLose','教學戰鬥失敗'],['returnLobby','引導返回大廳'],
   ['goldIntro','金幣召喚說明'],['goldOffer','贈送金幣召喚'],['afterGold','金幣召喚完成'],
   ['diamondIntro','鑽石召喚說明'],['diamondOffer','贈送鑽石召喚'],['afterDiamond','鑽石召喚完成'],
   ['teamIntro','隊伍教學開始'],['teamPick3','選擇三位棋子'],['teamDeck','編輯十張卡組'],['afterTeam','隊伍完成'],
@@ -11542,8 +11573,8 @@ const TUTORIAL_LINES = {
     white:'{name}，接下來是你的第一場練習。對面是一個訓練稻草人，它不會反擊，請放心，跟著我一步一步來。',
   },
   suitGuide: {
-    black:'看到下面那排手牌了吧？【劍・槍・法・願】四種花色卡，就是你出招的本錢。\n劍砍近的、槍捅遠的；法拿來強化自己或給對面找麻煩；願最貴——但也最狠。\n輪到你的棋子時，先決定要不要移動站位，再點一個招式。招式上標著要消耗幾張對應花色卡，卡不夠或還在冷卻就點不了。選好之後，按右邊的 OK 出手。\n那個稻草人不會還手。把劍、槍、法、願全部試過一遍——記住手感。之後的對手，可不會站著讓你砍。',
-    white:'先看畫面下方的手牌：【劍・槍・法・願】四種花色卡，是使用招式的資源。\n劍是近身攻擊、槍能攻擊遠處；法多半用來強化與控場；願的力量最強大，需要的卡也最多。\n輪到你的棋子時，先選擇要不要移動，再點選想用的招式——招式上會標明需要幾張對應花色卡，數量不足或冷卻中的招式會暗掉。確認後按右邊的 OK 出手。\n這個稻草人不會反擊，別緊張。請把劍、槍、法、願各試一次，感受它們的差別吧。',
+    black:'先從【劍】開始。下面亮著的就是劍招——上面標著要吃幾張劍色卡，手牌裡的卡就是你的本錢。點劍招，再按右邊的 OK，出手！\n不錯嘛。接著換【槍】。劍砍近的，槍捅遠的——站得遠也搆得到。一樣，點槍招，按 OK。\n再來是【法】。法術不只會傷人，多半還會強化自己、或給對面找點麻煩。點法招，按 OK。\n最後是【願】。最貴的一手，要吃的卡最多——但也最狠。點願招，按 OK，讓它嚐嚐！\n劍、槍、法、願，你都親手使過一遍了。剩下的自己來——把那個稻草人拆了吧！哈哈！',
+    white:'我們先從【劍】開始。畫面下方亮起的是劍系招式——上面標著需要幾張劍色卡，手牌就是使用招式的資源。請點選劍招，再按右邊的 OK 出手。\n做得很好。接下來是【槍】。劍適合近身，槍則能攻擊較遠的位置。請點選槍招，按 OK。\n然後是【法】。法術除了傷害，往往還帶有強化自己或干擾對方的效果。請點選法招，按 OK。\n最後是【願】。它需要的卡最多，威力也最強大。請點選願招，按 OK。\n劍、槍、法、願，你都親手體驗過了。接下來就自由發揮，結束這場練習吧。',
   },
   battlePickTeam: {
     black:'選這支剛組好的隊伍，然後按「確認」開戰。',
@@ -11604,6 +11635,8 @@ function tutorialInjectStyle(){
     +"body.tutorial-action-lock button{pointer-events:none!important;opacity:.3!important;filter:grayscale(.75);}"
     +"body.tutorial-action-lock button.tutorial-highlight,body.tutorial-action-lock .tutorial-allowed,body.tutorial-action-lock .tutorial-allowed button{pointer-events:auto!important;opacity:1!important;filter:none!important;}"
     +"@keyframes tutorialPulse{0%,100%{box-shadow:0 0 0 4px #ffd35a,0 0 18px 4px rgba(255,211,90,.7);}50%{box-shadow:0 0 0 6px #ffd35a,0 0 30px 10px rgba(255,211,90,.95);}}"
+    +".movebtn.tutorial-suit-target{position:relative;z-index:2;animation:tutorialSuitPulse 1.1s infinite;}"
+    +"@keyframes tutorialSuitPulse{0%,100%{box-shadow:0 0 0 3px #ffd35a,0 0 14px 3px rgba(255,211,90,.6);}50%{box-shadow:0 0 0 5px #ffd35a,0 0 24px 8px rgba(255,211,90,.9);}}"
     +".tutorial-starter-note{margin:0;color:#b8bfd3;font-size:12px;line-height:1.55;}"
     +"#tutorialStarterGrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-top:14px;}"
     +".tutorial-starter-card{min-width:0;cursor:pointer;border:2px solid #333850;border-radius:12px;padding:8px;background:#1c1f2b;color:#f0f0f5;font:inherit;text-align:center;transition:transform .15s,border-color .15s;}"
@@ -12117,10 +12150,18 @@ function tutorialSayAfterTeam(){
 
 function tutorialBattleStep(){
   if(tutorialReplayMode){ tutorialGoldGachaStep(); return; }
-  const suitPages=String(TUTORIAL_LINES.suitGuide&&TUTORIAL_LINES.suitGuide[tutorialFaction]||'').split('\n').map(function(s){return s.trim();}).filter(Boolean);
-  tutorialSay([TUTORIAL_LINES.battleIntro[tutorialFaction]].concat(suitPages), function(){
+  // 使用者要求「戰鬥教學要在戰鬥中一步一步引導」：suitGuide 不再於開戰前一次唸完四頁說明
+  // （玩家根本記不住），改成「逐回合教學」——每輪到玩家出手，指定這一回合要用的花色
+  // （劍→槍→法→願順序），鎖住其他招式按鈕、等玩家真的用出來才進下一種；四種都用過後
+  // 才開放自由出手。suitGuide 的每一行對應一步：第1~4行＝劍/槍/法/願的回合指示，
+  // 第5行＝全部完成後的收尾提示。逐回合的推進邏輯見 tutorialSuitTutorPrompt()（回合開始，
+  // 由 runLoop 呼叫）、confirmAct() 開頭的教學檢查（出手把關＋推進），與 renderBattle()
+  // 招式按鈕的鎖定/高亮。
+  tutorialSay([TUTORIAL_LINES.battleIntro[tutorialFaction]], function(){
     window.__tutorialFixedOpponentIds = [MONSTER_BY_ID['m004']?'m004':TUTORIAL_OPPONENT_IDS[0]];
     window.__tutorialBattleReturnRequired = true;
+    const pages=String(TUTORIAL_LINES.suitGuide&&TUTORIAL_LINES.suitGuide[tutorialFaction]||'').split('\n').map(function(s){return s.trim();}).filter(Boolean);
+    window.__tutorialSuitTutor={queue:['sword','gun','magic','wish'],current:null,done:false,lines:pages,prompting:false};
     currentMatchSize=1; twoPlayerMode=false; pendingMode='single1v1';
     state.selectedIds=[ownedCharIds[0]]; state.selectedIdsB=[];
     state.customDeck=expandDeckDraft({'001':3,'002':3,'003':2,'004':2});
@@ -12131,11 +12172,60 @@ function tutorialBattleStep(){
   });
 }
 
+// 教學戰鬥中插播一段對話：畫面不變暗（no-dim），講完自動收起對話框、把出手倒數重新滿上
+// ——玩家讀說明的時間不應該吃掉他的 30 秒操作時間。prompting 旗標避免同一回合重複觸發
+// （例如玩家亂按 OK 連續彈提示時，前一段還沒講完又疊一段）。
+function tutorialBattleSay(lines,onDone){
+  const tutor=window.__tutorialSuitTutor;
+  if(tutor&&tutor.prompting)return;
+  if(tutor)tutor.prompting=true;
+  const overlay=document.getElementById('tutorialOverlay');
+  overlay.classList.remove('cutscene');overlay.classList.add('no-dim');
+  tutorialSay(lines,function(){
+    if(tutor)tutor.prompting=false;
+    overlay.classList.remove('active');
+    document.getElementById('tutorialBox').classList.add('hidden');
+    if(state.phase==='act'&&getActingUnit()&&getActingUnit().side==='A'){
+      state.turnDeadlineAt=Date.now()+ACTION_TIMEOUT_MS;state.turnDeadlineTotalMs=ACTION_TIMEOUT_MS;
+      scheduleActionDeadline();
+    }
+    render();
+    if(onDone)onDone();
+  });
+}
+
+// 逐回合花色教學：玩家回合開始時（runLoop 呼叫），指定這回合要練的花色並顯示指示。
+// 角色如果剛好沒有某個花色的招式就跳過那一步；為了保證「指定的招式一定出得起」，
+// 不足的花色卡會直接補進手牌（僅教學戰，對手是不會反擊的稻草人，不影響平衡）。
+function tutorialSuitTutorPrompt(){
+  const tutor=window.__tutorialSuitTutor;
+  if(!tutor||tutor.done||state.phase!=='act')return;
+  const unit=getActingUnit();
+  if(!unit||unit.side!=='A'||!unit.alive)return;
+  while(tutor.queue.length&&!unit.moves[tutor.queue[0]])tutor.queue.shift();
+  if(!tutor.queue.length){
+    tutor.done=true;
+    tutorialBattleSay([tutor.lines[4]||'四種花色都試過一遍了。接下來自由發揮，結束這場戰鬥吧。']);
+    return;
+  }
+  tutor.current=tutor.queue[0];
+  const move=unit.moves[tutor.current],need=conditionForUnit(unit,move);
+  if(need!=null){
+    const suitId=suitCardIdForSlot(move.slot);
+    let have=countSuitInHand('A',suitId);
+    while(have<need&&CARD_BY_ID[suitId]){state.handA.push(CARD_BY_ID[suitId]);have++;}
+  }
+  render();
+  const stepIndex={sword:0,gun:1,magic:2,wish:3}[tutor.current];
+  tutorialBattleSay([tutor.lines[stepIndex]||('請點選【'+SLOT_LABEL[tutor.current]+'】的招式，然後按右邊的 OK 出手。')]);
+}
+
 function tutorialWatchForBattleEnd(){
   const iv = setInterval(function(){
     if(state.phase === 'end'){
       clearInterval(iv);
       window.__tutorialFixedOpponentIds = null;
+      window.__tutorialSuitTutor = null;
       const won = state.winner === 'A';
       tutorialCheckpoint('gold_summon',function(){
         document.getElementById('tutorialOverlay').classList.add('active');
@@ -12171,6 +12261,7 @@ function tutorialFinish(){
   tutorialReplayMode = false;
   window.__tutorialFixedOpponentIds = null;
   window.__tutorialBattleReturnRequired = false;
+  window.__tutorialSuitTutor = null;
   const overlay = document.getElementById('tutorialOverlay');
   overlay.classList.remove('active');
   overlay.classList.remove('cutscene');
