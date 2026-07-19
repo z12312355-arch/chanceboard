@@ -43,6 +43,11 @@
   body.story-mode #app{max-width:none;width:100%;height:100vh;padding:0;margin:0;overflow:hidden;}
   #screen-story{position:relative;width:100%;height:100vh;overflow:hidden;background:
     radial-gradient(circle at 50% 30%,rgba(52,62,91,.28),transparent 48%),linear-gradient(180deg,rgba(5,7,13,.3),rgba(2,3,7,.78)),url("background/pawn.png") center/cover no-repeat,#05060a;}
+  /* CG 演出時把場景底圖（background/pawn.png，就是使用者說的「兵的圖」）整個蓋掉。
+     #storyCg 是 object-fit:contain，圖片比例跟畫面不同時上下/左右會留邊，底圖就會從邊上露出來；
+     CG 還在載入、或正在淡入的那段時間也一樣會看到底圖。這個 class 在「這一拍有 CG」的當下就
+     立刻套用（早於圖片載好），所以從頭到尾都是深色底，不會閃出兵的圖。 */
+  #screen-story.cg-scene{background:#04050a;}
   #storyCgBlur,#storyCg{position:absolute;inset:0;width:100%;height:100%;opacity:0;transition:opacity .7s ease,filter .45s;}
   #storyCgBlur{object-fit:cover;transform:scale(1.08);filter:blur(22px) brightness(.32) saturate(.8);}
   #storyCg{object-fit:contain;object-position:center top;filter:brightness(.74);}
@@ -7337,7 +7342,55 @@ function autoDecideCurrentTurn(){
     }
   }
   if(chosenSlotKey){ pickActMove(chosenSlotKey); }
+  else { autoDiscardStuckSuitCard(unit); }
   confirmAct();
+}
+
+// 使用者要求「自動戰鬥加入棄牌的邏輯，避免角色用不出招式」：手牌上限只有 HAND_LIMIT 張，
+// 一旦塞滿了「這名角色根本用不到的花色」，就會一直湊不齊任何一招的條件，自動戰鬥只能空過回合，
+// 而且因為手牌是滿的，之後補牌也補不進來，等於永久卡死。這裡只在「這回合一招都出不起」時
+// 才棄一張，正常能出招的回合完全不動作，不影響原本的出牌品質。
+// 挑哪一張：優先丟角色沒有對應招式的花色（永遠用不到）；否則丟「離湊齊還差最多」的那個花色
+// ——那一色最不可能在手牌上限內湊齊，留著只是佔位子。同花色留最多張的先丟，避免把剛好還差
+// 一張的花色給拆了。
+function autoDiscardStuckSuitCard(unit){
+  if(state.phase!=='act') return;
+  const entries = suitHandEntries(unit);
+  if(!entries.length) return;
+  const slotKeys = ['sword','gun','magic','wish'];
+  // 自我保護：只要這回合還出得起任何一招就不棄牌。呼叫端本來就只在卡住時呼叫，
+  // 這裡再擋一次，確保之後就算有人在別的情境呼叫也不會把還用得到的牌丟掉。
+  if(slotKeys.some(k=> unit.moves[k] && moveIsAffordable(unit, unit.moves[k]))) return;
+  // 每個花色：這名角色是否有對應招式、以及還差幾張才能發動（已在冷卻的招式不算數）。
+  const need = {};
+  slotKeys.forEach(k=>{
+    const move = unit.moves[k];
+    if(!move) return;
+    const cd = unit.moveCooldownUntil[move.id];
+    if(cd!=null && state.clock < cd) return;      // 冷卻中，這一色現在留著也沒用
+    const cond = conditionForUnit(unit, move);
+    if(cond==null) return;
+    const suitId = suitCardIdForSlot(move.slot);
+    const have = countSuitInHand(unit.side, suitId);
+    const shortfall = Math.max(0, cond - have);
+    if(need[suitId]==null || shortfall < need[suitId]) need[suitId] = shortfall;
+  });
+  const counts = {};
+  entries.forEach(e=>{ counts[e.card.id] = (counts[e.card.id]||0) + 1; });
+  let bestIdx = -1, bestRank = null;
+  entries.forEach((entry, idx)=>{
+    const id = entry.card.id;
+    // rank 越大越該丟：沒有招式用到的花色排最前，其次是離湊齊差最遠的，再其次是張數最多的。
+    const unusable = need[id]==null;
+    const rank = [unusable ? 1 : 0, unusable ? 0 : need[id], counts[id]];
+    if(bestRank==null || rank[0]>bestRank[0] || (rank[0]===bestRank[0] && (rank[1]>bestRank[1] || (rank[1]===bestRank[1] && rank[2]>bestRank[2])))){
+      bestRank = rank; bestIdx = idx;
+    }
+  });
+  // 全部花色都剛好差 0 張（代表其實出得起，只是被封招之類擋住）就不用棄牌。
+  if(bestIdx<0 || (bestRank && bestRank[0]===0 && bestRank[1]===0)) return;
+  actDiscardPending = [{list:'suit', idx:bestIdx}];
+  addLog('info', sideTag(unit)+unitName(unit)+' 湊不齊任何招式，棄掉一張 '+(CARD_BY_ID[entries[bestIdx].card.id]||{}).name+' 換取新手牌。');
 }
 
 // Extra pause added on top of the user-selected auto-battle speed so the move/hit visual
@@ -8304,7 +8357,7 @@ storyRefreshRuntimeConfig();
 let storyBlocks=null,storyRun=null,storyBattleTimer=null,storyTextTimer=null,storyReveal=null,storyPreviewMode=false,storyPreviewSkipBattles=true;
 let storyAutoMode=false,storySpeed=1,storyAutoTimer=null,storyDialogueLog=[];
 let storyMenuView='chapters',storyMenuRoute=null;
-window.__resetStoryBlocks=function(){storyBlocks=null;};
+window.__resetStoryBlocks=function(){storyBlocks=null;storyCgPreloaded=false;};
 function loadStoryProgress(){try{const v=JSON.parse(localStorage.getItem(STORY_PROGRESS_KEY)||'null');return v&&typeof v==='object'?v:null;}catch(e){return null;}}
 function saveStoryProgress(){try{if(!storyRun||storyPreviewMode)return;if(storyRun.replayMode)localStorage.setItem(STORY_REPLAY_KEY,JSON.stringify(storyRun));else{localStorage.setItem(STORY_PROGRESS_KEY,JSON.stringify(storyRun));if(window.__queueAccountStorySync)window.__queueAccountStorySync();}}catch(e){}}
 function storyStageForBlock(route,block){return (STORY_STAGE_DEFS[route]||[]).find(stage=>stage.blocks.includes(Number(block)))||null;}
@@ -8394,7 +8447,7 @@ function storyRouteStateSnapshot(run){return {score:Number(run&&run.score)||0,fl
 let STORY_BLOCK_IDS={black:{2:'opening',3:'stage1',4:'stage2',5:'rescue',6:'accept',7:'promise',8:'responsible',9:'abandon',10:'refuse',11:'no_capacity',12:'weak',13:'no_help',14:'boss',15:'boss_joined',16:'boss_alone',17:'boss_common',18:'ending_gate',19:'ending_low',20:'ending_high',21:'king_scene'},white:{23:'opening',24:'stage1',25:'stage2',26:'protect',27:'accept',28:'promise',29:'promised',30:'uncertain',31:'refuse',32:'unsuitable',33:'burden',34:'no_help',35:'boss',36:'boss_joined',37:'boss_no_help',38:'boss_common',39:'ending_gate',40:'ending_hope',41:'ending_regret',42:'king_scene'}};
 let STORY_BRANCH_OUTCOMES={black:{3:[8,9,11,12,13],4:[19,20]},white:{3:[29,30,32,33,34],4:[40,41]}};
 let STORY_FATE_CHOICES={black:{3:[{block:5,title:'是否伸出援手',choices:[['幫忙',6],['不幫',13]]},{block:6,title:'是否讓她加入',choices:[['同意',7],['不同意',10]]},{block:7,title:'承諾的方式',choices:[['我會負責',8],['拖累就丟下',9]]},{block:10,title:'拒絕的理由',choices:[['我的隊伍沒有餘力',11],['弱者只會拖累我',12]]}]},white:{3:[{block:26,title:'是否伸出援手',choices:[['幫忙',27],['不幫',34]]},{block:27,title:'是否讓她加入',choices:[['同意',28],['不同意',31]]},{block:28,title:'給她的回答',choices:[['我答應妳',29],['我不能保證',30]]},{block:31,title:'拒絕的理由',choices:[['我的隊伍不適合她',32],['我不想背負她的生命',33]]}]}};
-let STORY_OUTCOME_LABELS={8:'承諾負責',9:'必要時放棄',11:'隊伍沒有餘力',12:'弱者只會拖累',13:'選擇旁觀',15:'同伴同行的台詞',16:'獨自應戰的台詞',19:'求生結局',20:'同伴結局',29:'許下承諾',30:'不作保證',32:'隊伍不適合她',33:'拒絕背負生命',34:'選擇旁觀',36:'同伴同行的台詞',37:'獨自應戰的台詞',40:'守護結局',41:'遺憾結局'};
+let STORY_OUTCOME_LABELS={8:'承諾負責',9:'必要時放棄',11:'隊伍沒有餘力',12:'弱者只會拖累',13:'選擇旁觀',15:'同伴同行',16:'獨自應戰',19:'求生結局',20:'同伴結局',29:'許下承諾',30:'不作保證',32:'隊伍不適合她',33:'拒絕背負生命',34:'選擇旁觀',36:'同伴同行',37:'獨自應戰',40:'守護結局',41:'遺憾結局'};
 const DEFAULT_STORY_FATE_CONFIG={blockIds:JSON.parse(JSON.stringify(STORY_BLOCK_IDS)),branchOutcomes:JSON.parse(JSON.stringify(STORY_BRANCH_OUTCOMES)),choiceMap:JSON.parse(JSON.stringify(STORY_FATE_CHOICES)),outcomeLabels:JSON.parse(JSON.stringify(STORY_OUTCOME_LABELS))};
 function storyRefreshFateConfig(){const fate=globalStoryModeConfig.fate&&typeof globalStoryModeConfig.fate==='object'?globalStoryModeConfig.fate:DEFAULT_STORY_FATE_CONFIG;STORY_BLOCK_IDS=JSON.parse(JSON.stringify(fate.blockIds||DEFAULT_STORY_FATE_CONFIG.blockIds));STORY_BRANCH_OUTCOMES=JSON.parse(JSON.stringify(fate.branchOutcomes||DEFAULT_STORY_FATE_CONFIG.branchOutcomes));STORY_FATE_CHOICES=JSON.parse(JSON.stringify(fate.choiceMap||DEFAULT_STORY_FATE_CONFIG.choiceMap));STORY_OUTCOME_LABELS=JSON.parse(JSON.stringify(fate.outcomeLabels||DEFAULT_STORY_FATE_CONFIG.outcomeLabels));
   // 內部一律使用 {branch,ending}／{branch}：舊設定用關卡編號 3／4 當 key，載入時轉換。
@@ -8481,7 +8534,25 @@ async function storyEnsureSource(){
     raw=await fetchBundled();
     storyBlocks=raw.split(/^_{5,}\s*$/m).map(s=>s.trim()).filter(Boolean);
   }
-  if(storyBlocks.length<3)throw new Error('故事文本格式不完整。');if(msg)msg.textContent='';return storyBlocks;
+  if(storyBlocks.length<3)throw new Error('故事文本格式不完整。');if(msg)msg.textContent='';
+  storyPreloadCgs();
+  return storyBlocks;
+}
+// 故事文本一載好就把所有 CG 先抓進瀏覽器快取（整章只有數張），這樣真的演到那一拍時
+// storySetCg() 的預載會立刻完成、CG 直接出現，不會有「先看到底圖、CG 才慢慢淡進來」的空檔。
+let storyCgPreloaded=false;
+function storyPreloadCgs(){
+  if(storyCgPreloaded||!storyBlocks)return;storyCgPreloaded=true;
+  const seen={},queue=[];
+  const add=function(src){if(src&&!seen[src]){seen[src]=true;queue.push(src);}};
+  const opening=globalStoryModeConfig.openingCg||{};['black','white'].forEach(route=>add(opening[route]));
+  storyBlocks.forEach(block=>String(block||'').split(/\r?\n/).forEach(line=>{
+    const m=line.trim().match(/^【CG[：:]\s*([^｜|】]+?)\s*(?:[｜|]\s*([^】]*?)\s*)?】$/);
+    if(!m)return;let src=m[1].trim();
+    if(!/[\/.]/.test(src))src='story/'+src+'.png';else if(!/\.\w+$/.test(src))src=src+'.png';
+    add(src);
+  }));
+  queue.forEach(src=>{const im=new Image();im.src=src;});
 }
 function storyBuildTeamOptions(){
   const select=document.getElementById('storyTeamSelect');if(!select)return;const saved=storySavedTeamId();
@@ -8630,19 +8701,23 @@ function storyFateVisualHtml(route,data){
   targets.forEach(block=>{
     const id=storyStableBlockId(route,block),saved=branches[id];if(!saved)return;
     const bossBlock=hasBoss?storyBossVariantForState(route,saved):null;
-    const endingBlock=hasEndings?(Number(r.endingPaths[id])||storyEndingBlockForState(route,saved)):null;
+    // 結局只畫「真的走到過」的（r.endingPaths 有紀錄），不再用分支當下的快照去「預測」。
+    // 使用者反應「獨自應戰只該有一個結局，卻畫出兩個箭頭」：預測用的是第三節結束當下的分數，
+    // 但分數在 Boss 關與尾聲還會再變動，推算出來的結局常常跟實際不同，於是同一個台詞節點
+    // 被畫出一條真實的線＋一條臆測的線。沒走完的命運就先不畫線，跟「未探索顯示???」一致。
+    const endingBlock=hasEndings?(Number(r.endingPaths[id])||null):null;
     const outcomePos=nodePos.get(Number(block));
     if(bossBlock!=null){
       const bossPos=nodePos.get(Number(bossBlock));
       if(outcomePos&&bossPos)links.push({from:outcomePos,to:bossPos,labeled:false,seen:storyWasBlockVisited(route,bossBlock,data)});
       if(endingBlock!=null){
         const endPos=nodePos.get(Number(endingBlock)),key=bossBlock+'>'+endingBlock;
-        if(bossPos&&endPos&&!chainSeen[key]){chainSeen[key]=true;links.push({from:bossPos,to:endPos,labeled:false,seen:!!Number(r.endingPaths[id])});}
+        if(bossPos&&endPos&&!chainSeen[key]){chainSeen[key]=true;links.push({from:bossPos,to:endPos,labeled:false,seen:true});}
       }
     }else if(endingBlock!=null){
       // 這條路線沒有Boss台詞分支時，命運結果才直接連結局。
       const endPos=nodePos.get(Number(endingBlock));
-      if(outcomePos&&endPos)links.push({from:outcomePos,to:endPos,labeled:false,seen:!!Number(r.endingPaths[id])});
+      if(outcomePos&&endPos)links.push({from:outcomePos,to:endPos,labeled:false,seen:true});
     }
   });
   links.forEach(link=>{
@@ -8687,9 +8762,19 @@ function storyFateVisualHtml(route,data){
   // 「沿此命運出發」固定從 Boss 關重打——使用者要求拿掉直接跳尾聲1的捷徑，
   // 因為正確的脈絡本來就是「命運結果 → Boss戰 → 尾聲1」，跳過中間反而看不出整體走向。
   const outcomeNodes=targets.map(block=>{const pos=nodePos.get(Number(block)),seen=storyWasBlockVisited(route,block,data),id=storyStableBlockId(route,block),saved=branches[id];return '<div class="story-fate-visual-node outcome '+(seen?'discovered':'')+'" style="left:'+pos.x+'px;top:'+pos.y+'px"><div class="story-fate-visual-node-title">'+(seen?escHtml(STORY_OUTCOME_LABELS[block]||'已探索命運'):'？？？')+'</div><div class="story-fate-visual-node-meta">'+(seen?'已探索命運結果':'尚未探索')+'</div>'+(saved&&hasEndings?'<button type="button" class="story-fate-replay" data-story-fourth-branch="'+block+'">沿此命運出發</button>':'')+'</div>';}).join('');
-  const bossNodes=hasBoss?bossVariants.map(block=>{const pos=nodePos.get(Number(block)),seen=storyWasBlockVisited(route,block,data);return '<div class="story-fate-visual-node outcome '+(seen?'discovered':'')+'" style="left:'+pos.x+'px;top:'+pos.y+'px"><div class="story-fate-visual-node-title">'+(seen?escHtml(STORY_OUTCOME_LABELS[block]||'戰前台詞'):'？？？')+'</div><div class="story-fate-visual-node-meta">'+(seen?'已看過這段對話':'尚未看過，需先走到對應命運並打到Boss')+'</div>'+(seen?'<button type="button" class="story-fate-replay" data-story-boss-replay="'+block+'">重播這段對話</button>':'')+'</div>';}).join(''):'';
+  // Boss 欄位是「Boss關會走到哪個版本」的分支節點，不是一段可以單獨重播的台詞。
+  // 使用者指出：講「已看過這段對話／重播這段對話」很怪，而且命運結果的「沿此命運出發」
+  // 本來就會從Boss關打起、自然會看到對應版本，重播鈕是多餘的。因此改成描述「這一戰的狀態」，
+  // 並移除重播鈕——這一欄純粹是鏈上的一環：命運結果 → Boss戰分支 → 尾聲。
+  const bossStageName=(storyStageByRole(route,'boss')||{}).shortTitle||'Boss戰';
+  const bossNodes=hasBoss?bossVariants.map(block=>{const pos=nodePos.get(Number(block)),seen=storyWasBlockVisited(route,block,data);return '<div class="story-fate-visual-node outcome '+(seen?'discovered':'')+'" style="left:'+pos.x+'px;top:'+pos.y+'px"><div class="story-fate-visual-node-title">'+(seen?escHtml(STORY_OUTCOME_LABELS[block]||'Boss戰分支'):'？？？')+'</div><div class="story-fate-visual-node-meta">'+(seen?escHtml(bossStageName)+'　此狀態下的一戰':'尚未抵達；沿對應的命運出發即可看到')+'</div></div>';}).join(''):'';
   const endingNodes=hasEndings?endings.map(block=>{const pos=nodePos.get(Number(block)),seen=storyWasBlockVisited(route,block,data);return '<div class="story-fate-visual-node outcome ending '+(seen?'discovered':'')+'" style="left:'+pos.x+'px;top:'+pos.y+'px"><div class="story-fate-visual-node-title">'+(seen?escHtml(STORY_OUTCOME_LABELS[block]||'已探索結局'):'？？？')+'</div><div class="story-fate-visual-node-meta">'+(seen?'已收入命運棋譜':'尚未抵達')+'</div></div>';}).join(''):'';
-  const colTitles=['起點','第一次分歧','第二次分歧','命運結果'].concat(hasBoss?['戰前台詞']:[]).concat(hasEndings?['最終結局']:[]);
+  // 後兩欄的標題直接取自實際關卡名稱（例如「無名戰士」「尾聲1」），讓整條鏈讀起來就是
+  // 「命運結果 → 打哪一場Boss → 走到哪個尾聲」，而不是三個抽象名詞。
+  const endingStageName=((storyEndingStage(route)||storyLastStage(route))||{}).shortTitle||'最終結局';
+  const colTitles=['起點','第一次分歧','第二次分歧','命運結果']
+    .concat(hasBoss?[bossStageName+'（分支）']:[])
+    .concat(hasEndings?[endingStageName+'（結局）']:[]);
   const colLabels=colTitles.map((title,i)=>'<span class="story-fate-column-label" style="left:'+xs[i]+'px">'+title+'</span>').join('');
   return '<div class="story-fate-visual-scroll"><div class="story-fate-canvas story-fate-choice-map" style="width:'+canvasW+'px;height:'+canvasH+'px">'+colLabels+svg+edgeLabels+choiceNodes+outcomeNodes+bossNodes+endingNodes+'</div></div>';
 }
@@ -8701,13 +8786,13 @@ function storyOpenFateMap(route){
   const explore=storyFateOverallProgress(route,data);
   overlay.dataset.route=route;
   document.getElementById('storyFateTitle').textContent='命運棋譜｜'+branchStage.title;
+  // 摘要只說明「整張圖怎麼讀」與唯一的操作入口，不再逐欄解釋。
   const replayEntry=storyFinalStage(route),endingHostDef=storyEndingStage(route)||storyLastStage(route);
-  const chainHint=replayEntry&&endingHostDef&&Number(replayEntry.number)!==Number(endingHostDef.number)?'　・　「沿此命運出發」從「'+replayEntry.shortTitle+'」重新打起，通關後沿回溯結果走到「'+endingHostDef.shortTitle+'」收錄結局':'';
-  const bossOnly=storyStageByRole(route,'boss'),bossHint=bossOnly&&(storyBossVariantBlocks(route)||[]).length?'　・　「戰前台詞」兩種對應命運分支的不同狀態，通關一次後可重播另一種':'';
-  document.getElementById('storyFateSummary').textContent='探索 '+explore.seen+'／'+explore.total+'　・　綠色連線代表已走過的命運'+chainHint+bossHint;
+  const chainHint=replayEntry&&endingHostDef&&Number(replayEntry.number)!==Number(endingHostDef.number)
+    ?'　・　「沿此命運出發」會從「'+replayEntry.shortTitle+'」沿該條命運重打，一路走到「'+endingHostDef.shortTitle+'」':'';
+  document.getElementById('storyFateSummary').textContent='探索 '+explore.seen+'／'+explore.total+'　・　由左至右：做過的選擇 → 命運結果 → 該命運下的一戰 → 結局；綠線代表已走過'+chainHint;
   graph.innerHTML=storyFateVisualHtml(route,data);overlay.classList.remove('hidden');
   graph.querySelectorAll('[data-story-replay-block]').forEach(btn=>btn.onclick=()=>storyStartReplay(route,Number(branchStage.number),Number(btn.dataset.storyReplayBlock)));
-  graph.querySelectorAll('[data-story-boss-replay]').forEach(btn=>btn.onclick=()=>storyStartReplay(route,Number(bossOnly.number),Number(btn.dataset.storyBossReplay)));
   graph.querySelectorAll('[data-story-fourth-branch]').forEach(btn=>btn.onclick=()=>storyStartFourthFromBranch(route,Number(btn.dataset.storyFourthBranch)));
 }
 function storyCloseFateMap(){document.getElementById('storyFateOverlay').classList.add('hidden');}
@@ -8787,6 +8872,9 @@ function storySetCg(){
   const beat=storyRun?storyParseBlock(storyRun.block)[storyRun.beat]:null;
   const directive=beat&&beat.cg||null,src=directive&&directive.src||'';
   const clear=function(){[img,blur].forEach(el=>{el.classList.remove('show');el.removeAttribute('src');});};
+  // 有沒有 CG 這件事在圖片載好之前就要反映到背景上，否則載入空檔會露出場景底圖（兵的圖）。
+  const screen=document.getElementById('screen-story');
+  if(screen)screen.classList.toggle('cg-scene',!!src);
   if(!src){img.dataset.cgSrc='';clear();return;}
   if(img.dataset.cgSrc===src){[img,blur].forEach(el=>el.classList.add('show'));return;}
   // 使用者反應「看CG時前面都會先跑出前一張圖，有點突兀」：<img> 換 src 之後，瀏覽器要等新圖
