@@ -8466,6 +8466,15 @@ function storyRefreshFateConfig(){const fate=globalStoryModeConfig.fate&&typeof 
     const choices=STORY_FATE_CHOICES[route]||{};
     STORY_FATE_CHOICES[route]={branch:JSON.parse(JSON.stringify(choices.branch||choices[3]||[]))};
   });
+  // Boss分支節點的名稱去掉「的台詞」尾綴。那一欄已經改成表示「這一戰處於什麼狀態」而不是
+  // 一段可重播的對話，但舊的後台設定（存進D1的 fate.outcomeLabels）會蓋掉程式內建預設值，
+  // 所以在載入時就地修掉，使用者不必回後台手動改。只針對Boss分支節點，不動其他標籤。
+  ['black','white'].forEach(route=>{
+    (storyBossVariantBlocks(route)||[]).forEach(block=>{
+      const label=STORY_OUTCOME_LABELS[block];
+      if(typeof label==='string'&&/的台詞$/.test(label))STORY_OUTCOME_LABELS[block]=label.replace(/的台詞$/,'');
+    });
+  });
   if(!globalStoryModeConfig.fate)globalStoryModeConfig.fate=JSON.parse(JSON.stringify(DEFAULT_STORY_FATE_CONFIG));}
 function storyBranchOutcomeList(route,kind){return (STORY_BRANCH_OUTCOMES[route]&&STORY_BRANCH_OUTCOMES[route][kind])||[];}
 function storyFateChoiceDefs(route){return (STORY_FATE_CHOICES[route]&&STORY_FATE_CHOICES[route].branch)||[];}
@@ -8681,23 +8690,87 @@ function storyFateVisualHtml(route,data){
   const canvasW=xs[colCount-1]+nodeW+marginX,top=compact?24:(narrow?38:45);
   // 畫布底部保留一條走線道，給「跨越多欄」的長邊繞路用（見 linkPath 的 lane 分支）。
   const lanePad=compact?26:38;
-  const nodePos=new Map([
-    [Number(defs[0].block),{x:xs[0],y:(canvasH-nodeH)/2,h:nodeH}],
-    [Number(defs[1].block),{x:xs[1],y:top+(canvasH-nodeH-top*2)*.18,h:nodeH}],
-    [Number(defs[2].block),{x:xs[2],y:top,h:nodeH}],
-    [Number(defs[3].block),{x:xs[2],y:canvasH-top-nodeH,h:nodeH}]
-  ]);
-  // 所有命運結果一律排在「命運結果」欄。先前把「不幫」這種直接抵達的結果放在第1欄，
-  // 它連往後面欄位的線就得橫越中間兩欄、從其他卡片底下穿過去（使用者反應「有的線會被卡片擋住」）。
-  // 全部收進同一欄之後，每條線都只跨相鄰一欄，不會再從任何卡片下面穿過。
+  const nodePos=new Map();
+  // 版面採「分層＋重心對齊」（樹狀圖的標準做法，Reingold–Tilford 的簡化版）：
+  // 先把葉節點（命運結果）平均分佈，再讓每個上游節點對齊「它所連到的節點的重心」。
+  // 先前是把選擇節點寫死在最上緣／最下緣／正中間，四個節點各據一角，中間整片空著
+  // ——也就是使用者說的「卡片喜歡靠上下」。改成重心對齊之後，父節點自然落在子節點中間，
+  // 版面由中央往外展開，留白平均，而且每條線的斜度都變小、更好讀。
   const laneReserve=lanePad;
-  const usable=Math.max(0,canvasH-top-laneReserve-targets.length*outcomeH);
-  const resultGap=targets.length>1?usable/(targets.length-1):0;
-  targets.forEach((block,index)=>nodePos.set(Number(block),{x:xs[3],y:top+index*(outcomeH+resultGap),h:outcomeH}));
-  const bossColIndex=hasBoss?4:-1;
-  if(hasBoss){const usableB=Math.max(0,canvasH-top*2-bossVariants.length*outcomeH),gapB=bossVariants.length>1?usableB/(bossVariants.length-1):0;bossVariants.forEach((block,index)=>nodePos.set(Number(block),{x:xs[bossColIndex],y:top+index*(outcomeH+gapB),h:outcomeH}));}
-  const endColIndex=hasEndings?(hasBoss?5:4):-1;
-  if(hasEndings){const usableE=Math.max(0,canvasH-top*2-endings.length*outcomeH),gapE=endings.length>1?usableE/(endings.length-1):0;endings.forEach((block,index)=>nodePos.set(Number(block),{x:xs[endColIndex],y:top+index*(outcomeH+gapE),h:outcomeH}));}
+  const bandTop=top,bandBottom=canvasH-laneReserve;
+  const centerOf=function(pos){return pos.y+pos.h/2;};
+  const placeEven=function(blocks,x,h,inset){
+    const pad=inset||0,fromY=bandTop+pad,toY=bandBottom-pad;
+    const usable=Math.max(0,(toY-fromY)-blocks.length*h);
+    const gap=blocks.length>1?usable/(blocks.length-1):0;
+    blocks.forEach((block,i)=>nodePos.set(Number(block),{x:x,y:fromY+i*(h+gap),h:h}));
+  };
+  // 1) 葉節點：所有命運結果收在同一欄平均分佈（同一欄可讓每條線只跨相鄰一欄，不會穿過卡片）。
+  //    上下各內縮「選擇卡與結果卡的高度差之半」：選擇卡比結果卡高，若結果卡貼齊畫布上下緣，
+  //    對齊到最上／最下那張的父節點就會超出畫布，只能被推回來、破壞重心對齊。先留出這點餘裕，
+  //    上游每一層都能精準對齊子節點中心。
+  placeEven(targets,xs[3],outcomeH,Math.max(0,(nodeH-outcomeH)/2));
+  // 2) 選擇節點：依在選擇樹裡的深度決定欄位，y 對齊子節點重心（由深到淺回推）。
+  const defByBlock={};defs.forEach(d=>{defByBlock[Number(d.block)]=d;});
+  const depth={},rootBlock=Number(defs[0].block);
+  (function walk(block,d){
+    if(depth[block]!=null&&depth[block]>=d)return;
+    depth[block]=d;
+    const node=defByBlock[block];if(!node)return;
+    (node.choices||[]).forEach(item=>walk(Number(item[1]),d+1));
+  })(rootBlock,0);
+  // 同一欄的節點若因重心對齊而擠在一起，依序推開並維持最小間距。
+  const spreadColumn=function(blocks,h){
+    const items=blocks.map(b=>nodePos.get(Number(b))).filter(Boolean).sort((a,b)=>a.y-b.y);
+    if(!items.length)return;
+    const gapMin=compact?8:14;
+    let cursor=bandTop;
+    items.forEach(pos=>{if(pos.y<cursor)pos.y=cursor;cursor=pos.y+pos.h+gapMin;});
+    const overflow=(cursor-gapMin)-bandBottom;
+    if(overflow>0){
+      let up=bandTop;
+      items.forEach(pos=>{pos.y=Math.max(up,pos.y-overflow);up=pos.y+pos.h+gapMin;});
+    }
+  };
+  const choiceBlocks=defs.map(d=>Number(d.block)).filter(b=>depth[b]!=null);
+  const colOfBlock=function(block){return Math.min(2,depth[block]||0);};
+  // 由最深的一欄往回做：先把該欄的節點對齊子節點重心、立刻推開避免重疊，**再**往前算上一欄。
+  // 順序很重要——如果等全部算完才統一推開，被推動的子節點會讓父節點原本算好的重心失準。
+  for(let col=2;col>=0;col--){
+    const inCol=choiceBlocks.filter(b=>colOfBlock(b)===col);
+    inCol.forEach(block=>{
+      const node=defByBlock[block];
+      const kidCenters=(node.choices||[]).map(item=>nodePos.get(Number(item[1]))).filter(Boolean).map(centerOf);
+      const center=kidCenters.length?kidCenters.reduce((a,b)=>a+b,0)/kidCenters.length:(bandTop+bandBottom)/2;
+      nodePos.set(block,{x:xs[col],y:center-nodeH/2,h:nodeH});
+    });
+    spreadColumn(inCol,nodeH);
+  }
+  // 3) Boss／結局欄先平均排，稍後再依實際連線重心微調（連線建好後才知道誰接誰）。
+  if(hasBoss)placeEven(bossVariants,xs[4],outcomeH);
+  if(hasEndings)placeEven(endings,xs[hasBoss?5:4],outcomeH);
+  // Boss／結局欄同樣做重心對齊：Boss節點對齊「會走到它的那些命運結果」，
+  // 結局節點再對齊「會走到它的那些Boss節點」，整條鏈就會順著中線展開而不是各自貼邊。
+  const feeders={};
+  targets.forEach(block=>{
+    const saved=branches[storyStableBlockId(route,block)];if(!saved)return;
+    const bossBlock=hasBoss?storyBossVariantForState(route,saved):null;
+    if(bossBlock!=null)(feeders[bossBlock]||(feeders[bossBlock]=[])).push(Number(block));
+    const endBlock=hasEndings?(Number(r.endingPaths[storyStableBlockId(route,block)])||null):null;
+    if(endBlock!=null){
+      const src=bossBlock!=null?bossBlock:Number(block);
+      (feeders[endBlock]||(feeders[endBlock]=[])).push(src);
+    }
+  });
+  const alignToFeeders=function(blocks){
+    blocks.forEach(block=>{
+      const pos=nodePos.get(Number(block));if(!pos)return;
+      const src=(feeders[block]||[]).map(b=>nodePos.get(Number(b))).filter(Boolean).map(centerOf);
+      if(src.length)pos.y=src.reduce((a,b)=>a+b,0)/src.length-pos.h/2;
+    });
+  };
+  if(hasBoss){alignToFeeders(bossVariants);spreadColumn(bossVariants,outcomeH);}
+  if(hasEndings){alignToFeeders(endings);spreadColumn(endings,outcomeH);}
   // 命運棋譜是一條「從頭走到尾」的鏈：選擇 → 命運結果 → 戰前台詞 → 結局。
   // 使用者指出「所有結局都會先到戰前台詞才到結局」，先前卻畫了命運結果直接跳到結局的線，
   // 那是錯的模型（也是造成長線橫越、被卡片擋住的元凶）。改成命運結果只連到它的戰前台詞，
