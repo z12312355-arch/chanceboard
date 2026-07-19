@@ -4866,6 +4866,10 @@ function rollHit(unit, move, target){
   // "open with ult to unlock your own offense" combo can never actually connect.
   if(hasStatus(unit,'必中')) return true;
   if(unit.flags.alwaysMiss) return false;
+  // 新手教學的引導期間，玩家的招式必定命中。命中率本來就只有 0.75～0.95，教學途中隨機 MISS
+  // 會讓玩家以為自己操作錯了（尤其是剛學會的那一招），教學要示範的是「這招怎麼用、打得到誰」，
+  // 不是運氣。引導結束（四種花色與手牌都教完）後就恢復正常判定。
+  if(window.__tutorialSuitTutor && !window.__tutorialSuitTutor.done && unit.side==='A') return true;
   let hr = move.hitRate==null?1:move.hitRate;
   return Math.random() < hr;
 }
@@ -7649,16 +7653,21 @@ function confirmAct(){
   // 下一種花色（推進要在結算「前」做：結算途中會清掉 actMovePicked，之後就讀不到了）。
   const suitTutor=window.__tutorialSuitTutor;
   if(suitTutor&&!suitTutor.done&&suitTutor.current&&unit.side==='A'){
-    if(state.actMovePicked!==suitTutor.current){
+    const wantSlot=suitTutor.requiredSlot;
+    const plannedSlot=state.actMoveTarget!=null?state.actMoveTarget:unit.slot;
+    let block='';
+    if(!tutorialStepSatisfied(suitTutor.current))block=tutorialStepHint(suitTutor.current);
+    else if(wantSlot!=null&&plannedSlot!==wantSlot)block='先點「移動到：'+slotDistLabel(unit.side,wantSlot)+'」，這一招才打得到對手。';
+    if(block){
       actionTimedOutForId=null;actionTimeoutHandledKey=null;
       state.turnDeadlineAt=Date.now()+ACTION_TIMEOUT_MS;state.turnDeadlineTotalMs=ACTION_TIMEOUT_MS;
-      tutorialBattleSay(['請先點選【'+SLOT_LABEL[suitTutor.current]+'】的招式，再按右邊的 OK 出手。']);
+      tutorialBattleSay([block]);
       render();
       scheduleActionDeadline();
       return;
     }
     suitTutor.queue.shift();
-    suitTutor.current=null;
+    suitTutor.current=null;suitTutor.requiredSlot=null;
   }
   // 先關掉真實時間倒數，避免確認出手與倒數 callback 在同一瞬間重複結算。
   cancelActionDeadline();
@@ -10133,6 +10142,13 @@ function renderBattle(){
       b.className = 'btn slotbtn'+(isSelected?' current':'');
       b.textContent = slotDistLabel(currentActUnit.side,s);
       b.disabled = rooted || !reachable || isOpponentAiTurn;
+      // 教學引導指定站位時，只留下該去的那一格可以點，並加上高亮——法招要打得到前排的敵人，
+      // 必須先退到後排（交錯位置），把「移動」也變成課程的一部分。
+      const slotTutor=window.__tutorialSuitTutor;
+      if(slotTutor&&!slotTutor.done&&slotTutor.requiredSlot!=null&&currentActUnit.side==='A'){
+        if(s!==slotTutor.requiredSlot)b.disabled=true;
+        else if(!b.disabled)b.classList.add('tutorial-suit-target');
+      }
       b.onclick = ()=> moveActingUnitTo(s);
       actSlotRow.appendChild(b);
     });
@@ -10158,11 +10174,12 @@ function renderBattle(){
       b.disabled = !info.affordable || blocked || isOpponentAiTurn;
       b.innerHTML = info.html;
       b.onclick = ()=> pickActMove(key);
-      // 新手教學戰的逐回合花色引導：這一回合只開放指定花色的招式，其他一律鎖住；
-      // 指定的那顆加上脈動高亮，讓玩家一眼知道要點哪裡。見 tutorialSuitTutorPrompt()。
+      // 新手教學戰的逐回合引導：招式步只開放指定花色（其餘鎖住、指定的加脈動高亮）；
+      // 花牌／棄牌步則把所有招式鎖住，讓玩家專心在手牌上。見 tutorialSuitTutorPrompt()。
       const suitTutor=window.__tutorialSuitTutor;
       if(suitTutor&&!suitTutor.done&&suitTutor.current&&currentActUnit.side==='A'){
-        if(key!==suitTutor.current)b.disabled=true;
+        if(TUTORIAL_CARD_STEPS.indexOf(suitTutor.current)>=0)b.disabled=true;
+        else if(key!==suitTutor.current)b.disabled=true;
         else if(!b.disabled)b.classList.add('tutorial-suit-target');
       }
       wrap.appendChild(b);
@@ -11158,7 +11175,7 @@ function collectAdminStoryStageProgress(){
 }
 const ADMIN_TUTORIAL_STORY_FIELDS = [
   ['pickIntro','選擇第一枚棋子前'],['afterPick','選完初始棋子後'],
-  ['battleIntro','第一場 1v1 戰鬥前'],['suitGuide','劍槍法願逐回合教學（第1~4行＝劍/槍/法/願回合指示，第5行＝完成提示）'],['afterBattleWin','教學戰鬥勝利'],['afterBattleLose','教學戰鬥失敗'],['returnLobby','引導返回大廳'],
+  ['battleIntro','第一場 1v1 戰鬥前'],['suitGuide','戰鬥逐回合教學（每行一步：1劍 2槍 3法 4願 5花牌 6棄牌 7收尾）'],['afterBattleWin','教學戰鬥勝利'],['afterBattleLose','教學戰鬥失敗'],['returnLobby','引導返回大廳'],
   ['goldIntro','金幣召喚說明'],['goldOffer','贈送金幣召喚'],['afterGold','金幣召喚完成'],
   ['diamondIntro','鑽石召喚說明'],['diamondOffer','贈送鑽石召喚'],['afterDiamond','鑽石召喚完成'],
   ['teamIntro','隊伍教學開始'],['teamPick3','選擇三位棋子'],['teamDeck','編輯十張卡組'],['afterTeam','隊伍完成'],
@@ -12060,9 +12077,12 @@ const TUTORIAL_LINES = {
     black:'{name}，該學著出手了。我在訓練場立了一個稻草人——它不會反擊，正好讓你把出招流程練熟。',
     white:'{name}，接下來是你的第一場練習。對面是一個訓練稻草人，它不會反擊，請放心，跟著我一步一步來。',
   },
+  // 每行對應教學戰的一個步驟：劍／槍／法／願／花牌／棄牌／收尾（見 tutorialSuitTutorPrompt）。
+  // 站位相關的字句（「往後退一格」）是刻意的：法招打的是交錯位置，站得越後面打到的越是前排，
+  // 所以引導會在槍、法兩步順勢把玩家從前排帶到後排，讓法招真的命中，而不是空揮。
   suitGuide: {
-    black:'先從【劍】開始。下面亮著的就是劍招——上面標著要吃幾張劍色卡，手牌裡的卡就是你的本錢。點劍招，再按右邊的 OK，出手！\n不錯嘛。接著換【槍】。劍砍近的，槍捅遠的——站得遠也搆得到。一樣，點槍招，按 OK。\n再來是【法】。法術不只會傷人，多半還會強化自己、或給對面找點麻煩。點法招，按 OK。\n最後是【願】。最貴的一手，要吃的卡最多——但也最狠。點願招，按 OK，讓它嚐嚐！\n劍、槍、法、願，你都親手使過一遍了。剩下的自己來——把那個稻草人拆了吧！哈哈！',
-    white:'我們先從【劍】開始。畫面下方亮起的是劍系招式——上面標著需要幾張劍色卡，手牌就是使用招式的資源。請點選劍招，再按右邊的 OK 出手。\n做得很好。接下來是【槍】。劍適合近身，槍則能攻擊較遠的位置。請點選槍招，按 OK。\n然後是【法】。法術除了傷害，往往還帶有強化自己或干擾對方的效果。請點選法招，按 OK。\n最後是【願】。它需要的卡最多，威力也最強大。請點選願招，按 OK。\n劍、槍、法、願，你都親手體驗過了。接下來就自由發揮，結束這場練習吧。',
+    black:'先從【劍】開始。你現在站在最前排，劍招砍的就是正對面那個傢伙。點劍招，再按右邊的 OK，出手！\n不錯嘛。換【槍】——槍不挑位置，站哪都搆得到。順手往後退一格，下一招用得上。\n再退一格。【法】打的是「交錯位置」：你站得越後面，打到的越是前排。現在正好對上它。點法招，按 OK。\n最後是【願】。吃的卡最多，也最狠。點願招，按 OK，讓它嚐嚐！\n手牌裡不是只有劍槍法願。那種叫花牌——不用湊條件，點一下就打得出去，效果五花八門。挑一張，按 OK。\n最後一課：手牌卡死的時候。點卡片上的 🗑 標記要丟的牌，按 OK 就換掉它。留著一手用不到的牌，只會讓你什麼都出不了。\n劍、槍、法、願、花牌、棄牌，你都摸過一遍了。剩下的自己來——把那個稻草人拆了吧！哈哈！',
+    white:'我們先從【劍】開始。你現在在最前排，劍招攻擊的正是對面的敵人。請點選劍招，再按右邊的 OK 出手。\n很好。接下來是【槍】。槍不受站位限制，任何位置都能攻擊。請順便往後退一格，下一招會用到。\n再退一格。【法】攻擊的是「交錯位置」——站得越後面，打到的越是前排的敵人。現在剛好對上。請點法招，按 OK。\n最後是【願】。它需要的卡最多，威力也最強大。請點選願招，按 OK。\n手牌裡除了劍槍法願，還有「花牌」。花牌不需要湊條件，點一下就能打出，效果各不相同。請挑一張，按 OK。\n最後一課是棄牌。當手上都是用不到的花色時，點卡片上的 🗑 標記，再按 OK 就能換掉它。學會取捨，往往比硬撐更重要。\n劍、槍、法、願、花牌、棄牌，你都體驗過了。接下來就自由發揮，結束這場練習吧。',
   },
   battlePickTeam: {
     black:'選這支剛組好的隊伍，然後按「確認」開戰。',
@@ -12649,10 +12669,11 @@ function tutorialBattleStep(){
     window.__tutorialFixedOpponentIds = [MONSTER_BY_ID['m004']?'m004':TUTORIAL_OPPONENT_IDS[0]];
     window.__tutorialBattleReturnRequired = true;
     const pages=String(TUTORIAL_LINES.suitGuide&&TUTORIAL_LINES.suitGuide[tutorialFaction]||'').split('\n').map(function(s){return s.trim();}).filter(Boolean);
-    window.__tutorialSuitTutor={queue:['sword','gun','magic','wish'],current:null,done:false,lines:pages,prompting:false};
+    window.__tutorialSuitTutor={queue:['sword','gun','magic','wish','flower','discard'],current:null,requiredSlot:null,done:false,lines:pages,prompting:false};
     currentMatchSize=1; twoPlayerMode=false; pendingMode='single1v1';
     state.selectedIds=[ownedCharIds[0]]; state.selectedIdsB=[];
-    state.customDeck=expandDeckDraft({'001':3,'002':3,'003':2,'004':2});
+    // 教學牌組留兩張花牌（強化／回復），花牌與棄牌的課程才有真的牌可以操作。
+    state.customDeck=expandDeckDraft({'001':3,'002':2,'003':2,'004':1,'013':1,'011':1});
     state.customDeckOrder=shuffle(state.customDeck.map(function(_,i){return i;}));
     document.getElementById('tutorialOverlay').classList.remove('active');
     startGame();
@@ -12682,30 +12703,82 @@ function tutorialBattleSay(lines,onDone){
   });
 }
 
-// 逐回合花色教學：玩家回合開始時（runLoop 呼叫），指定這回合要練的花色並顯示指示。
-// 角色如果剛好沒有某個花色的招式就跳過那一步；為了保證「指定的招式一定出得起」，
-// 不足的花色卡會直接補進手牌（僅教學戰，對手是不會反擊的稻草人，不影響平衡）。
+// 教學步驟：劍→槍→法→願→花牌→棄牌。前四步教出招，後兩步教手牌操作。
+const TUTORIAL_STEP_INDEX={sword:0,gun:1,magic:2,wish:3,flower:4,discard:5};
+const TUTORIAL_CARD_STEPS=['flower','discard'];
+// 這一步「算完成」的條件。招式步要選中對應花色的招式；花牌步要選中一張花牌；棄牌步要標記一張要棄的牌。
+function tutorialStepSatisfied(step){
+  if(step==='flower')return state.actPending!=null;
+  if(step==='discard')return actDiscardPending.length>0;
+  return state.actMovePicked===step;
+}
+function tutorialStepHint(step){
+  if(step==='flower')return '請先點選手牌裡的花牌（劍槍法願以外的那張），再按右邊的 OK 打出。';
+  if(step==='discard')return '請先點卡片上的 🗑 標記要棄掉的牌，再按右邊的 OK。';
+  return '請先點選【'+SLOT_LABEL[step]+'】的招式，再按右邊的 OK 出手。';
+}
+// 這一步該站哪一格。使用者反應「法招沒擊中對手」——法系打的是「交錯位置」（moveWouldHit 裡
+// crossOf(selfSlot)===敵人slot），我方前排是3、敵方前排是1，站在前排放法招永遠打空。
+// 因此：先看這一步的招式從現在的位置打不打得到，打不到就指出要移到哪一格；如果這一步本來就
+// 打得到（例如槍不挑位置），就順勢往「下一步需要的位置」走一格，把玩家在不知不覺中帶到後排。
+// 移動規則本來就限制一次一格，所以劍(前排)→槍(退到中)→法(退到後)剛好接得起來。
+function tutorialRequiredSlot(unit,step,nextStep){
+  if(TUTORIAL_CARD_STEPS.indexOf(step)>=0)return null;
+  const enemy=enemyTeamOf(unit.side);
+  const hits=function(mv,slot){return !mv||!mv.rangeType||moveWouldHit(mv,slot,unit.side,enemy);};
+  const move=unit.moves[step];
+  const stepToward=function(mv){
+    const good=[1,2,3].filter(function(s){return hits(mv,s);});
+    if(!good.length)return null;
+    if(good.indexOf(unit.slot)>=0)return null;
+    const target=good.reduce(function(a,b){return Math.abs(b-unit.slot)<Math.abs(a-unit.slot)?b:a;});
+    return unit.slot<target?unit.slot+1:unit.slot-1;
+  };
+  if(move&&!hits(move,unit.slot))return stepToward(move);
+  const next=nextStep&&TUTORIAL_CARD_STEPS.indexOf(nextStep)<0?unit.moves[nextStep]:null;
+  if(next&&!hits(next,unit.slot)){
+    const ahead=stepToward(next);
+    // 只有在「不會害這一步打空」的前提下才提前移動。
+    if(ahead!=null&&hits(move,ahead))return ahead;
+  }
+  return null;
+}
+// 玩家回合開始時（runLoop 呼叫）指定這一步要做什麼並顯示指示。角色沒有某個花色的招式就跳過
+// 那一步；為了保證「指定的操作一定做得到」，缺的花色卡／花牌會直接補進手牌
+// （僅教學戰，對手是不會反擊的稻草人，不影響平衡）。
 function tutorialSuitTutorPrompt(){
   const tutor=window.__tutorialSuitTutor;
   if(!tutor||tutor.done||state.phase!=='act')return;
   const unit=getActingUnit();
   if(!unit||unit.side!=='A'||!unit.alive)return;
-  while(tutor.queue.length&&!unit.moves[tutor.queue[0]])tutor.queue.shift();
+  while(tutor.queue.length&&TUTORIAL_CARD_STEPS.indexOf(tutor.queue[0])<0&&!unit.moves[tutor.queue[0]])tutor.queue.shift();
   if(!tutor.queue.length){
-    tutor.done=true;
-    tutorialBattleSay([tutor.lines[4]||'四種花色都試過一遍了。接下來自由發揮，結束這場戰鬥吧。']);
+    tutor.done=true;tutor.current=null;tutor.requiredSlot=null;
+    render();
+    tutorialBattleSay([tutor.lines[6]||'該教的都教完了。接下來自由發揮，結束這場戰鬥吧。']);
     return;
   }
   tutor.current=tutor.queue[0];
-  const move=unit.moves[tutor.current],need=conditionForUnit(unit,move);
-  if(need!=null){
-    const suitId=suitCardIdForSlot(move.slot);
-    let have=countSuitInHand('A',suitId);
-    while(have<need&&CARD_BY_ID[suitId]){state.handA.push(CARD_BY_ID[suitId]);have++;}
+  if(tutor.current==='flower'){
+    // 手上沒有花牌就補一張，否則這一課無從操作。
+    if(!combinedFlowerHand(unit).length){
+      const gift=CARD_BY_ID['013']||CARD_BY_ID['011'];
+      if(gift)state.handCustomA.push(gift);
+    }
+  }else if(tutor.current==='discard'){
+    if(!suitHandEntries(unit).length&&CARD_BY_ID['001'])state.handA.push(CARD_BY_ID['001']);
+  }else{
+    const move=unit.moves[tutor.current],need=conditionForUnit(unit,move);
+    if(need!=null){
+      const suitId=suitCardIdForSlot(move.slot);
+      let have=countSuitInHand('A',suitId);
+      while(have<need&&CARD_BY_ID[suitId]){state.handA.push(CARD_BY_ID[suitId]);have++;}
+    }
   }
+  tutor.requiredSlot=tutorialRequiredSlot(unit,tutor.current,tutor.queue[1]);
+  if(tutor.requiredSlot!=null)state.actMoveTarget=null;
   render();
-  const stepIndex={sword:0,gun:1,magic:2,wish:3}[tutor.current];
-  tutorialBattleSay([tutor.lines[stepIndex]||('請點選【'+SLOT_LABEL[tutor.current]+'】的招式，然後按右邊的 OK 出手。')]);
+  tutorialBattleSay([tutor.lines[TUTORIAL_STEP_INDEX[tutor.current]]||tutorialStepHint(tutor.current)]);
 }
 
 function tutorialWatchForBattleEnd(){
