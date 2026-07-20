@@ -12712,6 +12712,7 @@ function tutorialClearHighlight(){
   tutorialAllowedEls.forEach(function(allowed){allowed.classList.remove('tutorial-allowed');});
   tutorialAllowedEls=[];
   document.body.classList.remove('tutorial-action-lock');
+  tutorialStopOverlapWatch();
 }
 // 捕獲階段擋住所有非教學目標的點擊。CSS 的 pointer-events 是視覺與滑鼠第一層保護，
 // 這裡再攔截鍵盤觸發的 click 或動態產生的控制項，確保玩家不會誤跳到別的畫面而中斷流程。
@@ -12723,22 +12724,43 @@ document.addEventListener('click',function(e){
 // 等玩家真的點擊某個按鈕才推進教學流程。用捕獲階段多加一個一次性監聽，不覆蓋/取代按鈕
 // 原本的onclick，原有功能完全不受影響，純粹多監聽一次藉此知道「玩家點了」。
 // 對話框固定在畫面底部，手機上常常正好蓋住玩家被要求點的那顆按鈕（組隊伍的「確定」「儲存隊伍」
-// 都在底部）。等待點擊前先量一次：真的重疊才把對話框讓到上方，桌機或沒重疊時完全不動。
+// 都在底部）。等待點擊前量一次：真的重疊才把對話框讓到上方，桌機或沒重疊時完全不動。
 function tutorialAvoidOverlap(el){
   const box=document.getElementById('tutorialBox');
   if(!box||!el||typeof el.getBoundingClientRect!=='function')return;
-  box.classList.remove('avoid-bottom');
   const target=el.getBoundingClientRect(),rect=box.getBoundingClientRect();
   if(!target.width&&!target.height)return;
   const overlaps=target.left<rect.right&&target.right>rect.left&&target.top<rect.bottom&&target.bottom>rect.top;
   // 讓到上方之後若反而蓋住目標（目標本來就在畫面頂端）就維持原位，至少不會更糟。
-  if(overlaps&&target.top>rect.height+24)box.classList.add('avoid-bottom');
+  const shouldAvoid = overlaps&&target.top>rect.height+24;
+  box.classList.toggle('avoid-bottom', shouldAvoid);
+}
+// 使用者反應「第一步點得到、第二步（儲存隊伍）點不到，對話框卻在下面」：舊版只在等待開始那
+// 一瞬間量一次位置就定案，之後不管畫面怎麼變都不會重新判斷。問題是「儲存隊伍」這類目標在
+// 等待剛開始時常常還沒排到最終位置（卡組還沒選滿、按鈕還沒進入它最終會停留的那個版面狀態，
+// 或整個畫面才剛切換、字體/版面還沒吃穩），一次性測量量到的是「還沒重疊」的舊位置，後面畫面
+// 排定之後才真的重疊，卻再也不會補測。改成整個等待期間每 400ms 重新量一次（跟本檔案其他地方
+// 的輪詢寫法，例如 tutorialWatchForBattleEnd()，是同一種手法），不管玩家怎麼選卡、怎麼縮放
+// 視窗，只要重疊就會被抓到並補上 avoid-bottom；等待結束（tutorialClearHighlight）就停止輪詢。
+let tutorialOverlapWatchEl = null, tutorialOverlapWatchTimer = null;
+function tutorialWatchOverlap(el){
+  tutorialOverlapWatchEl = el;
+  tutorialAvoidOverlap(el);
+  if(tutorialOverlapWatchTimer) return;
+  tutorialOverlapWatchTimer = setInterval(function(){
+    if(!tutorialOverlapWatchEl){ tutorialStopOverlapWatch(); return; }
+    tutorialAvoidOverlap(tutorialOverlapWatchEl);
+  }, 400);
+}
+function tutorialStopOverlapWatch(){
+  tutorialOverlapWatchEl = null;
+  if(tutorialOverlapWatchTimer){ clearInterval(tutorialOverlapWatchTimer); tutorialOverlapWatchTimer=null; }
 }
 function tutorialWaitForClick(elId, cb, consumeClick, allowedIds){
   const el = document.getElementById(elId);
   if(!el){ cb(); return; }
   tutorialHighlight(el,allowedIds);
-  tutorialAvoidOverlap(el);
+  tutorialWatchOverlap(el);
   function handler(e){
     // consumeClick=true：教學自己已經完整處理了這次點擊該做的事（例如金幣/鑽石免費召喚，
     // 見 tutorialGoldGachaStep()/tutorialDiamondGachaStep()），這次點擊就不能再讓按鈕原本
