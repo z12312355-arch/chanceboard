@@ -10185,6 +10185,14 @@ function renderBattle(){
   const speedBtn=document.getElementById('autoBattleSpeedBtn');
   if(speedBtn)speedBtn.style.display = window.__onlineLocalSide ? 'none' : '';
 
+  // 新手教學逐招引導期間鎖住「自動戰鬥」跟「加速」——這兩顆按鈕會讓玩家跳過正在教的操作
+  // （自動戰鬥直接幫你出招，加速則讓畫面來不及看清楚指示），跟招式鈕、站位鈕用同一套
+  // window.__tutorialSuitTutor 判斷（見 tutorialSuitTutorPrompt()），教完（tutor.done）就恢復。
+  const tutorSuitActive = !!(window.__tutorialSuitTutor && !window.__tutorialSuitTutor.done);
+  autoBattleAButton.disabled = tutorSuitActive;
+  document.getElementById('autoBattleToggleB').disabled = tutorSuitActive;
+  if(speedBtn)speedBtn.disabled = tutorSuitActive;
+
   renderOrderBar();
   renderHandSummary();
 
