@@ -362,6 +362,20 @@
   #screen-login #loginEnterBtn{justify-content:center;width:min(100%,360px);min-width:280px;}
   #screen-login #loginEnterBtn .lobby-btn-label{white-space:nowrap;}
   #loginEnterBtn .lobby-btn-icon{font-size:24px;}
+  /* 大廳改版後 .lobby-btn-primary 只剩登入畫面的「進入遊戲」按鈕在用（大廳的主CTA改用
+     .lobby-main-primary，見大廳版面那段CSS），樣式搬到這裡跟登入畫面的規則放一起。 */
+  .lobby-btn-primary{flex-direction:row !important;align-items:center;
+    padding:clamp(8px,2.2vh,18px) 26px;border-radius:16px;gap:14px;
+    background:linear-gradient(180deg, rgba(90,140,240,.95), rgba(44,86,173,.98));
+    border:2px solid var(--gold);position:relative;overflow:hidden;
+    box-shadow:0 10px 28px rgba(0,0,0,.55), 0 0 26px rgba(242,193,78,.28), inset 0 1px 0 rgba(255,255,255,.3);}
+  .lobby-btn-primary:hover{transform:translateY(-3px) scale(1.02);box-shadow:0 14px 34px rgba(0,0,0,.6), 0 0 36px rgba(242,193,78,.4), inset 0 1px 0 rgba(255,255,255,.3);}
+  .lobby-btn-primary::after{content:'';position:absolute;top:0;left:-60%;width:35%;height:100%;
+    background:linear-gradient(120deg, transparent, rgba(255,255,255,.4), transparent);
+    animation:lobbyShimmer 3.4s ease-in-out infinite;pointer-events:none;}
+  .lobby-btn-primary .lobby-btn-icon{font-size:30px;}
+  .lobby-btn-primary .lobby-btn-label{font-size:19px;}
+  .lobby-btn-primary .lobby-btn-desc{color:rgba(232,233,240,.85);}
   /* 後台入口：使用者要求「把後台按鈕，改在登入介面的右下角」，改成不搶視覺的小圖示鈕，
      跟主要CTA拉開，避免玩家誤點進開發用的資料編輯面板。 */
   #screen-login #lobbyAdminBtn{position:absolute;right:18px;bottom:16px;z-index:3;
@@ -371,48 +385,77 @@
   #screen-login #lobbyAdminBtn:hover{opacity:1;background:rgba(20,22,30,.85);color:var(--text);}
   #screen-login #lobbyAdminBtn .lobby-btn-icon{font-size:16px;}
 
-  #lobbyContent{position:relative;z-index:2;display:flex;flex-direction:column;justify-content:center;
-    align-items:flex-end;text-align:right;margin-left:auto;overflow-y:auto;
-    height:100%;padding:0 5% 4% 3%;max-width:620px;gap:clamp(10px, 4vh, 30px);}
-  #lobbyCurrencyChips{display:flex;justify-content:flex-end;gap:8px;}
-  #lobbyBtnGrid{display:flex;flex-direction:column;gap:clamp(8px, 2.6vh, 16px);margin-top:6px;}
-  /* 主要CTA（單人對戰）：明顯放大、金框＋發光＋掃光動畫，是整個大廳視覺重量最重的元素，
-     符合手遊「一眼就知道要點哪裡開始玩」的慣例。padding也改用clamp()，螢幕矮的時候
-     跟著縮，不會單獨佔掉太多垂直空間。 */
-  .lobby-btn-primary{flex-direction:row !important;align-items:center;width:100%;max-width:440px;
-    padding:clamp(8px,2.2vh,18px) 26px;border-radius:16px;gap:14px;
-    background:linear-gradient(180deg, rgba(90,140,240,.95), rgba(44,86,173,.98));
+  /* ============ 大廳 NIKKE/蔚藍檔案式版面（使用者要求「參考市面上的熱門手遊重新設計」）============
+     三塊固定區域：頂部橫條（玩家/貨幣＋系統小圖示）、右側直欄（養成/管理）、底部主功能列
+     （召喚/隊伍/故事/決鬥，右大左小）。立繪置左偏中當視覺主體，UI貼邊、中央留白，
+     跟這一派手遊「角色是主角、功能貼在畫面四周」的構圖一致。 */
+  #lobbyTopBar{position:absolute;top:0;left:0;right:0;z-index:3;display:flex;align-items:center;gap:10px;
+    padding:10px 16px 14px;
+    background:linear-gradient(180deg, rgba(6,7,11,.82), rgba(6,7,11,.38) 68%, transparent);}
+  #lobbyPlayerChip{display:flex;align-items:center;gap:6px;padding:6px 15px;border-radius:999px;
+    background:rgba(20,22,30,.68);border:1px solid var(--line);font-size:12.5px;color:var(--text);white-space:nowrap;}
+  #lobbyCurrencyChips{display:flex;gap:8px;}
+  #lobbyTopIcons{margin-left:auto;display:flex;gap:8px;}
+  /* 小圖示鈕：頂部橫條跟右側直欄共用同一種元件。 */
+  .lobby-icon-btn{position:relative;width:46px;height:46px;border-radius:12px;flex:0 0 auto;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;
+    background:linear-gradient(180deg, rgba(44,48,68,.78), rgba(24,27,38,.88));
+    border:1px solid rgba(242,193,78,.22);color:var(--text);cursor:pointer;
+    transition:transform .15s,border-color .15s,box-shadow .15s;}
+  .lobby-icon-btn:hover{border-color:var(--gold);transform:translateY(-2px);box-shadow:0 0 12px rgba(242,193,78,.28);}
+  .lobby-icon-btn .lobby-btn-icon{font-size:17px;line-height:1;}
+  .lobby-icon-btn .lobby-btn-label{font-size:9.5px;color:var(--muted);line-height:1;}
+  .lobby-icon-btn .lobby-btn-desc{display:none;}
+  .lobby-icon-btn.lobby-btn-upcoming{opacity:.6;}
+  .lobby-icon-btn.lobby-btn-upcoming::after{content:'開發中';position:absolute;top:-5px;right:-5px;
+    padding:1px 4px;border-radius:6px;background:rgba(10,12,18,.92);border:1px solid rgba(151,163,190,.35);
+    color:var(--muted);font-size:8px;line-height:1.25;text-shadow:none;}
+  #lobbySideRail{position:absolute;right:12px;top:50%;transform:translateY(-50%);z-index:3;
+    display:flex;flex-direction:column;gap:9px;}
+  #lobbySideRail .lobby-icon-btn{width:54px;height:54px;border-radius:14px;}
+  #lobbySideRail .lobby-icon-btn .lobby-btn-icon{font-size:20px;}
+  #lobbySideRail .lobby-icon-btn .lobby-btn-label{font-size:10px;}
+  /* 底部主功能列：右大左小，「決鬥」是主CTA（金框＋掃光），符合「主按鈕在右下角最大顆」慣例。 */
+  #lobbyMainRow{position:absolute;left:0;right:80px;bottom:0;z-index:2;
+    display:flex;justify-content:flex-end;align-items:flex-end;gap:12px;
+    padding:16px 16px 18px;
+    background:linear-gradient(0deg, rgba(6,7,11,.85), rgba(6,7,11,.32) 66%, transparent);}
+  .lobby-main-btn{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;
+    width:clamp(96px,10vw,120px);height:clamp(76px,9vh,92px);border-radius:14px;cursor:pointer;flex:0 0 auto;
+    background:linear-gradient(165deg, rgba(52,58,82,.88), rgba(28,31,44,.94));
+    border:1px solid rgba(242,193,78,.26);color:var(--text);
+    box-shadow:0 6px 16px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.08);
+    transition:transform .15s,border-color .15s,box-shadow .15s;}
+  .lobby-main-btn:hover{transform:translateY(-4px);border-color:var(--gold);
+    box-shadow:0 10px 22px rgba(0,0,0,.5), 0 0 18px rgba(242,193,78,.3);}
+  .lobby-main-btn .lobby-btn-icon{font-size:26px;line-height:1.1;}
+  .lobby-main-btn .lobby-btn-label{font-size:13.5px;font-weight:bold;}
+  .lobby-main-btn .lobby-btn-desc{display:none;}
+  .lobby-main-primary{width:clamp(130px,14vw,168px);height:clamp(96px,12vh,116px);border-radius:16px;
+    background:linear-gradient(165deg, rgba(90,140,240,.95), rgba(44,86,173,.98));
     border:2px solid var(--gold);position:relative;overflow:hidden;
     box-shadow:0 10px 28px rgba(0,0,0,.55), 0 0 26px rgba(242,193,78,.28), inset 0 1px 0 rgba(255,255,255,.3);}
-  .lobby-btn-primary:hover{transform:translateY(-3px) scale(1.02);box-shadow:0 14px 34px rgba(0,0,0,.6), 0 0 36px rgba(242,193,78,.4), inset 0 1px 0 rgba(255,255,255,.3);}
-  .lobby-btn-primary::after{content:'';position:absolute;top:0;left:-60%;width:35%;height:100%;
+  .lobby-main-primary:hover{transform:translateY(-4px) scale(1.02);
+    box-shadow:0 14px 34px rgba(0,0,0,.6), 0 0 36px rgba(242,193,78,.4), inset 0 1px 0 rgba(255,255,255,.3);}
+  .lobby-main-primary::after{content:'';position:absolute;top:0;left:-60%;width:35%;height:100%;
     background:linear-gradient(120deg, transparent, rgba(255,255,255,.4), transparent);
     animation:lobbyShimmer 3.4s ease-in-out infinite;pointer-events:none;}
   @keyframes lobbyShimmer{0%{left:-60%;}42%{left:130%;}100%{left:130%;}}
-  .lobby-btn-primary .lobby-btn-icon{font-size:30px;}
-  .lobby-btn-primary .lobby-btn-label{font-size:19px;}
-  .lobby-btn-primary .lobby-btn-desc{color:rgba(232,233,240,.85);}
-  /* 次要功能（雙人對戰／隊伍／規則／設定／後台）：收成一排較小、較低調的圖示按鈕，
-     跟主要CTA拉開視覺層級差距。 */
-  #lobbyBtnSecondary{display:flex;flex-wrap:wrap;gap:clamp(6px,1.6vh,10px);max-width:520px;}
-  #lobbyBtnSecondary .lobby-btn{flex:1 1 130px;width:auto;min-width:120px;padding:clamp(6px,1.6vh,10px) 12px;gap:2px;
-    background:linear-gradient(180deg, rgba(42,46,64,.55), rgba(30,33,46,.65));
-    border:1px solid rgba(242,193,78,.22);border-radius:10px;}
-  #lobbyBtnSecondary .lobby-btn:hover{border-color:var(--gold);box-shadow:0 0 14px rgba(242,193,78,.25);transform:translateY(-2px);}
-  #lobbyBtnSecondary .lobby-btn-upcoming{position:relative;border-color:rgba(151,163,190,.24);}
-  #lobbyBtnSecondary .lobby-btn-upcoming::after{content:'開發中';position:absolute;top:4px;right:5px;
-    padding:1px 4px;border-radius:6px;background:rgba(10,12,18,.82);border:1px solid rgba(151,163,190,.35);
-    color:var(--muted);font-size:8px;line-height:1.25;text-shadow:none;}
-  #lobbyBtnSecondary .lobby-btn-icon{font-size:19px;}
-  #lobbyBtnSecondary .lobby-btn-label{font-size:12.5px;}
-  #lobbyBtnSecondary .lobby-btn-desc{display:none;}
+  .lobby-main-primary .lobby-btn-icon{font-size:34px;}
+  .lobby-main-primary .lobby-btn-label{font-size:17px;letter-spacing:2px;}
+  .lobby-main-primary .lobby-btn-desc{display:block;font-size:10px;color:rgba(232,233,240,.85);}
   #screen-lobby .lobby-btn-icon, #screen-lobby .lobby-btn-label, #screen-lobby .lobby-btn-desc{
     text-shadow:0 1px 2px rgba(0,0,0,1), 0 0 6px rgba(0,0,0,.9), 0 0 12px rgba(0,0,0,.7);}
   @media (max-width:900px){
-    #lobbyHeroArt{width:100%;opacity:.35;}
+    #lobbyHeroArt{width:100%;opacity:.45;}
     #lobbyHeroArt::before{background:linear-gradient(to top, rgba(6,7,11,.95) 0%, rgba(6,7,11,.4) 45%, transparent 80%);}
-    #lobbyContent{max-width:none;padding:0 5%;align-items:stretch;text-align:left;margin-left:0;}
-    .lobby-btn-primary, #lobbyBtnSecondary{max-width:none;}
+    #lobbyTopBar{flex-wrap:wrap;row-gap:8px;}
+    /* 手機：右側直欄改成貼在主功能列上方的橫向一排，避免吃掉狹窄畫面的水平空間。 */
+    #lobbySideRail{top:auto;bottom:132px;right:0;left:0;transform:none;
+      flex-direction:row;justify-content:center;flex-wrap:wrap;padding:0 10px;}
+    #lobbyMainRow{right:0;flex-wrap:wrap;justify-content:center;}
+    .lobby-main-btn{width:clamp(88px,26vw,110px);}
+    .lobby-main-primary{width:clamp(120px,34vw,150px);}
   }
 
   /* ==================== 隊伍列表畫面（同一套暗黑奇幻二次元手遊風）====================
@@ -2217,115 +2260,89 @@
          #lobbyContent同一層兄弟節點、position:relative）下面，自己給一個比兩者都高的
          z-index，不再受#lobbyHeroArt那層矮stacking context拖累。 -->
     <button type="button" id="lobbyHeroPickBtn" title="更換立繪角色">🖼️</button>
-    <div id="lobbyContent">
-      <!-- 使用者要求「多做一個登入介面，把LOGO/標語資訊改過去」：原本這裡的<h1>LOGO跟
-           .subtitle標語搬去#screen-login了，大廳只留貨幣餘額徽章。 -->
-      <!-- 使用者要求「召喚分成金幣召喚、鑽石召喚」：大廳放一份餘額顯示，讓玩家不用
-           特地跳進召喚畫面才知道自己有多少錢，跟召喚畫面裡的#gachaGoldAmt/#gachaDiamondAmt
-           共用同一份refreshCurrencyDisplays()邏輯同步更新。 -->
+    <!-- 使用者要求「大廳的介面參考市面上的熱門手遊，重新設計」（選了 NIKKE／蔚藍檔案流派）：
+         版面改成三塊固定區域——(1) #lobbyTopBar 頂部橫條：玩家名＋貨幣餘額靠左、系統類小圖示
+         （任務/信箱/成就/公告/設定）靠右；(2) #lobbySideRail 右側直欄：養成/管理類入口（收藏/
+         棋子/狩獵/商店/好友/規則）；(3) #lobbyMainRow 底部主功能列：召喚/隊伍/故事＋「決鬥」
+         當最大顆的主CTA（金框＋掃光），大小往右遞增，跟這類遊戲「主按鈕在右下角最大顆」的
+         慣例一致。角色立繪維持置左偏中當視覺主體。所有按鈕 id 全部沿用（JS 綁定都靠
+         getElementById，不受版面搬動影響）；被隱藏的單人/雙人/1v1對戰鈕也留在主功能列裡
+         （lobby1v1Btn 是 addBattle1v1Button() 動態插在 lobbyTwoBtn 後面的，那個錨點不能丟）。 -->
+    <div id="lobbyTopBar">
+      <div id="lobbyPlayerChip">🎮 <b id="lobbyPlayerName">玩家</b></div>
       <div id="lobbyCurrencyChips">
         <span class="gacha-balance-chip">💰 <b id="lobbyGoldAmt">0</b></span>
         <span class="gacha-balance-chip">💎 <b id="lobbyDiamondAmt">0</b></span>
       </div>
-      <div id="lobbyBtnGrid">
-        <button type="button" class="lobby-btn lobby-btn-primary hidden" id="lobbySoloBtn">
-          <span class="lobby-btn-icon">⚔️</span>
-          <span class="lobby-btn-label">單人對戰</span>
-          <span class="lobby-btn-desc">挑一支隊伍，跟電腦對戰</span>
+      <div id="lobbyTopIcons">
+        <button type="button" class="lobby-icon-btn lobby-btn-upcoming" id="lobbyMissionsBtn" title="完成每日與成長任務">
+          <span class="lobby-btn-icon">🎯</span><span class="lobby-btn-label">任務</span>
         </button>
-        <div id="lobbyBtnSecondary">
-          <!-- 使用者要求「加入抽卡的機制，必須要有這個角色才能使用」＋「新增召喚按鈕」：放在
-               次要按鈕列最前面（緊接在主要CTA後面），因為沒召喚過任何角色的話「隊伍」畫面會
-               是空的、组不了隊，召喚在遊戲流程上其實跟「隊伍」一樣重要，位置上刻意排在它前面
-               引導新玩家先來這裡。 -->
-          <button type="button" class="lobby-btn" id="lobbyGachaBtn">
-            <span class="lobby-btn-icon">✨</span>
-            <span class="lobby-btn-label">召喚</span>
-            <span class="lobby-btn-desc">抽取新角色，組隊前要先召喚</span>
-          </button>
-          <!-- 使用者要求「把我的收藏改成在大廳獨立的按鈕」：原本收藏格是召喚畫面下半部的
-               一部分，現在拆成獨立畫面＋這顆獨立入口，緊接在召喚後面。 -->
-          <button type="button" class="lobby-btn" id="lobbyCollectionBtn">
-            <span class="lobby-btn-icon">📚</span>
-            <span class="lobby-btn-label">收藏</span>
-            <span class="lobby-btn-desc">查看已召喚的角色與升星進度</span>
-          </button>
-          <button type="button" class="lobby-btn" id="lobbyPiecesBtn">
-            <span class="lobby-btn-icon">🧩</span>
-            <span class="lobby-btn-label">棋子</span>
-            <span class="lobby-btn-desc">查看已擁有的棋子與培養進度</span>
-          </button>
-          <button type="button" class="lobby-btn" id="lobbyHuntBtn">
-            <span class="lobby-btn-icon">🏹</span>
-            <span class="lobby-btn-label">狩獵</span>
-            <span class="lobby-btn-desc">派遣隊伍取得劍／槍／法／願之碎片</span>
-          </button>
-          <!-- 使用者要求「新增商店：可以課金或用金幣購買卡片」：除了4張基本花色牌，其餘
-               招式卡改成需要在這裡花金幣解鎖才能放進卡組（見組卡畫面 renderDeckBuild() 的
-               鎖定樣式），位置排在收藏後面——邏輯上跟「先召喚角色→再組卡組」同一條引導
-               動線，這裡是「先買卡→再組卡組」。 -->
-          <button type="button" class="lobby-btn" id="lobbyShopBtn">
-            <span class="lobby-btn-icon">🛒</span>
-            <span class="lobby-btn-label">商店</span>
-            <span class="lobby-btn-desc">用金幣購買招式卡，解鎖組卡組</span>
-          </button>
-          <button type="button" class="lobby-btn hidden" id="lobbyTwoBtn">
-            <span class="lobby-btn-icon">🤝</span>
-            <span class="lobby-btn-label">雙人對戰</span>
-            <span class="lobby-btn-desc">本機雙人，黑白方各挑一隊</span>
-          </button>
-          <button type="button" class="lobby-btn" id="lobbyOnlineBtn">
-            <span class="lobby-btn-icon">🌐</span>
-            <span class="lobby-btn-label">決鬥</span>
-            <span class="lobby-btn-desc">瀏覽房間、建立房間，與其他玩家即時對戰</span>
-          </button>
-          <button type="button" class="lobby-btn" id="lobbyTeamsBtn">
-            <span class="lobby-btn-icon">🛡️</span>
-            <span class="lobby-btn-label">隊伍</span>
-            <span class="lobby-btn-desc">組角色＋卡組，可存多支隊伍</span>
-          </button>
-          <button type="button" class="lobby-btn" id="lobbyStoryBtn">
-            <span class="lobby-btn-icon">📜</span>
-            <span class="lobby-btn-label">故事</span>
-            <span class="lobby-btn-desc">第一章開放：選擇執黑或執白踏上棋盤</span>
-          </button>
-          <button type="button" class="lobby-btn" id="lobbyFriendsBtn">
-            <span class="lobby-btn-icon">👥</span>
-            <span class="lobby-btn-label">好友</span>
-            <span class="lobby-btn-desc">新增與管理好友（最多 50 人）</span>
-          </button>
-          <button type="button" class="lobby-btn lobby-btn-upcoming" id="lobbyMissionsBtn">
-            <span class="lobby-btn-icon">🎯</span>
-            <span class="lobby-btn-label">任務</span>
-            <span class="lobby-btn-desc">完成每日與成長任務</span>
-          </button>
-          <button type="button" class="lobby-btn lobby-btn-upcoming" id="lobbyMailboxBtn">
-            <span class="lobby-btn-icon">📬</span>
-            <span class="lobby-btn-label">信箱</span>
-            <span class="lobby-btn-desc">接收系統通知與獎勵</span>
-          </button>
-          <button type="button" class="lobby-btn lobby-btn-upcoming" id="lobbyAchievementsBtn">
-            <span class="lobby-btn-icon">🏆</span>
-            <span class="lobby-btn-label">成就</span>
-            <span class="lobby-btn-desc">查看成就與完成進度</span>
-          </button>
-          <button type="button" class="lobby-btn lobby-btn-upcoming" id="lobbyAnnouncementsBtn">
-            <span class="lobby-btn-icon">📢</span>
-            <span class="lobby-btn-label">公告</span>
-            <span class="lobby-btn-desc">查看遊戲更新與活動消息</span>
-          </button>
-          <button type="button" class="lobby-btn" id="lobbyRulesBtn">
-            <span class="lobby-btn-icon">📖</span>
-            <span class="lobby-btn-label">遊戲規則說明</span>
-            <span class="lobby-btn-desc">核心玩法、傷害公式、狀態效果</span>
-          </button>
-          <button type="button" class="lobby-btn" id="lobbySettingsBtn">
-            <span class="lobby-btn-icon">⚙️</span>
-            <span class="lobby-btn-label">設定</span>
-            <span class="lobby-btn-desc">音效／音樂</span>
-          </button>
-        </div>
+        <button type="button" class="lobby-icon-btn lobby-btn-upcoming" id="lobbyMailboxBtn" title="接收系統通知與獎勵">
+          <span class="lobby-btn-icon">📬</span><span class="lobby-btn-label">信箱</span>
+        </button>
+        <button type="button" class="lobby-icon-btn lobby-btn-upcoming" id="lobbyAchievementsBtn" title="查看成就與完成進度">
+          <span class="lobby-btn-icon">🏆</span><span class="lobby-btn-label">成就</span>
+        </button>
+        <button type="button" class="lobby-icon-btn lobby-btn-upcoming" id="lobbyAnnouncementsBtn" title="查看遊戲更新與活動消息">
+          <span class="lobby-btn-icon">📢</span><span class="lobby-btn-label">公告</span>
+        </button>
+        <button type="button" class="lobby-icon-btn" id="lobbySettingsBtn" title="音效／音樂">
+          <span class="lobby-btn-icon">⚙️</span><span class="lobby-btn-label">設定</span>
+        </button>
       </div>
+    </div>
+    <div id="lobbySideRail">
+      <button type="button" class="lobby-icon-btn" id="lobbyCollectionBtn" title="查看已召喚的角色、怪物圖鑑與CG收藏">
+        <span class="lobby-btn-icon">📚</span><span class="lobby-btn-label">圖鑑</span>
+      </button>
+      <button type="button" class="lobby-icon-btn" id="lobbyPiecesBtn" title="查看已擁有的棋子與培養進度">
+        <span class="lobby-btn-icon">🧩</span><span class="lobby-btn-label">棋子</span>
+      </button>
+      <button type="button" class="lobby-icon-btn" id="lobbyHuntBtn" title="派遣隊伍取得劍／槍／法／願之碎片">
+        <span class="lobby-btn-icon">🏹</span><span class="lobby-btn-label">狩獵</span>
+      </button>
+      <button type="button" class="lobby-icon-btn" id="lobbyShopBtn" title="用金幣購買招式卡，解鎖組卡組">
+        <span class="lobby-btn-icon">🛒</span><span class="lobby-btn-label">商店</span>
+      </button>
+      <button type="button" class="lobby-icon-btn" id="lobbyFriendsBtn" title="新增與管理好友（最多 50 人）">
+        <span class="lobby-btn-icon">👥</span><span class="lobby-btn-label">好友</span>
+      </button>
+      <button type="button" class="lobby-icon-btn" id="lobbyRulesBtn" title="核心玩法、傷害公式、狀態效果">
+        <span class="lobby-btn-icon">📖</span><span class="lobby-btn-label">規則</span>
+      </button>
+    </div>
+    <div id="lobbyMainRow">
+      <button type="button" class="lobby-main-btn hidden" id="lobbySoloBtn">
+        <span class="lobby-btn-icon">⚔️</span>
+        <span class="lobby-btn-label">單人對戰</span>
+        <span class="lobby-btn-desc">挑一支隊伍，跟電腦對戰</span>
+      </button>
+      <button type="button" class="lobby-main-btn hidden" id="lobbyTwoBtn">
+        <span class="lobby-btn-icon">🤝</span>
+        <span class="lobby-btn-label">雙人對戰</span>
+        <span class="lobby-btn-desc">本機雙人，黑白方各挑一隊</span>
+      </button>
+      <button type="button" class="lobby-main-btn" id="lobbyGachaBtn">
+        <span class="lobby-btn-icon">✨</span>
+        <span class="lobby-btn-label">召喚</span>
+        <span class="lobby-btn-desc">抽取新角色</span>
+      </button>
+      <button type="button" class="lobby-main-btn" id="lobbyTeamsBtn">
+        <span class="lobby-btn-icon">🛡️</span>
+        <span class="lobby-btn-label">隊伍</span>
+        <span class="lobby-btn-desc">組角色＋卡組</span>
+      </button>
+      <button type="button" class="lobby-main-btn" id="lobbyStoryBtn">
+        <span class="lobby-btn-icon">📜</span>
+        <span class="lobby-btn-label">故事</span>
+        <span class="lobby-btn-desc">第一章開放</span>
+      </button>
+      <button type="button" class="lobby-main-btn lobby-main-primary" id="lobbyOnlineBtn">
+        <span class="lobby-btn-icon">🌐</span>
+        <span class="lobby-btn-label">決鬥</span>
+        <span class="lobby-btn-desc">與其他玩家即時對戰</span>
+      </button>
     </div>
   </div>
 
@@ -6680,8 +6697,13 @@ function playPendingEffects(){
     // 移動分身的過場與下面的清除計時器要用同一個縮放後的時長，否則加速時分身會被提早砍掉。
     ghost.style.transition = 'transform '+ghostMs+'ms cubic-bezier(.22,.78,.24,1), width '+ghostMs+'ms ease, height '+ghostMs+'ms ease';
     document.body.appendChild(ghost);
-    const previousVisibility = el.style.visibility;
     el.style.visibility = 'hidden';
+    // 分身飛行期間把這個單位記進「動畫進行中」名單：中途的 render() 會整個重建棋盤DOM，
+    // 上面那行藏的是「舊的」元素，新建出來的元素要靠這份名單在建立當下就藏好（見
+    // renderBattle() 裡 unit-<id> 建立處的說明），否則會看到目的地的圖跟半路的分身同時存在。
+    const animUntil = Date.now() + ghostMs + battleScaledMs(40);
+    window.__unitsMidMoveAnim = window.__unitsMidMoveAnim || {};
+    window.__unitsMidMoveAnim[m.unitId] = animUntil;
     void ghost.offsetWidth;
     requestAnimationFrame(()=>{
       ghost.style.transform = 'translate('+dx+'px,'+dy+'px)';
@@ -6690,7 +6712,13 @@ function playPendingEffects(){
     });
     setTimeout(()=>{
       if(ghost.parentNode) ghost.parentNode.removeChild(ghost);
-      el.style.visibility = previousVisibility;
+      // 只有這筆記錄還是「自己那一次」寫的才清除——如果同一個單位在飛行途中又排了下一段
+      // 移動動畫（覆寫了名單上的時間戳），這裡不能把別人的藏匿提前解除。
+      if(window.__unitsMidMoveAnim && window.__unitsMidMoveAnim[m.unitId]===animUntil) delete window.__unitsMidMoveAnim[m.unitId];
+      // 重建過的話 el 已經是死引用，一律重新用 id 抓「目前活著的那顆」來現形。
+      const current = document.getElementById('unit-'+m.unitId);
+      if(current) current.style.visibility = '';
+      el.style.visibility = '';
     }, ghostMs + battleScaledMs(40));
   });
   if(!effects.length) return;
@@ -6787,7 +6815,11 @@ function resolveMove(unit, move, ownTeam, enemyTeam){
     // preHit ops run before damage (e.g. HP swap)
     if(move.effectTrigger==='preHit' && move.effectOps && move.effectOps.length) executeOps(unit, target, move.effectOps, ctx);
     if(!target.alive) return;
-    const hit = rollHit(unit, move, target) && !rollEvade(target);
+    // 使用者回報「必中狀態打有迴避狀態的狼還是MISS」：命中判定是兩段獨立擲骰——rollHit()
+    // 看攻擊方的命中率（必中在那裡面已處理），rollEvade() 看目標的迴避%，而必中原本只繞過
+    // 第一段，第二段照樣可能失敗。「必中」語意上就該連目標的迴避一起無視（跟主流遊戲的
+    // 必中/certain-hit慣例一致），這裡補上：攻擊方有必中時直接跳過迴避擲骰。
+    const hit = rollHit(unit, move, target) && (hasStatus(unit,'必中') || !rollEvade(target));
     if(!hit){
       addLog('miss', sideTag(unit)+unitName(unit)+' 攻擊 '+sideTag(target)+unitName(target)+'，<span class="miss">未命中</span>');
       fxHits.push({target, isMiss:true});
@@ -7357,7 +7389,45 @@ function aiHandleTurn(unit){
     }
   }
   if(move) resolveMove(unit, move, state.teamB, state.teamA);
-  else { addLog('info', sideTag(unit)+unitName(unit)+' 沒有可用招式，待機'); tryOnPassEffect(unit, state.teamB, state.teamA); }
+  else {
+    // 使用者追問「他真的動這麼多次嗎？」——查下去發現待機洗版不是節奏問題，是真的卡死了：
+    // 手牌上限 HAND_LIMIT=4，一旦塞滿「這名角色用不到的花色／湊不齊的零星牌」，就永遠出不了
+    // 招，而且因為手牌是滿的，topUpHand() 之後再也補不進新牌 —— 永久待機迴圈。玩家自己有
+    // 🗑 棄牌鈕可以解套，玩家側的「自動戰鬥」也早就有 autoDiscardStuckSuitCard() 這套解法
+    // （見那個函式上面的說明，當初就是為了同一個「永久卡死」問題寫的），但電腦對手走的是
+    // aiHandleTurn() 這條路徑，從來沒接上去。這裡補上：卡住時先嘗試棄一張換新手牌。
+    // autoDiscardStuckSuitCard() 只標記 actDiscardPending（原本設計由 confirmAct() 結算），
+    // 而 aiHandleTurn() 不經過 confirmAct()，所以標記完要自己就地結算掉。
+    autoDiscardStuckSuitCard(unit);
+    if(actDiscardPending.length){
+      const entries=suitHandEntries(unit),names=[];
+      actDiscardPending.forEach(mark=>{
+        const entry=mark.list==='suit'?entries[mark.idx]:null;
+        if(!entry)return;
+        const hand=handOf(unit.side,entry.source);
+        const idx=hand.indexOf(entry.card);
+        if(idx<0)return;
+        hand.splice(idx,1);
+        if(entry.source==='public')discardCard(unit.side,entry.card); // 自訂卡直接消失，不進棄牌堆
+        names.push(entry.card.name);
+      });
+      actDiscardPending=[];
+      if(names.length)addLog('fx', sideTag(unit)+unitName(unit)+' 棄了：'+names.join('、'));
+    }
+    // 使用者反應「沒有可用招式，待機 會重複出現在戰鬥紀錄」：高速怪（例如SPD143的荒野孤狼）
+    // 一回合本來就會輪到約兩次，加上上面那個卡死問題，同一句待機訊息會連著洗版。改成：跟
+    // 「上一條」紀錄完全相同時不再新增一條，改在原本那條後面累加 ×N 次數——只合併「緊鄰的
+    // 重複」，中間隔著別的動作/回合線就照常另起一條，時間順序不會被扭曲。
+    const idleHtml=sideTag(unit)+unitName(unit)+' 沒有可用招式，待機';
+    const idleNorm=normalizeOnlineLogSides(idleHtml);
+    const last=state.log[state.log.length-1];
+    const marker='　×';
+    if(last&&last.type==='info'&&typeof last.html==='string'&&(last.html===idleNorm||last.html.indexOf(idleNorm+marker)===0)){
+      const n=last.html===idleNorm?2:(Number(last.html.slice((idleNorm+marker).length))||1)+1;
+      last.html=idleNorm+marker+n;
+    }else addLog('info', idleHtml);
+    tryOnPassEffect(unit, state.teamB, state.teamA);
+  }
   if(unit.alive) runPostActionPassive(unit, state.teamB, state.teamA);
   if(unit.alive && hasStatus(unit,'燃燒')) burnTick(unit);
   if(deferredHandSwapCard && unit.alive) playFlowerCard(unit, deferredHandSwapCard, state.teamB, state.teamA, unit);
@@ -8047,6 +8117,9 @@ function showTopScreen(id){
 function goToLobby(){
   showTopScreen('screen-lobby');
   refreshLobbyHeroArt();
+  // 大廳改版（NIKKE式頂部橫條）：左上角顯示玩家名稱，跟新手教學/故事共用同一個 playerName。
+  const nameEl=document.getElementById('lobbyPlayerName');
+  if(nameEl)nameEl.textContent=(typeof playerName==='string'&&playerName)?playerName:'玩家';
 }
 // 使用者要求「多做一個登入介面」：遊戲載入後第一個看到的畫面，見底部原本goToLobby()
 // 改成goToLogin()那行、跟#loginEnterBtn的wiring。
@@ -8882,7 +8955,21 @@ function storyPreloadCgs(){
     if(!/[\/.]/.test(src))src='story/'+src+'.png';else if(!/\.\w+$/.test(src))src=src+'.png';
     add(src);
   }));
-  queue.forEach(src=>{const im=new Image();im.src=src;});
+  // 使用者反應「故事裡的立繪第一次也不會出現」：這個函式原本真的只預載CG劇照，對話立繪
+  // （portraits設定表：小黑/小白/梅朵/無名戰士…，storyRenderStage()的.story-actor跟
+  // storySetSpeakerAvatar()的頭像都吃同一批檔案）完全沒被涵蓋，每個角色第一次開口那一刻
+  // 才開始下載，畫面上就是「先空著、圖才慢慢冒出來」。這裡把整張portraits表一起排進預載
+  // 佇列——檔案數量就是出場角色數，一章十來張，跟CG同一個時機（故事文本載好時）抓完。
+  Object.keys(globalStoryModeConfig.portraits||{}).forEach(name=>add(globalStoryModeConfig.portraits[name]));
+  queue.forEach(src=>{
+    const im=new Image();
+    im.decoding='async';
+    im.onload=function(){ if(window.__imgExistCache)window.__imgExistCache[src]=true; };
+    im.src=src;
+    // 跟 preloadEssentialAssets() 同一個理由（見那裡的說明）：只下載不解碼，第一次真的要畫
+    // 的時候還是會卡一下解碼時間，明確呼叫decode()把解碼也在背景先做完。
+    if(im.decode)im.decode().catch(function(){});
+  });
 }
 function storyBuildTeamOptions(){
   const select=document.getElementById('storyTeamSelect');if(!select)return;const saved=storySavedTeamId();
@@ -8928,7 +9015,7 @@ function storyHidePresentation(){
   // 離開故事畫面時一定要一起收掉。漏掉的話（尤其是章節結束的落幕層）它會蓋在選單上、
   // 又因為整片 inset:0 攔截所有點擊，看起來就像整個畫面卡死、完全點不動。
   ['storyNarration','storyPlayerLine','storyChapterSplash','storyMotto','storyComplete'].forEach(id=>{const el=document.getElementById(id);if(!el)return;el.classList.add('hidden');if(id==='storyNarration'||id==='storyPlayerLine')el.innerHTML='';});
-  ['storyActorLeft','storyActorRight'].forEach(id=>{const el=document.getElementById(id);el.className='story-actor '+(id.endsWith('Left')?'left':'right');el.removeAttribute('src');});
+  ['storyActorLeft','storyActorRight'].forEach(id=>{const el=document.getElementById(id);el.className='story-actor '+(id.endsWith('Left')?'left':'right');el.removeAttribute('src');el.dataset.actorSrc='';});
 }
 function storyUpdateChapterStatus(){
   const progress=loadStoryStageProgress(),black=progress.routes.black.cleared.length,white=progress.routes.white.cleared.length,total=black+white;
@@ -9221,24 +9308,51 @@ function storyFateVisualHtml(route,data){
     return {x:link.x1+(link.x2-link.x1)*t,y:link.y1+(link.y2-link.y1)*t};
   };
   const labelBoxes=[];
-  const labelClear=function(x,y){
-    if(hitsCard(x,y,null))return false;
-    return !labelBoxes.some(b=>Math.abs(b.x-x)<74&&Math.abs(b.y-y)<20);
+  // 使用者再次反應「綠線上面的字還是會被卡片擋住」：上一版只拿標籤的「中心點」去問 hitsCard()，
+  // 但標籤是一個最寬 130px 的膠囊（.story-fate-edge-label，white-space:nowrap＋translate(-50%,-50%)），
+  // 中心點閃過卡片不代表兩端也閃過；而卡片 z-index:3 比標籤的 2 高，只要壓到一點點，卡片就會
+  // 整片蓋在文字上面。改成用標籤「實際的矩形」去判定（寬度依字數估算，跟 CSS 的 font-size:10px
+  // ／padding:4px 9px／max-width:130px 對齊；小尺寸版本 font-size:8px／padding:2px 6px 另計）。
+  const labelHalfH=small?7:10;
+  const labelHalfW=function(text){
+    const chars=String(text||'').length;
+    const w=Math.min(small?104:130,(small?8:10)*chars+(small?12:18));
+    return w/2;
+  };
+  const rectsOverlap=function(ax,ay,ahw,ahh,bx,by,bhw,bhh){
+    return Math.abs(ax-bx)<(ahw+bhw)&&Math.abs(ay-by)<(ahh+bhh);
+  };
+  const labelClear=function(x,y,hw){
+    // 標籤整個矩形都不能碰到任何一張卡片（用矩形對矩形，不再只看中心點）。
+    const hitCard=cardRects.some(function(rc){
+      return rectsOverlap(x,y,hw,labelHalfH, rc.x+rc.w/2, rc.y+rc.h/2, rc.w/2+PAD, rc.h/2+PAD);
+    });
+    if(hitCard)return false;
+    return !labelBoxes.some(b=>rectsOverlap(x,y,hw,labelHalfH,b.x,b.y,b.hw,labelHalfH+2));
   };
   const edgeLabels=links.filter(link=>link.labeled).map(link=>{
+    const text=link.seen?link.text:'？？？';
+    const hw=labelHalfW(text);
     // 由中點往外找：0.5, 0.42, 0.58, 0.34, 0.66 …
     const offsets=[0,-.08,.08,-.16,.16,-.24,.24,-.32,.32];
     let spot=null;
     for(const off of offsets){
       const t=.5+off;if(t<=.08||t>=.92)continue;
       const p=pointOnLink(link,t);
-      if(labelClear(p.x,p.y)){spot=p;break;}
+      if(labelClear(p.x,p.y,hw)){spot=p;break;}
     }
     if(!spot){
-      spot=pointOnLink(link,.5);
-      for(let guard=0;guard<14&&!labelClear(spot.x,spot.y);guard++)spot={x:spot.x,y:spot.y+21};
+      // 沿線都找不到乾淨的位置：從中點開始往上下推，直到整個矩形都離開卡片為止。
+      // 往上跟往下交替嘗試，取先成功的那一邊，避免一律往下推而全部擠在同一側。
+      const mid=pointOnLink(link,.5);
+      for(let step=1;step<=16&&!spot;step++){
+        const dy=step*13;
+        if(labelClear(mid.x,mid.y-dy,hw))spot={x:mid.x,y:mid.y-dy};
+        else if(labelClear(mid.x,mid.y+dy,hw))spot={x:mid.x,y:mid.y+dy};
+      }
+      if(!spot)spot=mid;
     }
-    labelBoxes.push({x:spot.x,y:spot.y});
+    labelBoxes.push({x:spot.x,y:spot.y,hw:hw});
     return '<span class="story-fate-edge-label '+(link.seen?'seen':'')+'" style="left:'+spot.x+'px;top:'+spot.y+'px">'+(link.seen?escHtml(link.text):'？？？')+'</span>';
   }).join('');
   const choiceNodes=defs.map(node=>{const pos=nodePos.get(Number(node.block)),seen=storyWasBlockVisited(route,node.block,data),incoming=storyFateIncoming(route,node.block);return '<div class="story-fate-visual-node '+(seen?'discovered':'')+'" style="left:'+pos.x+'px;top:'+pos.y+'px"><div class="story-fate-visual-node-title">'+(seen?escHtml(node.title):'？？？')+'</div><div class="story-fate-visual-node-meta">'+(seen?(incoming?'由「'+escHtml(incoming.parent.title)+'」選擇「'+escHtml(incoming.choice)+'」抵達':'分支起點'):'尚未探索此選擇點')+'</div><button type="button" class="story-fate-replay" data-story-replay-block="'+node.block+'" '+(seen?'':'disabled')+'>從此節點回溯</button></div>';}).join('');
@@ -9427,7 +9541,7 @@ function storyRenderStage(beat){
   const stage=document.getElementById('storyStage');
   if(beat&&beat.cg){
     if(stage)stage.classList.add('cg-scene');
-    [left,right].forEach(el=>{el.classList.remove('visible','active');el.removeAttribute('src');});return;
+    [left,right].forEach(el=>{el.classList.remove('visible','active');el.removeAttribute('src');el.dataset.actorSrc='';});return;
   }
   if(stage)stage.classList.remove('cg-scene');
   const normalized=storyNormalizeSpeaker(beat.speaker),isPlayer=normalized===(playerName||'玩家')||normalized==='玩家',isChoice=beat.type==='choice';
@@ -9439,7 +9553,35 @@ function storyRenderStage(beat){
   const slots=[null,null],slotByPortrait={},uniquePortraits=[];let nextSlot=0;
   sequence.forEach(p=>{if(slotByPortrait[p.src]===undefined){slotByPortrait[p.src]=nextSlot;nextSlot=(nextSlot+1)%2;uniquePortraits.push(p.src);}slots[slotByPortrait[p.src]]=p;});
   const cast=uniquePortraits.length<=1?slots.filter(Boolean):slots;
-  [left,right].forEach((el,i)=>{const p=cast[i];const pos=cast.length===1&&i===0?'center':(i===0?'left':'right');el.className='story-actor '+pos;if(!p){el.removeAttribute('src');el.alt='';return;}el.src=p.src;el.alt=p.name;el.classList.add('visible');if(active&&p.src===active.src)el.classList.add('active');el.onerror=function(){this.classList.remove('visible','active');};});
+  // 使用者反應「點選項會看到破圖」：立繪原本是直接 el.src=新圖 ——還沒快取過的大張 PNG
+  // 會邊下載邊解碼邊畫（漸進式渲染），畫面上就是上半張有、下半張還沒出來的破圖。CG 那邊
+  // （storySetCg()）早就為同一個問題改成「背景 Image() 預載＋解碼完成才真的換圖」，立繪
+  // 這裡比照辦理：同一張圖（dataset.actorSrc 相同）直接同步套 class，不重載；換圖才走
+  // 預載流程，載好前維持原樣（或空白），不會再有半張圖。
+  [left,right].forEach((el,i)=>{
+    const p=cast[i];const pos=cast.length===1&&i===0?'center':(i===0?'left':'right');
+    el.className='story-actor '+pos;
+    if(!p){el.dataset.actorSrc='';el.removeAttribute('src');el.alt='';return;}
+    el.alt=p.name;
+    const isActive=!!(active&&p.src===active.src);
+    if(el.dataset.actorSrc===p.src){
+      el.classList.add('visible');
+      if(isActive)el.classList.add('active');
+      return;
+    }
+    el.dataset.actorSrc=p.src;
+    const pre=new Image();
+    pre.onload=function(){
+      if(el.dataset.actorSrc!==p.src)return; // 已被更後面的渲染換掉，放棄這次結果
+      el.src=p.src;el.classList.add('visible');
+      if(isActive)el.classList.add('active');
+    };
+    pre.onerror=function(){
+      if(el.dataset.actorSrc===p.src){el.dataset.actorSrc='';el.removeAttribute('src');el.classList.remove('visible','active');}
+    };
+    pre.src=p.src;
+    if(pre.decode)pre.decode().catch(function(){});
+  });
 }
 function storyFinishReveal(){
   if(!storyReveal)return false;
@@ -9489,7 +9631,19 @@ function storyRenderCurrent(){
   storyRenderStage(beat);
   if(beat.type==='choice'){const ctx=storyRun.lastContext;if(ctx&&ctx.text){dialog.classList.remove('hidden');dialog.classList.toggle('context-narration',ctx.type==='narration');const row=document.getElementById('storySpeakerRow');row.classList.toggle('hidden',!ctx.speaker);document.getElementById('storySpeaker').textContent=ctx.speaker||'';storySetSpeakerAvatar(ctx.speaker||'');document.getElementById('storyText').textContent=ctx.text;document.getElementById('storyContinueHint').textContent='請選擇回應';}choices.classList.remove('hidden');const revealState=storyRun.replayMode||loadStoryStageProgress().routes[storyRun.route].cleared.includes(storyRun.stageNumber);choices.innerHTML=beat.choices.map(c=>{const seen=storyWasChoiceVisited(storyRun.route,storyRun.block,c);return '<button type="button" class="story-choice '+(revealState?(seen?'seen':'unseen'):'')+'" data-choice="'+escHtml(c)+'">'+escHtml(c)+(revealState?'<span class="story-choice-state">'+(seen?'✓ 已探索':'◇ 未探索')+'</span>':'')+'</button>';}).join('');choices.querySelectorAll('.story-choice').forEach(btn=>btn.onclick=e=>{e.stopPropagation();storyChoose(btn.dataset.choice);});return;}
   let speaker=beat.speaker||'',text=beat.text||'',hint='點擊任意位置繼續 ◆';
-  if(beat.type==='battle'){speaker=beat.boss?'Boss戰':'故事戰鬥';text=beat.boss?'無名戰士擋住了前路。準備迎戰守關者。':'魔物出現了。使用選定的故事隊伍進入戰鬥。';hint='點擊任意位置'+(storyPreviewMode?'跳過戰鬥':'開始戰鬥')+' ◆';}
+  if(beat.type==='battle'){speaker=beat.boss?'Boss戰':'故事戰鬥';text=beat.boss?'無名戰士擋住了前路。準備迎戰守關者。':'魔物出現了。使用選定的故事隊伍進入戰鬥。';hint='點擊任意位置'+(storyPreviewMode?'跳過戰鬥':'開始戰鬥')+' ◆';
+    // 使用者反應「故事裡戰鬥的立繪出現得很慢，真的有先載入嗎？」：有載入，但時機太晚——
+    // startGame() 裡那次預載跟戰鬥畫面渲染幾乎同時發生，等於沒搶到時間。故事其實在「戰鬥
+    // 提示畫面」這一拍就已經知道雙方名單了（玩家隊伍＝storySelectedTeam()，對手＝beat 的
+    // boss/opponentIds 設定），玩家還要讀提示、再點一下才真的開戰，這段真實時間拿來下載。
+    try{
+      const team=typeof storySelectedTeam==='function'?storySelectedTeam():null;
+      if(team&&typeof preloadBattleArt==='function')preloadBattleArt(team.characterIds);
+      const isBoss=beat.kind?beat.kind==='boss':!!beat.boss;
+      const foeIds=isBoss?[(beat.bossMonsterId||'m001')]:(Array.isArray(beat.opponentIds)&&beat.opponentIds.length?beat.opponentIds:['020','018','008']);
+      if(typeof preloadBattleArt==='function')preloadBattleArt(foeIds);
+    }catch(e){}
+  }
   else if(beat.type==='reward'){speaker='角色加入';text='獲得角色：'+beat.name;hint='點擊領取並繼續 ◆';}
   else if(beat.type==='score'){speaker='選擇的影響';text=beat.label+(beat.amount>=0?'＋':'－')+Math.abs(beat.amount);}
   else if(beat.type==='complete'){speaker='第一章　完';text=storyRun.route==='white'?'願每一枚棋子，都不被忘記。':'願望不會停止，棋局仍將繼續。';hint='點擊完成章節 ◆';}
@@ -10142,7 +10296,11 @@ function statusPresentation(key){
 // "lasts the whole match". 普通模式可用100秒上限判斷常駐；故事模式不限時，因此只把真正使用
 // 超大秒數的狀態視為常駐，避免120秒等一般狀態被誤標。
 function statusRemainText(remain){
-  const permanentThreshold = state && state.unlimitedTime ? 999000 : ROUND_CAP*ROUND_SECONDS;
+  // 使用者反應「荒野孤狼野性狀態顯示999s很醜」：durSec:999 這類「整場有效」的狀態，在不限時
+  // 戰鬥（故事戰）裡原本的門檻是999000，999秒遠低於它，就照實印出999s。改成固定900秒以上
+  // 一律視為常駐——遊戲內時鐘一回合走10秒，900秒＝90回合，不管限不限時都不可能真的倒數完，
+  // 印秒數沒有資訊價值；限時模式維持原本「超過整場上限就是常駐」的更低門檻。
+  const permanentThreshold = Math.min(900, state && state.unlimitedTime ? 900 : ROUND_CAP*ROUND_SECONDS);
   return remain >= permanentThreshold ? '常駐' : (remain+'s');
 }
 // compact（共用一格、橫向並排，見 renderUnitBlock()）時每個標籤能用的寬度非常窄。標籤文字本身
@@ -10207,6 +10365,13 @@ function renderUnitBlock(u, isActing, compact, displaySlot){
   const div = document.createElement('div');
   div.id = 'unit-'+u.id; // stable anchor so playPendingEffects() can find this unit's fresh DOM node after each render()
   div.className = 'unit'+(u.alive?'':' dead')+(isActing?' current-turn':'')+(!isVisible(u)?' stealth':'');
+  // 使用者反應「移動動畫還沒結束，移動後的圖就先出來了」：移動分身（.move-ghost）飛行期間，
+  // 原本只把「當下那顆」目的地元素設成 visibility:hidden，但 render() 每次都整個重建棋盤DOM，
+  // 分身還在飛的途中只要再發生一次 render()（下一位的回合幾乎立刻接上來），重建出來的新元素
+  // 是可見的，於是「角色已經站在目的地」跟「分身還在半路」同時出現在畫面上。改用一份
+  // 「移動動畫進行中的單位」名單（window.__unitsMidMoveAnim，playPendingEffects() 維護），
+  // 重建DOM時查名單，還在飛的單位一律先藏起來，等分身抵達的 cleanup 再統一現形。
+  if(window.__unitsMidMoveAnim && window.__unitsMidMoveAnim[u.id] > Date.now()) div.style.visibility='hidden';
   // 戰鬥畫面的角色卡立繪：用橫向立繪(_wide.png)，B方（畫面右側）鏡像水平翻轉，讓兩邊的角色
   // 視覺上都「面對」棋盤中央對方。絕大多數角色目前還沒有畫真的立繪，圖片 404 時只把 <img> 自己
   // 拿掉（onerror），底下墊著一個放大版的生成頭像 SVG（跟小圓形頭像同一套生成邏輯，見
