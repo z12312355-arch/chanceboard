@@ -3550,6 +3550,13 @@ function preloadBattleArtForTeam(team){
 // 故事王、故事固定對手、隨機AI）連「早一步預先知道名單」的時機都沒有，只能在 startGame() 裡
 // 名單一確定就立刻補（見那裡的呼叫），雖然比進戰鬥畫面才臨時下載早不了太多，但下載本身是
 // 非同步、不擋畫面，多少還是能搶到一點時間差，好過完全沒預載。
+// 使用者反應「角色圖、戰鬥的招式圖，也很常第一次不出現」：招式圖（出招時彈出的滿版插畫，
+// 見 .move-splash-img／entityImageSrc(baseId,'sword'/'gun'/'magic'/'wish')）原本完全不在
+// 這個函式的預載清單裡——只顧到立繪本身（full/wide），招式插畫是玩家真的出那招的當下才第一次
+// 下載，難怪常常「第一次不出現」（其實是圖片還在下載，不是真的壞掉）。這裡補上四個招式檔案，
+// 但刻意跟立繪分兩個優先度：立繪（開戰第一眼就會看到）維持 fetchPriority:'high'，招式插畫
+// （通常要等玩家真的出招，多少有一兩回合的餘裕）維持瀏覽器預設優先度，避免4種招式×3名角色
+// 這些比較重的檔案（1080×1920，每張快2MB）搶走立繪的頻寬，反而讓真正第一眼要看到的立繪變慢。
 function preloadBattleArt(ids){
   try{
     (ids||[]).slice(0,3).forEach(function(id){
@@ -3558,6 +3565,16 @@ function preloadBattleArt(ids){
         if(window.__imgExistCache && window.__imgExistCache[src]===false) return;
         const img=new Image();
         try{ img.fetchPriority='high'; }catch(e){}
+        img.decoding='async';
+        img.onload=function(){ window.__imgExistCache[src]=true; };
+        img.onerror=function(){ window.__imgExistCache[src]=false; };
+        img.src=src;
+        if(img.decode) img.decode().catch(function(){});
+      });
+      ['sword','gun','magic','wish'].forEach(function(suffix){
+        const src=entityImageSrc(id, suffix);
+        if(window.__imgExistCache && window.__imgExistCache[src]===false) return;
+        const img=new Image();
         img.decoding='async';
         img.onload=function(){ window.__imgExistCache[src]=true; };
         img.onerror=function(){ window.__imgExistCache[src]=false; };
@@ -9666,6 +9683,15 @@ function goToTeamPick(mode){
   renderTeamPick();
 }
 
+// 使用者反應「角色圖、招式圖第一次常常不出現」：startGame() 裡的 preloadBattleArt() 是本機
+// 模式唯一的預載時機，但那時候戰鬥畫面幾乎同時就要畫出來，下載才剛起步，多少還是會看到空白/
+// 慢半拍。單人／本機雙人這裡其實更早就知道玩家選了哪支隊伍——「挑隊伍」畫面點下卡片那一刻
+// （還沒按「開始遊戲」），比 startGame() 早了「玩家看畫面、確認、再點一次」這段真實時間，
+// 借這段時間差先動手下載。
+function preloadTeamBattleArt(teamId){
+  const team = teams.find(t=>t.id===teamId);
+  if(team && typeof preloadBattleArt==='function') preloadBattleArt(team.characterIds);
+}
 function renderTeamPick(){
   const isTwo = pendingMode==='two' || pendingMode==='two1v1';
   const is1v1 = pendingMode==='single1v1' || pendingMode==='two1v1';
@@ -9714,10 +9740,10 @@ function renderTeamPick(){
     return wrap;
   }
   if(isTwo){
-    body.appendChild(buildTeamPickerList('⚫ 黑方', id=>{ pendingTeamIdA = id; }));
-    body.appendChild(buildTeamPickerList('⚪ 白方', id=>{ pendingTeamIdB = id; }));
+    body.appendChild(buildTeamPickerList('⚫ 黑方', id=>{ pendingTeamIdA = id; preloadTeamBattleArt(id); }));
+    body.appendChild(buildTeamPickerList('⚪ 白方', id=>{ pendingTeamIdB = id; preloadTeamBattleArt(id); }));
   } else {
-    body.appendChild(buildTeamPickerList('你的隊伍', id=>{ pendingTeamIdA = id; }));
+    body.appendChild(buildTeamPickerList('你的隊伍', id=>{ pendingTeamIdA = id; preloadTeamBattleArt(id); }));
   }
   updateTeamPickSelection();
 }
