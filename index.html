@@ -165,7 +165,7 @@
   /* Stage selection is a one-screen game map: horizontal scrolling only. */
   .story-menu-card.stage-map-mode{height:min(650px,calc(100vh - 24px));max-height:none;overflow:hidden;display:flex;flex-direction:column}.stage-map-mode .story-menu-head{flex:0 0 auto}.stage-map-mode #storyStagePanel:not(.hidden){display:flex;flex:1 1 auto;min-height:0;flex-direction:column;overflow:hidden}.stage-map-mode .story-stage-shell{flex:1 1 auto;min-height:220px;overflow:hidden}.stage-map-mode .story-stage-scroll{height:100%;overflow-x:auto;overflow-y:hidden}.stage-map-mode .story-stage-map,.stage-map-mode .story-stage-row{height:100%}.stage-map-mode .story-stage-row{grid-template-rows:minmax(0,1fr) auto}.stage-map-mode .story-stage-node{height:100%;min-height:0}.stage-map-mode .story-stage-toolbar,.stage-map-mode #storyMenuActions,.stage-map-mode #storyLoadMessage{flex:0 0 auto}
   /* Spatial fate graph: the fixed canvas makes choice-to-result causality visible. */
-  .story-fate-visual-scroll{overflow-x:auto;overflow-y:hidden;margin:12px -5px 18px;padding:5px 5px 18px;scrollbar-color:#d3a83f rgba(255,255,255,.08)}.story-fate-visual-scroll::-webkit-scrollbar{height:12px}.story-fate-visual-scroll::-webkit-scrollbar-track{border-radius:999px;background:rgba(255,255,255,.07)}.story-fate-visual-scroll::-webkit-scrollbar-thumb{border:3px solid transparent;border-radius:999px;background:#d3a83f padding-box}.story-fate-canvas{position:relative;width:1100px;height:610px;border:1px solid rgba(122,139,181,.28);border-radius:16px;background:radial-gradient(circle at 12% 50%,rgba(242,193,78,.08),transparent 22%),linear-gradient(135deg,rgba(15,20,34,.95),rgba(8,11,20,.98));overflow:hidden}.story-fate-svg{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}.story-fate-link{fill:none;stroke:#47516c;stroke-width:2}.story-fate-link.seen{stroke:#75d897;stroke-width:3;filter:drop-shadow(0 0 4px rgba(117,216,151,.35))}.story-fate-edge-label{position:absolute;z-index:2;transform:translate(-50%,-50%);max-width:130px;border:1px solid #4d5874;border-radius:999px;padding:4px 9px;background:#101522;color:#78839d;font-size:10px;white-space:nowrap}.story-fate-edge-label.seen{border-color:rgba(117,216,151,.65);background:#12251d;color:#b9f0ca}.story-fate-visual-node{position:absolute;z-index:3;width:220px;min-height:128px;border:1px solid #47516d;border-radius:13px;padding:12px;background:linear-gradient(145deg,rgba(28,34,52,.98),rgba(13,17,29,.98));color:#7f899f;box-shadow:0 12px 26px rgba(0,0,0,.32)}.story-fate-visual-node.discovered{border-color:rgba(242,193,78,.58);color:#e8edf9}.story-fate-visual-node.outcome.discovered{border-color:rgba(117,216,151,.55);background:linear-gradient(145deg,rgba(24,50,38,.96),rgba(12,24,21,.98))}.story-fate-visual-node-title{font-size:14px;font-weight:900;color:inherit}.story-fate-visual-node-meta{margin-top:6px;color:#8f9ab4;font-size:10px;line-height:1.5}.story-fate-visual-node.discovered .story-fate-visual-node-meta{color:#c6cee1}.story-fate-visual-node .story-fate-replay{width:100%;margin-top:9px;padding:6px 8px;font-size:10px}.story-fate-column-label{position:absolute;top:14px;z-index:1;color:#79849f;font-size:10px;font-weight:850;letter-spacing:.14em}.story-fate-scroll-note{color:#909ab3;font-size:10px;text-align:center;margin-top:-10px}
+  .story-fate-visual-scroll{overflow-x:auto;overflow-y:hidden;margin:12px -5px 18px;padding:5px 5px 18px;scrollbar-color:#d3a83f rgba(255,255,255,.08)}.story-fate-visual-scroll::-webkit-scrollbar{height:12px}.story-fate-visual-scroll::-webkit-scrollbar-track{border-radius:999px;background:rgba(255,255,255,.07)}.story-fate-visual-scroll::-webkit-scrollbar-thumb{border:3px solid transparent;border-radius:999px;background:#d3a83f padding-box}.story-fate-canvas{position:relative;width:1100px;height:610px;border:1px solid rgba(122,139,181,.28);border-radius:16px;background:radial-gradient(circle at 12% 50%,rgba(242,193,78,.08),transparent 22%),linear-gradient(135deg,rgba(15,20,34,.95),rgba(8,11,20,.98));overflow:hidden}.story-fate-svg{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}.story-fate-link{fill:none;stroke:#47516c;stroke-width:2}.story-fate-link.seen{stroke:#75d897;stroke-width:3;filter:drop-shadow(0 0 4px rgba(117,216,151,.35))}.story-fate-edge-label{position:absolute;z-index:4;pointer-events:none;transform:translate(-50%,-50%);max-width:130px;border:1px solid #4d5874;border-radius:999px;padding:4px 9px;background:#101522;color:#78839d;font-size:10px;white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,.55)}.story-fate-edge-label.seen{border-color:rgba(117,216,151,.65);background:#12251d;color:#b9f0ca}.story-fate-visual-node{position:absolute;z-index:3;width:220px;min-height:128px;border:1px solid #47516d;border-radius:13px;padding:12px;background:linear-gradient(145deg,rgba(28,34,52,.98),rgba(13,17,29,.98));color:#7f899f;box-shadow:0 12px 26px rgba(0,0,0,.32)}.story-fate-visual-node.discovered{border-color:rgba(242,193,78,.58);color:#e8edf9}.story-fate-visual-node.outcome.discovered{border-color:rgba(117,216,151,.55);background:linear-gradient(145deg,rgba(24,50,38,.96),rgba(12,24,21,.98))}.story-fate-visual-node-title{font-size:14px;font-weight:900;color:inherit}.story-fate-visual-node-meta{margin-top:6px;color:#8f9ab4;font-size:10px;line-height:1.5}.story-fate-visual-node.discovered .story-fate-visual-node-meta{color:#c6cee1}.story-fate-visual-node .story-fate-replay{width:100%;margin-top:9px;padding:6px 8px;font-size:10px}.story-fate-column-label{position:absolute;top:14px;z-index:1;color:#79849f;font-size:10px;font-weight:850;letter-spacing:.14em}.story-fate-scroll-note{color:#909ab3;font-size:10px;text-align:center;margin-top:-10px}
   /* Fate map follows the same one-screen rule as stage selection: horizontal only. */
   #storyFateOverlay{padding:8px}.story-fate-panel{height:min(680px,calc(100vh - 16px));max-height:none;overflow:hidden}.story-fate-head{flex:0 0 auto}.story-fate-graph{flex:1 1 auto;min-height:0;overflow:hidden;padding:12px 16px 14px}.story-fate-visual-scroll{height:100%;margin:0;padding:0 0 14px;overflow-x:auto;overflow-y:hidden}.story-fate-canvas{height:100%;min-height:0}.story-fate-scroll-note,.story-fate-legend{display:none}.story-fate-head .hidden{display:none}
   #storyMenuActions{display:flex;gap:9px;align-items:center;flex-wrap:wrap;margin-top:18px;}
@@ -410,11 +410,23 @@
   .lobby-icon-btn.lobby-btn-upcoming::after{content:'開發中';position:absolute;top:-5px;right:-5px;
     padding:1px 4px;border-radius:6px;background:rgba(10,12,18,.92);border:1px solid rgba(151,163,190,.35);
     color:var(--muted);font-size:8px;line-height:1.25;text-shadow:none;}
-  #lobbySideRail{position:absolute;right:12px;top:50%;transform:translateY(-50%);z-index:3;
-    display:flex;flex-direction:column;gap:9px;}
+  /* 使用者反應「設定被擋住了」（附圖：右上角⚙️被直欄第一顆鈕壓住）：直欄原本用 top:50%
+     ＋translateY(-50%) 做「畫面垂直置中」，但直欄本身高度固定（6顆54px＋間距≈369px），
+     視窗一矮，置中後的「上緣」就會爬進頂部橫條的高度範圍，DOM順序又在橫條後面、同樣
+     z-index:3，於是整顆蓋在⚙️設定上。改成不猜置中位置：上緣鎖在頂部橫條下方（top:84px）、
+     下緣鎖在主功能列上方（bottom:118px），在這個「保證不相撞」的區間內用 justify-content:
+     center 自己置中；視窗再矮就靠下面的 max-height 媒體查詢把鈕縮小，結構上不可能再疊到。 */
+  #lobbySideRail{position:absolute;right:12px;top:84px;bottom:118px;z-index:3;
+    display:flex;flex-direction:column;gap:9px;justify-content:center;}
   #lobbySideRail .lobby-icon-btn{width:54px;height:54px;border-radius:14px;}
   #lobbySideRail .lobby-icon-btn .lobby-btn-icon{font-size:20px;}
   #lobbySideRail .lobby-icon-btn .lobby-btn-label{font-size:10px;}
+  @media (max-height:640px){
+    #lobbySideRail{gap:6px;}
+    #lobbySideRail .lobby-icon-btn{width:44px;height:44px;border-radius:11px;}
+    #lobbySideRail .lobby-icon-btn .lobby-btn-icon{font-size:16px;}
+    #lobbySideRail .lobby-icon-btn .lobby-btn-label{font-size:9px;}
+  }
   /* 底部主功能列：右大左小，「決鬥」是主CTA（金框＋掃光），符合「主按鈕在右下角最大顆」慣例。 */
   #lobbyMainRow{position:absolute;left:0;right:80px;bottom:0;z-index:2;
     display:flex;justify-content:flex-end;align-items:flex-end;gap:12px;
@@ -451,11 +463,20 @@
     #lobbyHeroArt::before{background:linear-gradient(to top, rgba(6,7,11,.95) 0%, rgba(6,7,11,.4) 45%, transparent 80%);}
     #lobbyTopBar{flex-wrap:wrap;row-gap:8px;}
     /* 手機：右側直欄改成貼在主功能列上方的橫向一排，避免吃掉狹窄畫面的水平空間。 */
-    #lobbySideRail{top:auto;bottom:132px;right:0;left:0;transform:none;
-      flex-direction:row;justify-content:center;flex-wrap:wrap;padding:0 10px;}
-    #lobbyMainRow{right:0;flex-wrap:wrap;justify-content:center;}
-    .lobby-main-btn{width:clamp(88px,26vw,110px);}
-    .lobby-main-primary{width:clamp(120px,34vw,150px);}
+    /* 手機：使用者說「沒看過哪款熱門手遊會設計成這樣」——之前主功能列 flex-wrap:wrap，
+       窄螢幕上四顆鈕折成兩行、直欄又用猜的 bottom:132px 疊在上面，整個下半部亂成一團。
+       改成熱門手遊的標準做法：主功能列永遠一排（鈕用 vw 縮到塞得下）、直欄橫排緊貼其上，
+       兩塊各自固定一行高，不再互相交疊。 */
+    #lobbySideRail{top:auto;bottom:118px;right:0;left:0;
+      flex-direction:row;justify-content:center;flex-wrap:nowrap;padding:0 8px;gap:7px;}
+    #lobbySideRail .lobby-icon-btn{width:48px;height:48px;}
+    #lobbyMainRow{right:0;flex-wrap:nowrap;justify-content:center;gap:6px;padding:12px 8px 14px;}
+    .lobby-main-btn{width:clamp(64px,20vw,110px);height:clamp(64px,9vh,92px);}
+    .lobby-main-btn .lobby-btn-icon{font-size:21px;}
+    .lobby-main-btn .lobby-btn-label{font-size:11.5px;}
+    .lobby-main-primary{width:clamp(96px,30vw,150px);height:clamp(80px,11vh,116px);}
+    .lobby-main-primary .lobby-btn-icon{font-size:27px;}
+    .lobby-main-primary .lobby-btn-label{font-size:14px;letter-spacing:1px;}
   }
 
   /* ==================== 隊伍列表畫面（同一套暗黑奇幻二次元手遊風）====================
@@ -2314,7 +2335,7 @@
     </div>
     <div id="lobbyMainRow">
       <button type="button" class="lobby-main-btn hidden" id="lobbySoloBtn">
-        <span class="lobby-btn-icon">⚔️</span>
+        <span class="lobby-btn-icon">🤖</span>
         <span class="lobby-btn-label">單人對戰</span>
         <span class="lobby-btn-desc">挑一支隊伍，跟電腦對戰</span>
       </button>
@@ -2338,8 +2359,10 @@
         <span class="lobby-btn-label">故事</span>
         <span class="lobby-btn-desc">第一章開放</span>
       </button>
+      <!-- 使用者要求「大廳 決鬥的圖示換一下」：🌐（地球）跟「決鬥」的戰鬥感搭不起來，
+           換成 ⚔️ 交叉雙劍（決鬥的直覺符號）。原本用 ⚔️ 的 lobbySoloBtn 是隱藏鈕，改給 🤖（對電腦）。 -->
       <button type="button" class="lobby-main-btn lobby-main-primary" id="lobbyOnlineBtn">
-        <span class="lobby-btn-icon">🌐</span>
+        <span class="lobby-btn-icon">⚔️</span>
         <span class="lobby-btn-label">決鬥</span>
         <span class="lobby-btn-desc">與其他玩家即時對戰</span>
       </button>
@@ -9322,14 +9345,20 @@ function storyFateVisualHtml(route,data){
   const rectsOverlap=function(ax,ay,ahw,ahh,bx,by,bhw,bhh){
     return Math.abs(ax-bx)<(ahw+bhw)&&Math.abs(ay-by)<(ahh+bhh);
   };
-  const labelClear=function(x,y,hw){
-    // 標籤整個矩形都不能碰到任何一張卡片（用矩形對矩形，不再只看中心點）。
-    const hitCard=cardRects.some(function(rc){
+  const hitsAnyCard=function(x,y,hw){
+    return cardRects.some(function(rc){
       return rectsOverlap(x,y,hw,labelHalfH, rc.x+rc.w/2, rc.y+rc.h/2, rc.w/2+PAD, rc.h/2+PAD);
     });
-    if(hitCard)return false;
-    return !labelBoxes.some(b=>rectsOverlap(x,y,hw,labelHalfH,b.x,b.y,b.hw,labelHalfH+2));
   };
+  const hitsOtherLabel=function(x,y,hw){
+    return labelBoxes.some(b=>rectsOverlap(x,y,hw,labelHalfH,b.x,b.y,b.hw,labelHalfH+2));
+  };
+  // 使用者反應「手機看命運棋譜時，綠色的字沒有在線上面」：上一版找不到乾淨位置時會把標籤
+  // 垂直推離線最多 16×13px，小畫面卡片密、幾乎每個標籤都走到這條 fallback，結果整排標籤
+  // 飄在半空中，跟線對不起來。改成標籤「永遠釘在線上」：CSS 把標籤 z-index 提到卡片(3)之上
+  // （z-index:4）＋pointer-events:none，就算跟卡片重疊文字也不會被蓋住、卡片也照樣能點；
+  // 這裡的取樣只是「盡量」挑不壓卡片、不撞其他標籤的線上位置，挑不到就退而求其次，
+  // 但無論如何都在線上。
   const edgeLabels=links.filter(link=>link.labeled).map(link=>{
     const text=link.seen?link.text:'？？？';
     const hw=labelHalfW(text);
@@ -9339,19 +9368,17 @@ function storyFateVisualHtml(route,data){
     for(const off of offsets){
       const t=.5+off;if(t<=.08||t>=.92)continue;
       const p=pointOnLink(link,t);
-      if(labelClear(p.x,p.y,hw)){spot=p;break;}
+      if(!hitsAnyCard(p.x,p.y,hw)&&!hitsOtherLabel(p.x,p.y,hw)){spot=p;break;}
     }
     if(!spot){
-      // 沿線都找不到乾淨的位置：從中點開始往上下推，直到整個矩形都離開卡片為止。
-      // 往上跟往下交替嘗試，取先成功的那一邊，避免一律往下推而全部擠在同一側。
-      const mid=pointOnLink(link,.5);
-      for(let step=1;step<=16&&!spot;step++){
-        const dy=step*13;
-        if(labelClear(mid.x,mid.y-dy,hw))spot={x:mid.x,y:mid.y-dy};
-        else if(labelClear(mid.x,mid.y+dy,hw))spot={x:mid.x,y:mid.y+dy};
+      // 沿線避不開卡片（z-index 已保證文字仍可讀），至少避開其他標籤，免得標籤疊標籤。
+      for(const off of offsets){
+        const t=.5+off;if(t<=.08||t>=.92)continue;
+        const p=pointOnLink(link,t);
+        if(!hitsOtherLabel(p.x,p.y,hw)){spot=p;break;}
       }
-      if(!spot)spot=mid;
     }
+    if(!spot)spot=pointOnLink(link,.5);
     labelBoxes.push({x:spot.x,y:spot.y,hw:hw});
     return '<span class="story-fate-edge-label '+(link.seen?'seen':'')+'" style="left:'+spot.x+'px;top:'+spot.y+'px">'+(link.seen?escHtml(link.text):'？？？')+'</span>';
   }).join('');
@@ -9519,7 +9546,16 @@ function storySetCg(){
   const pre=new Image();
   pre.onload=function(){
     if(img.dataset.cgSrc!==src)return; // 已經被後面的 CG 取代，放棄這次結果
-    [img,blur].forEach(el=>{el.src=src;el.classList.add('show');});
+    // 使用者回報「破圖修了很多次還是會出現」：之前的版本在這裡直接換 src＋加 .show，但
+    // pre 的 onload 只保證「檔案抓完了」，不保證「畫面上那個 <img> 已經解碼成點陣圖」。
+    // 快取一旦被回收（手機記憶體吃緊很常見）或回應標頭不給快取，把 src 塞進畫面元素時
+    // 瀏覽器會重新下載、邊下載邊畫——而 .show 已經加上（透明度1），半張圖就這樣露出來。
+    // 改成：src 塞進「真正掛在畫面上的元素」後，等該元素自己的 decode() 完成才加 .show；
+    // 解碼完成前元素維持 opacity:0，任何時候都不可能看到畫到一半的圖。
+    img.src=src;blur.src=src;
+    const show=function(){if(img.dataset.cgSrc===src)[img,blur].forEach(el=>el.classList.add('show'));};
+    if(img.decode)Promise.all([img.decode(),blur.decode()]).then(show).catch(show);
+    else show();
   };
   pre.onerror=function(){if(img.dataset.cgSrc===src){img.dataset.cgSrc='';clear();}};
   pre.src=src;
@@ -9573,8 +9609,17 @@ function storyRenderStage(beat){
     const pre=new Image();
     pre.onload=function(){
       if(el.dataset.actorSrc!==p.src)return; // 已被更後面的渲染換掉，放棄這次結果
-      el.src=p.src;el.classList.add('visible');
-      if(isActive)el.classList.add('active');
+      // 同 storySetCg()：換完 src 後等「畫面上的元素自己」decode() 完成才顯示。
+      // 光靠 pre 的 onload 不夠——快取被回收時 el.src 會觸發重新下載＋漸進式渲染，
+      // 這正是「點完選項偶爾還是破圖」的來源（點選項後常常正好要換立繪）。
+      el.src=p.src;
+      const show=function(){
+        if(el.dataset.actorSrc!==p.src)return;
+        el.classList.add('visible');
+        if(isActive)el.classList.add('active');
+      };
+      if(el.decode)el.decode().then(show).catch(show);
+      else show();
     };
     pre.onerror=function(){
       if(el.dataset.actorSrc===p.src){el.dataset.actorSrc='';el.removeAttribute('src');el.classList.remove('visible','active');}
@@ -9613,8 +9658,18 @@ let storyFlashTimer=null;
 function storyFlash(text,duration){const el=document.getElementById('storySystemNote');if(storyFlashTimer)clearTimeout(storyFlashTimer);el.textContent=text;el.classList.add('show');storyFlashTimer=setTimeout(()=>{el.classList.remove('show');storyFlashTimer=null;},Math.max(1200,Number(duration)||1800));}
 function storyApplyBeatEvent(beat){if(!storyRun.applied)storyRun.applied={};const key=storyRun.block+':'+storyRun.beat;if(storyRun.applied[key])return;if(beat.type==='score'){storyRun.score=(Number(storyRun.score)||0)+beat.amount;storyRun.applied[key]=true;saveStoryProgress();storyFlash(beat.label+(beat.amount>=0?'＋':'－')+Math.abs(beat.amount));}}
 function storySetSpeakerAvatar(speaker){
-  const avatar=document.getElementById('storySpeakerAvatar'),portrait=storyPortraitForSpeaker(speaker);avatar.classList.toggle('hidden',!portrait);
-  if(!portrait){avatar.removeAttribute('src');avatar.alt='';return;}avatar.src=portrait.src;avatar.alt=portrait.name;avatar.onerror=function(){this.classList.add('hidden');};
+  // 對話框的小頭像原本直接 avatar.src=新圖 就顯示——這是三個故事圖片路徑（CG／立繪／頭像）
+  // 中最後一個沒套「解碼完成才顯示」的，點完選項換說話者時偶爾會看到裂圖示或半張頭像。
+  // 比照 storySetCg()：先藏起來，src 塞進元素後等 decode() 完成才現身；載不到就維持隱藏。
+  const avatar=document.getElementById('storySpeakerAvatar'),portrait=storyPortraitForSpeaker(speaker);
+  if(!portrait){avatar.classList.add('hidden');avatar.removeAttribute('src');avatar.alt='';return;}
+  if(avatar.getAttribute('src')===portrait.src){avatar.classList.remove('hidden');avatar.alt=portrait.name;return;}
+  avatar.classList.add('hidden');
+  avatar.src=portrait.src;avatar.alt=portrait.name;
+  avatar.onerror=function(){this.classList.add('hidden');};
+  const show=function(){if(avatar.getAttribute('src')===portrait.src)avatar.classList.remove('hidden');};
+  if(avatar.decode)avatar.decode().then(show).catch(function(){});
+  else show();
 }
 function storyRenderCurrent(){
   if(!storyRun||!storyRun.active)return storyShowMenu();storyCancelReveal();storyCancelAuto();document.getElementById('storyMenu').classList.add('hidden');document.getElementById('storyChapterTitle').textContent=storyBlockHeader(storyRun.block);document.getElementById('storyRouteBadge').textContent=storyRouteText(storyRun.route)+(storyPreviewMode?'・預覽':storyRun.replayMode?'・命運回溯':'');
