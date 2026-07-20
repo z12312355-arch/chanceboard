@@ -9127,8 +9127,10 @@ function storyParseBlock(blockIndex){
     if(line==='【章節標語】'){const motto=lines[i+1]&&/^「/.test(lines[i+1])?storyStripQuote(lines[++i]):'';push({type:'motto',text:motto});i++;continue;}
     if(storyIsSpeaker(lines,i)){const speaker=line==='玩家'?(playerName||'玩家'):line;i++;while(i<lines.length&&/^「/.test(lines[i])){storySplitDialogue(storyStripQuote(lines[i])).forEach(text=>push({type:'dialogue',speaker,text}));i++;}continue;}
     const narration=[],narrationStart=i;while(i<lines.length){if(lines[i]==='選項'||/^【(進入戰鬥|Boss戰|獲得角色|求生意志|守護之心|章節標語|第一章|CG)/.test(lines[i])||lines[i]==='（CG結束）'||storyIsSpeaker(lines,i))break;const raw=lines[i++];if(!/^（.*）$/.test(raw))narration.push(raw);}
-    // 跑馬燈 CG 的旁白整段保留換行（逐行浮現），其餘一律照句號拆成一句一頁。
-    if(narration.length){const marquee=!!(currentCg&&currentCg.marquee),joined=narration.join(marquee?'\n':' ');if(marquee)push({type:'narration',speaker:'',text:joined});else storySplitNarration(joined).forEach(text=>push({type:'narration',speaker:'',text}));}else if(i===narrationStart)i++;
+    // 跑馬燈 CG 的「開頭那一段」旁白整段保留換行（逐行浮現）；其餘一律照句號拆成一句一頁。
+    // beats.length===0 這個條件要跟 storyRenderCurrent 的 storyRun.beat===0 對齊：只有段落
+    // 第一拍才是蒙太奇，對話之後的旁白是一般敘述。
+    if(narration.length){const marquee=!!(currentCg&&currentCg.marquee)&&beats.length===0,joined=narration.join(marquee?'\n':' ');if(marquee)push({type:'narration',speaker:'',text:joined});else storySplitNarration(joined).forEach(text=>push({type:'narration',speaker:'',text}));}else if(i===narrationStart)i++;
   }return beats;
 }
 function storySetCg(){
@@ -9268,7 +9270,10 @@ function storyRenderCurrent(){
     return;
   }
   storyAppendLog(beat,speaker,text);
-  if(beat.type==='narration'){storyRun.lastContext={type:'narration',speaker:'',text};const openingMarquee=!!(beat&&beat.cg&&beat.cg.marquee);if(openingMarquee)storyPlayCinematic(text);else{narration.textContent=text;narration.classList.remove('hidden');storyScheduleAuto(1700/storySpeed);}return;}
+  if(beat.type==='narration'){storyRun.lastContext={type:'narration',speaker:'',text};// 跑馬燈只用在段落開頭的那段蒙太奇旁白（開場CG、尾聲2）。對話開始之後才出現的旁白
+// （例如開場CG裡小黑講完話後的「她俯視著下方墜落的人群。」）是一般敘述，要走普通旁白框，
+// 不能整段再跑一次跑馬燈——原本的寫法就是只認 beat 0，我把CG一般化時誤擴大到整個段落。
+const openingMarquee=!!(beat&&beat.cg&&beat.cg.marquee)&&storyRun.beat===0;if(openingMarquee)storyPlayCinematic(text);else{narration.textContent=text;narration.classList.remove('hidden');storyScheduleAuto(1700/storySpeed);}return;}
   const normalized=storyNormalizeSpeaker(speaker),isPlayer=beat.type==='dialogue'&&(normalized===(playerName||'玩家')||normalized==='玩家');
   if(isPlayer){const ctx=storyRun.lastContext;if(ctx&&ctx.type==='narration'&&ctx.text){narration.textContent=ctx.text;narration.classList.remove('hidden');}else if(ctx&&ctx.type==='dialogue'&&ctx.text){dialog.classList.remove('hidden');document.getElementById('storySpeaker').textContent=ctx.speaker||'';storySetSpeakerAvatar(ctx.speaker||'');document.getElementById('storyText').textContent=ctx.text;document.getElementById('storyContinueHint').textContent='請選擇回應';}playerLine.classList.remove('hidden');playerLine.innerHTML='<button type="button" class="story-player-line-btn">'+escHtml(text)+'</button>';playerLine.querySelector('button').onclick=function(e){e.stopPropagation();storyAdvance();};storyScheduleAuto(1050/storySpeed);return;}
   if(beat.type==='dialogue'){storyRun.lastNpcLine={speaker,text};storyRun.lastContext={type:'dialogue',speaker,text};}
