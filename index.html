@@ -3505,7 +3505,7 @@ function charFullThumbSrc(id){ return 'images/'+id+'_full_thumb.png'; }
 function charFullThumbOnErrorAttr(id){
   // 使用者反應「還是有點卡，他好像會先跑一個小圖」：問題出在.rcard-art-img原本預設
   // 「先讓小圓頭像(.char-avatar.sm)顯示，等立繪img觸發onload才隱藏」——即使圖片其實
-  // 已經被preloadCharThumbs()預先下載+解碼好、瀏覽器是從快取秒讀，<img>的load事件
+  // 已經被preloadEssentialAssets()預先下載+解碼好、瀏覽器是從快取秒讀，<img>的load事件
   // 天生就是非同步的，不會跟DOM插入同一時間點觸發，所以「先看到小頭像、下一瞬間才換成
   // 立繪」這個swap動作本身一定會被看到，不管圖片多快載完都一樣。改成反過來：預設就
   // 不顯示小頭像（21位角色的縮圖檔案都已確認存在），只有在立繪真的讀取失敗（連_full.png
@@ -3517,38 +3517,14 @@ function charFullThumbOnErrorAttr(id){
 // 使用者反應「為什麼要點擊才會變清楚，不能原本就清楚」：縮圖第一次被插進畫面（不管是
 // 收藏、隊伍列表、雙人選隊伍…）時，瀏覽器才第一次去下載＋解碼那張 _full_thumb.png，
 // 解碼完成前畫面上可能先看到糊糊的過渡狀態，解碼完才變清楚——這就是「要點一下才清楚」
-// 的真正原因（不是點擊本身讓它變清楚，是點擊那次剛好是第一次載入）。修法：一開始（登入
-// 畫面出現後）就在背景把全部角色的縮圖都預先下載＋解碼一次、放進瀏覽器快取，之後不管
-// 玩家走到收藏／隊伍列表／雙人選隊伍哪個畫面，圖片都已經是現成解碼好的，一開始就是清楚的。
+// 的真正原因（不是點擊本身讓它變清楚，是點擊那次剛好是第一次載入）。
 // 使用者反應「進入對戰後，角色也會出現那個小圖」：戰鬥畫面的角色立繪其實用的是另外
 // 兩種檔案（_wide.png橫版立繪、_full.png給charAvatarInnerHtml/招式彈窗等處用的直式立繪），
-// 跟前面只預載的_full_thumb.png是三種不同檔案，完全沒被涵蓋到，所以進戰鬥畫面時這兩種
-// 圖片都還是「第一次載入」，一樣會先看到SVG生成頭像備援、載完才swap成真的立繪。這裡把
-// 三種檔案一次全部預載＋強制解碼，並且成功時直接寫進imgLayerHtml()共用的
-// window.__imgExistCache（跟戰鬥/招式彈窗那邊查的是同一份快取）——這樣戰鬥畫面第一次
-// 建立角色卡片時，__imgExistCache早就已經知道「這張圖讀得到」，一開始就會走
-// display:none那個分支（不顯示SVG備援），不用再等onload才藏起來，就不會再看到
-// 「先SVG小圖、後立繪」的swap閃爍。
-function preloadCharThumbs(){
-  try{
-    (DB.characters||[]).forEach(function(c){
-      // 首頁只預載體積較小的縮圖，避免 20 多名角色的大立繪同時搶網路，
-      // 反而讓真正即將看到的第一張圖變慢。
-      ['images/'+c.id+'_full_thumb.png'].forEach(function(src){
-        const img = new Image();
-        img.decoding = 'async';
-        img.onload = function(){ window.__imgExistCache[src] = true; };
-        img.onerror = function(){ window.__imgExistCache[src] = false; };
-        img.src = src;
-        // 光是設定 src 只保證瀏覽器把檔案「下載」進快取，不保證圖片已經完整「解碼」成可以
-        // 直接畫出來的點陣圖——沒被插進畫面的 Image 物件，很多瀏覽器會把解碼這步延後到真的
-        // 要畫出來那一刻才做。呼叫 img.decode()（Promise，跑在背景，不會擋住畫面）強迫瀏覽器
-        // 現在就把解碼做完，之後不管進哪個畫面，圖片都已經是解碼好可以直接畫出來的狀態。
-        if(img.decode) img.decode().catch(function(){});
-      });
-    });
-  }catch(e){}
-}
+// 跟角色縮圖是三種不同檔案，完全沒被涵蓋到，所以進戰鬥畫面時這兩種圖片都還是「第一次
+// 載入」，一樣會先看到SVG生成頭像備援、載完才swap成真的立繪。見 preloadBattleArt()。
+// （原本這裡有一個只顧角色縮圖的 preloadCharThumbs()，已被下面 preloadEssentialAssets()
+// 取代——那個版本涵蓋角色縮圖＋卡片美術圖，還能回報進度給「進入遊戲」讀取畫面用，函式
+// 名稱改掉是故意的，避免後續改動誤呼叫這個舊版本、變成同一批圖被下載兩次。）
 // 即將投入戰鬥的三名角色才以高優先度下載＋解碼完整立繪。
 // 這個時機比真正進戰鬥畫面早，因此首次看見角色時通常已在瀏覽器快取中。
 function preloadBattleArtForTeam(team){
@@ -3591,24 +3567,76 @@ function preloadBattleArt(ids){
     });
   }catch(e){}
 }
-// 卡片美術圖（4張花色卡 _suitcard.png ＋ 22張花牌 _cardicon.png）原本完全沒有預載，玩家
-// 不管進收藏、隊伍編輯，還是戰鬥手牌，第一次看到某張卡都要重新下載＋解碼，容易看到那一瞬間
-// 的空白。檔案數量少、體積小，比照 preloadCharThumbs() 同一套做法在背景全部預先下載＋解碼一次。
-function preloadCardArt(){
-  try{
-    (DB.cards||[]).forEach(function(card){
-      const src=cardArtIconSrc(card);
-      if(!src) return;
-      const img=new Image();
-      img.decoding='async';
-      img.onload=function(){ window.__imgExistCache[src]=true; };
-      img.onerror=function(){ window.__imgExistCache[src]=false; };
-      img.src=src;
-      if(img.decode) img.decode().catch(function(){});
-    });
-  }catch(e){}
-}
 window.__imgExistCache = window.__imgExistCache || {};
+// 使用者要求「進入遊戲前先載入圖片，跟其他遊戲一樣」：在登入畫面按「進入遊戲」那一刻，蓋一個
+// 讀取畫面，直到「開局就會看到」的圖片（全部角色縮圖＋全部卡片美術圖）真的下載＋解碼完成才放行
+// 進大廳。這份清單刻意不含戰鬥立繪（_full/_wide）——那些只有進戰鬥才看得到，由 startGame() 那邊
+// 個別提前預載（見 preloadBattleArt()），不需要也不該卡在開局讀取畫面裡拖慢進場時間。
+// 讀取本身在 goToLogin() 剛顯示登入畫面那一刻就已經在背景默默進行（見下面 boot 段落的呼叫），
+// 玩家按「進入遊戲」時通常已經下載完大半甚至全部，讀取畫面很少會真的卡住看得到。
+window.__essentialAssetsProgress = window.__essentialAssetsProgress || {done:0, total:0, promise:null, listeners:[]};
+function preloadEssentialAssets(){
+  const progress = window.__essentialAssetsProgress;
+  if(progress.promise) return progress.promise;
+  const urls = [];
+  (DB.characters||[]).forEach(function(c){ urls.push('images/'+c.id+'_full_thumb.png'); });
+  (DB.cards||[]).forEach(function(card){ const src=cardArtIconSrc(card); if(src) urls.push(src); });
+  progress.total = urls.length;
+  progress.done = 0;
+  const notify = function(){
+    progress.listeners.forEach(function(fn){ try{ fn(progress.done, progress.total); }catch(e){} });
+  };
+  progress.promise = Promise.all(urls.map(function(src){
+    return new Promise(function(resolve){
+      const img = new Image();
+      img.decoding = 'async';
+      const finish = function(ok){
+        window.__imgExistCache[src] = ok;
+        const decoded = (ok && img.decode) ? img.decode().catch(function(){}) : Promise.resolve();
+        Promise.resolve(decoded).then(function(){ progress.done++; notify(); resolve(); });
+      };
+      img.onload = function(){ finish(true); };
+      img.onerror = function(){ finish(false); };
+      img.src = src;
+    });
+  }));
+  notify();
+  return progress.promise;
+}
+// 訂閱進度：立刻先回報一次目前進度（可能已經跑到一半甚至跑完了），之後每完成一張再回報一次。
+function onEssentialAssetsProgress(fn){
+  window.__essentialAssetsProgress.listeners.push(fn);
+  fn(window.__essentialAssetsProgress.done, window.__essentialAssetsProgress.total);
+}
+// 「進入遊戲」按下那一刻蓋的讀取畫面（跟跨網對戰的 onlineOverlay 是同一種「全螢幕蓋層＋進度文字」
+// 手法，但這裡不依賴那段程式，各自獨立避免耦合到跨網那套狀態機）。
+let bootLoadingOverlay = null, bootLoadingText = null;
+function showBootLoadingOverlay(){
+  if(!bootLoadingOverlay){
+    if(!document.getElementById('bootLoadingSpinKeyframes')){
+      const styleEl = document.createElement('style');
+      styleEl.id = 'bootLoadingSpinKeyframes';
+      styleEl.textContent = '@keyframes bootLoadingSpin{to{transform:rotate(360deg);}}';
+      document.head.appendChild(styleEl);
+    }
+    bootLoadingOverlay = document.createElement('div');
+    bootLoadingOverlay.style.cssText = 'position:fixed;inset:0;z-index:999997;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;background:#06070c;';
+    const spinner = document.createElement('div');
+    spinner.style.cssText = 'width:38px;height:38px;border-radius:50%;border:4px solid rgba(255,255,255,.16);border-top-color:#f2c14e;animation:bootLoadingSpin .8s linear infinite;';
+    bootLoadingText = document.createElement('div');
+    bootLoadingText.style.cssText = 'color:#cbd7ff;font-size:14px;font-weight:600;letter-spacing:.02em;';
+    bootLoadingOverlay.appendChild(spinner);
+    bootLoadingOverlay.appendChild(bootLoadingText);
+    document.body.appendChild(bootLoadingOverlay);
+  }
+  bootLoadingOverlay.style.display = 'flex';
+  onEssentialAssetsProgress(function(done,total){
+    if(bootLoadingText) bootLoadingText.textContent = '載入中 '+done+' / '+(total||0);
+  });
+}
+function hideBootLoadingOverlay(){
+  if(bootLoadingOverlay) bootLoadingOverlay.style.display = 'none';
+}
 function imgLayerHtml(fallbackHtml, src, imgClass, extraOnloadJs){
   const known = window.__imgExistCache[src];
   // 不再顯示程式產生的預設 SVG：圖片載入完成前保持隱藏，失敗時留白。
@@ -12295,14 +12323,28 @@ state = newState();
 // goToLogin()（見那個函式跟 TOP_SCREEN_IDS／showTopScreen() 的說明），按「進入遊戲」
 // 才會走到goToLobby()。
 goToLogin();
-preloadCharThumbs(); // 背景預先載入全部角色縮圖，見 preloadCharThumbs() 註解
-preloadCardArt(); // 背景預先載入全部卡片美術圖，見 preloadCardArt() 註解
+// 登入畫面一顯示就在背景先默默開始下載（見 preloadEssentialAssets() 的說明），玩家通常要看完
+// 登入畫面文案、按下「進入遊戲」才會觸發下面的讀取畫面，這時多半已經下載完大半甚至全部了。
+preloadEssentialAssets();
 // 使用者要求「每日簽到要在進入遊戲後才能領」：原本頁面一載入（還在登入畫面）就結算，
 // 改成等玩家實際按下「進入遊戲」、真的進大廳那一刻才觸發，跟goToLobby()綁在同一個
 // click handler裡。
+// 使用者要求「進入遊戲前先載入圖片，跟其他遊戲一樣」：按下「進入遊戲」時蓋一個讀取畫面，
+// 等開局就會看到的圖片（角色縮圖＋卡片美術）真的就緒才放行進大廳。6 秒安全閥：理論上
+// Promise.all 一定會settle（每張圖不管成功失敗都會resolve，見preloadEssentialAssets()），
+// 這裡只是防呆，避免萬一某個環節真的卡住，玩家被讀取畫面永遠卡住進不去。
 document.getElementById('loginEnterBtn').onclick = function(){
-  goToLobby();
-  claimDailyBonusIfNeeded();
+  showBootLoadingOverlay();
+  let settled = false;
+  const proceed = function(){
+    if(settled) return;
+    settled = true;
+    hideBootLoadingOverlay();
+    goToLobby();
+    claimDailyBonusIfNeeded();
+  };
+  preloadEssentialAssets().then(proceed);
+  setTimeout(proceed, 6000);
 };
 // 「金幣來源：每日簽到/開啟遊戲贈送」的餘額顯示本身（不是簽到判定）維持載入就刷新，
 // 這樣就算玩家還在登入畫面，之後任何畫面第一眼看到的金幣/鑽石數字都已經是正確的。
