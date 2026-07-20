@@ -9557,7 +9557,12 @@ function storySetCg(){
   // 到、有沒有換過圖）只要有真的顯示src就記一筆，見 storyMarkCgSeen()。SKIP整段跳過不會走
   // 這個函式，另外在 storySkipToBattle() 裡補了一份，見那裡的說明。
   storyMarkCgSeen(src);
-  if(img.dataset.cgSrc===src){[img,blur].forEach(el=>el.classList.add('show'));return;}
+  if(img.dataset.cgSrc===src){
+    // 同立繪的修正：dataset.cgSrc 只代表「要求過」，不代表「已掛上且載入完成」。
+    // 前一次的預載還在跑時若直接加 .show，元素會以未載完的狀態現身（CG 版的破圖）。
+    if(img.getAttribute('src')===src&&img.complete&&img.naturalWidth>0)[img,blur].forEach(el=>el.classList.add('show'));
+    return;
+  }
   // 使用者反應「看CG時前面都會先跑出前一張圖，有點突兀」：<img> 換 src 之後，瀏覽器要等新圖
   // 解碼完成才會換畫面，在那之前畫面上留著的仍是「上一張已解碼的圖」——再加上 .show 有 0.7 秒
   // 的淡入，等於先看到舊 CG（開場的兵、或上一段的擊破圖）淡進來，才被新圖取代。
@@ -9628,9 +9633,20 @@ function storyRenderStage(beat){
     if(!p){el.dataset.actorSrc='';el.removeAttribute('src');el.alt='';return;}
     el.alt=p.name;
     const isActive=!!(active&&p.src===active.src);
+    el.dataset.actorActive=isActive?'1':'';
     if(el.dataset.actorSrc===p.src){
-      el.classList.add('visible');
-      if(isActive)el.classList.add('active');
+      // 真兇（實機以逐幀探針＋快取標頭查證後定位）：dataset.actorSrc 記的是「要求過」這張圖，
+      // 不代表「已經掛上並載入完成」。點選項時會在極短時間內連續 render 兩次——選項那拍先
+      // 發起換圖（預載開始），點下去的下一拍又要求同一張圖；冷快取（Cloudflare Pages 對圖片
+      // 回 max-age=0, must-revalidate，加上本作圖片量大、瀏覽器快取常被擠掉）時第一次的預載
+      // 要跑一兩秒，第二次 render 走到這裡直接加 .visible，就把「圖還沒載完的元素」現身了
+      // ——邊下載邊畫，正是「點完選項一瞬間一左一右破圖」。只有元素上「真的掛著這張圖、
+      // 且已完整載入」才可以同步顯示；否則什麼都不做，交給仍在進行中的預載流程收尾
+      // （它完成時會依 dataset.actorActive 套上當下正確的 class）。
+      if(el.getAttribute('src')===p.src&&el.complete&&el.naturalWidth>0){
+        el.classList.add('visible');
+        if(isActive)el.classList.add('active');
+      }
       return;
     }
     el.dataset.actorSrc=p.src;
@@ -9653,7 +9669,9 @@ function storyRenderStage(beat){
       const show=function(){
         if(el.dataset.actorSrc!==p.src)return;
         el.classList.add('visible');
-        if(isActive)el.classList.add('active');
+        // active 與否讀「最新一次 render」寫進 dataset 的狀態，不用閉包抓住的舊值——
+        // 預載期間可能又 render 過（正是點選項的情境），說話者可能已經換人。
+        if(el.dataset.actorActive)el.classList.add('active');
       };
       if(el.decode)el.decode().then(show).catch(show);
       else show();
@@ -9700,7 +9718,11 @@ function storySetSpeakerAvatar(speaker){
   // 比照 storySetCg()：先藏起來，src 塞進元素後等 decode() 完成才現身；載不到就維持隱藏。
   const avatar=document.getElementById('storySpeakerAvatar'),portrait=storyPortraitForSpeaker(speaker);
   if(!portrait){avatar.classList.add('hidden');avatar.removeAttribute('src');avatar.alt='';return;}
-  if(avatar.getAttribute('src')===portrait.src){avatar.classList.remove('hidden');avatar.alt=portrait.name;return;}
+  if(avatar.getAttribute('src')===portrait.src){
+    // 同立繪：src 相同但還沒載完＝上一次的載入還在跑，別急著現身，交給那次的 decode 流程收尾。
+    if(avatar.complete&&avatar.naturalWidth>0)avatar.classList.remove('hidden');
+    avatar.alt=portrait.name;return;
+  }
   avatar.classList.add('hidden');
   avatar.src=portrait.src;avatar.alt=portrait.name;
   avatar.onerror=function(){this.classList.add('hidden');};
