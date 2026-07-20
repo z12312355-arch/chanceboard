@@ -3568,6 +3568,46 @@ function preloadBattleArtForTeam(team){
     });
   }catch(e){}
 }
+// 通用版：吃一串角色/怪物ID，用 entityImageSrc() 判斷該走 images/ 還是 monster/ 路徑。
+// preloadBattleArtForTeam() 只在「跨網對戰選定隊伍」那個時機點被呼叫（見 saveOnlineSelectedTeam()），
+// 本機單人／本機雙人／新手教學／故事模式的雙方隊伍完全沒被涵蓋到——尤其對手（新手教學稻草人、
+// 故事王、故事固定對手、隨機AI）連「早一步預先知道名單」的時機都沒有，只能在 startGame() 裡
+// 名單一確定就立刻補（見那裡的呼叫），雖然比進戰鬥畫面才臨時下載早不了太多，但下載本身是
+// 非同步、不擋畫面，多少還是能搶到一點時間差，好過完全沒預載。
+function preloadBattleArt(ids){
+  try{
+    (ids||[]).slice(0,3).forEach(function(id){
+      ['full','wide'].forEach(function(suffix){
+        const src=entityImageSrc(id, suffix);
+        if(window.__imgExistCache && window.__imgExistCache[src]===false) return;
+        const img=new Image();
+        try{ img.fetchPriority='high'; }catch(e){}
+        img.decoding='async';
+        img.onload=function(){ window.__imgExistCache[src]=true; };
+        img.onerror=function(){ window.__imgExistCache[src]=false; };
+        img.src=src;
+        if(img.decode) img.decode().catch(function(){});
+      });
+    });
+  }catch(e){}
+}
+// 卡片美術圖（4張花色卡 _suitcard.png ＋ 22張花牌 _cardicon.png）原本完全沒有預載，玩家
+// 不管進收藏、隊伍編輯，還是戰鬥手牌，第一次看到某張卡都要重新下載＋解碼，容易看到那一瞬間
+// 的空白。檔案數量少、體積小，比照 preloadCharThumbs() 同一套做法在背景全部預先下載＋解碼一次。
+function preloadCardArt(){
+  try{
+    (DB.cards||[]).forEach(function(card){
+      const src=cardArtIconSrc(card);
+      if(!src) return;
+      const img=new Image();
+      img.decoding='async';
+      img.onload=function(){ window.__imgExistCache[src]=true; };
+      img.onerror=function(){ window.__imgExistCache[src]=false; };
+      img.src=src;
+      if(img.decode) img.decode().catch(function(){});
+    });
+  }catch(e){}
+}
 window.__imgExistCache = window.__imgExistCache || {};
 function imgLayerHtml(fallbackHtml, src, imgClass, extraOnloadJs){
   const known = window.__imgExistCache[src];
@@ -4534,6 +4574,10 @@ function startGame(){
   }
   const slotOrderB = slotDepthOrder('B');
   state.teamB = chosenB.map((c,i)=>cloneUnit(c,'B', sharedPiece, slotOrderB[i]));
+  // 雙方立繪美術預先下載＋解碼（見 preloadBattleArt() 的說明）：這裡是本機對戰唯一能拿到
+  // 「雙方最終名單」的最早時機點，包含對手（教學稻草人／故事王／隨機AI），提早觸發下載。
+  preloadBattleArt(chosenA.map(function(c){return c.id;}));
+  preloadBattleArt(chosenB.map(function(c){return c.id;}));
   if(window.__tutorialFixedOpponentIds){
     // 教學戰鬥再額外調降對手數值（HP/ATK/DEF各打6折，SPD維持不變），確保新手第一場幾乎必勝，
     // 不只是靠「挑比較弱的角色」這種還是有機率打輸的做法。
@@ -12252,6 +12296,7 @@ state = newState();
 // 才會走到goToLobby()。
 goToLogin();
 preloadCharThumbs(); // 背景預先載入全部角色縮圖，見 preloadCharThumbs() 註解
+preloadCardArt(); // 背景預先載入全部卡片美術圖，見 preloadCardArt() 註解
 // 使用者要求「每日簽到要在進入遊戲後才能領」：原本頁面一載入（還在登入畫面）就結算，
 // 改成等玩家實際按下「進入遊戲」、真的進大廳那一刻才觸發，跟goToLobby()綁在同一個
 // click handler裡。
