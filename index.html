@@ -1494,28 +1494,28 @@
 
   /* ---- move/hit visual effects (lightweight, spawned by playPendingEffects()) ---- */
   @keyframes fxSwordSlash{ 0%{ transform:translate(-55%,-55%) rotate(-40deg) scaleX(0); opacity:0;} 25%{ opacity:1;} 55%{ transform:translate(55%,55%) rotate(-40deg) scaleX(1); opacity:1;} 100%{ transform:translate(85%,85%) rotate(-40deg) scaleX(1); opacity:0;} }
-  .fx-slash{position:absolute; left:50%; top:50%; width:120%; height:5px; background:linear-gradient(90deg,transparent,#f4f7ff,var(--gold),transparent); box-shadow:0 0 8px 2px rgba(255,255,255,.8); transform-origin:left center; animation:fxSwordSlash .42s ease-out forwards; pointer-events:none;}
+  .fx-slash{position:absolute; left:50%; top:50%; width:120%; height:5px; background:linear-gradient(90deg,transparent,#f4f7ff,var(--gold),transparent); box-shadow:0 0 8px 2px rgba(255,255,255,.8); transform-origin:left center; animation:fxSwordSlash calc(.42s / var(--battle-speed, 1)) ease-out forwards; pointer-events:none;}
 
   @keyframes fxGunFlash{ 0%{transform:translate(-50%,-50%) scale(.2);opacity:0;} 20%{transform:translate(-50%,-50%) scale(1.1);opacity:1;} 100%{transform:translate(-50%,-50%) scale(1.6);opacity:0;} }
-  .fx-gunflash{position:absolute; left:50%; top:50%; font-size:24px; animation:fxGunFlash .32s ease-out forwards; pointer-events:none;}
+  .fx-gunflash{position:absolute; left:50%; top:50%; font-size:24px; animation:fxGunFlash calc(.32s / var(--battle-speed, 1)) ease-out forwards; pointer-events:none;}
 
   @keyframes fxMagicRing{ 0%{transform:translate(-50%,-50%) scale(.2) rotate(0deg); opacity:0; } 30%{opacity:.9;} 100%{transform:translate(-50%,-50%) scale(1.5) rotate(150deg); opacity:0;} }
-  .fx-magicring{position:absolute; left:50%; top:50%; width:70%; height:70%; border:3px solid #b28dff; border-radius:50%; box-shadow:0 0 12px 2px rgba(178,141,255,.8); animation:fxMagicRing .5s ease-out forwards; pointer-events:none;}
+  .fx-magicring{position:absolute; left:50%; top:50%; width:70%; height:70%; border:3px solid #b28dff; border-radius:50%; box-shadow:0 0 12px 2px rgba(178,141,255,.8); animation:fxMagicRing calc(.5s / var(--battle-speed, 1)) ease-out forwards; pointer-events:none;}
 
   @keyframes fxWishBeam{ 0%{transform:translate(-50%,0) scaleY(0); opacity:0;} 25%{opacity:1;} 70%{transform:translate(-50%,0) scaleY(1); opacity:.9;} 100%{transform:translate(-50%,0) scaleY(1); opacity:0;} }
-  .fx-wishbeam{position:absolute; left:50%; bottom:0; width:26%; height:100%; transform-origin:bottom; background:linear-gradient(180deg,rgba(255,244,190,.95),rgba(255,244,190,0)); animation:fxWishBeam .55s ease-out forwards; pointer-events:none;}
+  .fx-wishbeam{position:absolute; left:50%; bottom:0; width:26%; height:100%; transform-origin:bottom; background:linear-gradient(180deg,rgba(255,244,190,.95),rgba(255,244,190,0)); animation:fxWishBeam calc(.55s / var(--battle-speed, 1)) ease-out forwards; pointer-events:none;}
   @keyframes fxWishStar{ 0%{transform:translate(-50%,0) scale(.4); opacity:0;} 40%{opacity:1;} 100%{transform:translate(-50%,-160%) scale(1.1); opacity:0;} }
-  .fx-wishstar{position:absolute; left:50%; bottom:10%; font-size:15px; animation:fxWishStar .6s ease-out forwards; pointer-events:none;}
+  .fx-wishstar{position:absolute; left:50%; bottom:10%; font-size:15px; animation:fxWishStar calc(.6s / var(--battle-speed, 1)) ease-out forwards; pointer-events:none;}
 
   @keyframes fxHitFlash{ 0%{opacity:.85;} 100%{opacity:0;} }
-  .fx-hitflash{position:absolute; inset:0; background:#fff; mix-blend-mode:overlay; border-radius:8px; animation:fxHitFlash .28s ease-out forwards; pointer-events:none;}
+  .fx-hitflash{position:absolute; inset:0; background:#fff; mix-blend-mode:overlay; border-radius:8px; animation:fxHitFlash calc(.28s / var(--battle-speed, 1)) ease-out forwards; pointer-events:none;}
   .fx-hitflash.crit{background:var(--gold); mix-blend-mode:normal; opacity:.55;}
 
   @keyframes fxShake{ 0%,100%{transform:translateX(0);} 20%{transform:translateX(-6px);} 40%{transform:translateX(5px);} 60%{transform:translateX(-4px);} 80%{transform:translateX(3px);} }
-  .fx-shake{animation:fxShake .35s ease-in-out;}
+  .fx-shake{animation:fxShake calc(.35s / var(--battle-speed, 1)) ease-in-out;}
 
   @keyframes fxNumFloat{ 0%{transform:translate(-50%,0); opacity:0;} 15%{opacity:1;} 100%{transform:translate(-50%,-32px); opacity:0;} }
-  .fx-num{position:absolute; left:50%; top:6px; transform:translate(-50%,0); font-weight:bold; font-size:14px; white-space:nowrap; animation:fxNumFloat .7s ease-out forwards; text-shadow:0 1px 2px rgba(0,0,0,.6); pointer-events:none; z-index:6;}
+  .fx-num{position:absolute; left:50%; top:6px; transform:translate(-50%,0); font-weight:bold; font-size:14px; white-space:nowrap; animation:fxNumFloat calc(.7s / var(--battle-speed, 1)) ease-out forwards; text-shadow:0 1px 2px rgba(0,0,0,.6); pointer-events:none; z-index:6;}
   .fx-num.dmg{color:var(--bad);}
   .fx-num.crit{color:var(--gold); font-size:17px;}
   .fx-num.heal{color:var(--good);}
@@ -1523,14 +1523,14 @@
   .fx-num.kill{color:#fff; -webkit-text-stroke:1px var(--bad);}
 
   @keyframes fxDeathFade{ 0%{opacity:1; filter:grayscale(0);} 100%{opacity:.35; filter:grayscale(1);} }
-  .fx-death{animation:fxDeathFade .5s ease-in forwards;}
+  .fx-death{animation:fxDeathFade calc(.5s / var(--battle-speed, 1)) ease-in forwards;}
 
   /* ---- 出招插畫（有真的圖才會出現，見 showMoveSplash()） ---- */
   /* 用 fixed 定位、大小放大很多，但中心點是用 JS 算出「出招那位角色自己的角色卡」在畫面上的
      實際座標（有夾限避免貼到畫面邊緣被裁掉），這樣還是看得出來是哪一位角色出的招，但圖本身可以
      開得比塞在小小的角色卡裡面大很多。 */
   @keyframes moveSplashPop{ 0%{opacity:0; transform:translate(-50%,-50%) scale(.82);} 12%{opacity:1; transform:translate(-50%,-50%) scale(1);} 82%{opacity:1; transform:translate(-50%,-50%) scale(1);} 100%{opacity:0; transform:translate(-50%,-50%) scale(1.03);} }
-  .move-splash{position:fixed; z-index:70; display:flex; flex-direction:column; align-items:center; gap:8px; pointer-events:none; text-align:center; animation:moveSplashPop 1.3s ease-out forwards;}
+  .move-splash{position:fixed; z-index:70; display:flex; flex-direction:column; align-items:center; gap:8px; pointer-events:none; text-align:center; animation:moveSplashPop calc(1.3s / var(--battle-speed, 1)) ease-out forwards;}
   /* 實際渲染尺寸由 showMoveSplash()/repositionMoveSplashes() 用行內樣式(width/height)直接鎖定，
      跟 computeMoveSplashCenter() 算夾限邊界用的是同一份數字，兩邊保證一致。這裡的 max-height/
      max-width 只是保底（例如圖片還沒被 JS 設定行內尺寸前的極短暫瞬間），數值故意跟 JS 那邊的上限
@@ -5523,7 +5523,7 @@ function spawnFx(el, className, innerHTML, ttlMs){
   fx.className = className;
   if(innerHTML!=null) fx.innerHTML = innerHTML;
   el.appendChild(fx);
-  setTimeout(()=>{ if(fx.parentNode) fx.parentNode.removeChild(fx); }, ttlMs||900);
+  setTimeout(()=>{ if(fx.parentNode) fx.parentNode.removeChild(fx); }, battleScaledMs(ttlMs||900));
 }
 
 // Per-move-slot "cast" flourish, played once on the caster regardless of how many targets the
@@ -5676,7 +5676,7 @@ function showMoveSplash(casterEl, baseId, moveSlot, moveName, casterSide, caster
   setTimeout(()=>{
     if(wrap.parentNode) wrap.parentNode.removeChild(wrap);
     activeMoveSplashes = activeMoveSplashes.filter(e=>e!==entry);
-  }, MOVE_SPLASH_LIFETIME_MS);
+  }, battleScaledMs(MOVE_SPLASH_LIFETIME_MS));
 }
 
 // computeMoveSplashCenter()'s clamp bounds depend on window.innerWidth/innerHeight, which can
@@ -6542,7 +6542,9 @@ function playPendingEffects(){
     ghost.style.width = oldWidth+'px';
     ghost.style.height = oldHeight+'px';
     ghost.style.transform = 'translate(0,0)';
-    ghost.style.transition = 'transform .58s cubic-bezier(.22,.78,.24,1), width .58s ease, height .58s ease';
+    const ghostMs = battleScaledMs(580);
+    // 移動分身的過場與下面的清除計時器要用同一個縮放後的時長，否則加速時分身會被提早砍掉。
+    ghost.style.transition = 'transform '+ghostMs+'ms cubic-bezier(.22,.78,.24,1), width '+ghostMs+'ms ease, height '+ghostMs+'ms ease';
     document.body.appendChild(ghost);
     const previousVisibility = el.style.visibility;
     el.style.visibility = 'hidden';
@@ -6555,7 +6557,7 @@ function playPendingEffects(){
     setTimeout(()=>{
       if(ghost.parentNode) ghost.parentNode.removeChild(ghost);
       el.style.visibility = previousVisibility;
-    }, 620);
+    }, ghostMs + battleScaledMs(40));
   });
   if(!effects.length) return;
   effects.forEach(fx=>{
@@ -7452,6 +7454,30 @@ function autoDiscardStuckSuitCard(unit){
 // 開始得比較快，可能會跟下一次的插畫短暫重疊，這是另一個問題，不在這次調整範圍內）。
 const AUTO_BATTLE_FX_EXTRA_MS = 900;
 
+/* ---- 戰鬥速度＝真正的「時間縮放」 ----
+   舊做法只縮短「兩次出手之間的空檔」（autoBattleDelay），而動畫時長與這裡的 900ms 都是固定的，
+   於是按鈕寫 3X、實際只有 1.53 倍（(600+900)/(80+900)），而且畫面上的動作從頭到尾一樣慢，
+   只是空檔被壓掉——節奏變得急促卻不流暢，這就是「加速怪怪的」的來源。
+   改成主流手遊的做法（Unity 的 Time.timeScale／Animator.speed）：整條時間軸等比例縮放，
+   動畫、特效、插畫、出手間隔全部除以同一個倍率，2X 就真的是一半時間。
+   實作上分兩路：JS 計時走 battleScaledMs()，CSS 動畫走 --battle-speed 這個變數。 */
+// 跨網代打的固定思考停頓（跨網沒有速度按鈕，不能跟著本機設定跑）。
+const ONLINE_AUTO_BATTLE_DELAY_MS = 700;
+const BATTLE_SPEED_FACTORS = [1, 2, 3];
+function battleSpeedFactor(){
+  const f = BATTLE_SPEED_FACTORS[typeof autoBattleSpeedIdx!=='undefined' ? autoBattleSpeedIdx : 0];
+  return f > 0 ? f : 1;
+}
+// 任何「戰鬥演出」相關的毫秒數都要經過這裡，才會跟著速度倍率縮放。
+function battleScaledMs(ms){ return Math.max(1, Math.round(ms / battleSpeedFactor())); }
+// 每次出手之間的總停頓（含特效播放時間）。基準 1500ms＝1X，除以倍率就是 2X/3X。
+const BATTLE_BASE_TURN_PAUSE_MS = 1500;
+function autoTurnPauseMs(){ return battleScaledMs(BATTLE_BASE_TURN_PAUSE_MS); }
+// 把倍率同步給 CSS：所有戰鬥動畫的 duration 都寫成 calc(基準 / var(--battle-speed))。
+function syncBattleSpeedCss(){
+  if(document && document.body) document.body.style.setProperty('--battle-speed', String(battleSpeedFactor()));
+}
+
 // Schedules the next auto-battle step with a delay so the player can watch it play out.
 // Guards against stale timers firing after a game reset, an auto-battle toggle-off, or the
 // player having already manually resolved this same turn before the timer fired.
@@ -7465,7 +7491,7 @@ function scheduleAutoLoop(){
     if(!autoOnForSide) return;
     if(state.phase!=='act' || state.actingUnitId!==capturedUnitId) return;
     autoDecideCurrentTurn();
-  }, (state.autoBattleDelay||280) + AUTO_BATTLE_FX_EXTRA_MS);
+  }, autoTurnPauseMs());
 }
 
 // 單人對戰、電腦對手（非「自動戰鬥」開關那種）回合的停頓排程，節奏設定跟上面
@@ -7487,7 +7513,7 @@ function scheduleOpponentAiTurn(unit){
     actInfoRequest = null;
     scheduleNext(unit);
     runLoop();
-  }, (state.autoBattleDelay||280) + AUTO_BATTLE_FX_EXTRA_MS);
+  }, autoTurnPauseMs());
 }
 
 function roundEndPassiveCheck(unit){
@@ -10153,6 +10179,11 @@ function renderBattle(){
   // is already fully AI-controlled by default, so there's nothing to "hand over".
   document.getElementById('autoBattleToggleB').style.display = twoPlayerMode ? '' : 'none';
   document.getElementById('autoBattleToggleB').classList.toggle('on', state.autoBattleB);
+  // 加速鈕只在本機模式有意義（單人／本機雙人／故事）。跨網對戰時速度不會同步給對手，
+  // 兩邊節奏會不一致，而且對手回合的長短取決於他自己的操作期限，本機調快也沒用，因此隱藏。
+  // 這裡是唯一的真相來源：離開房間回到本機模式時會自動恢復顯示。
+  const speedBtn=document.getElementById('autoBattleSpeedBtn');
+  if(speedBtn)speedBtn.style.display = window.__onlineLocalSide ? 'none' : '';
 
   renderOrderBar();
   renderHandSummary();
@@ -10638,7 +10669,7 @@ function renderBattle(){
           document.getElementById('screen-end').classList.remove('hidden');
           state.endScreenRevealed = true;
           renderEnd();
-        }, MOVE_SPLASH_LIFETIME_MS + 150);
+        }, battleScaledMs(MOVE_SPLASH_LIFETIME_MS) + 150);
       }
     }
     if(state.endScreenRevealed) renderEnd();
@@ -10898,7 +10929,9 @@ document.getElementById('autoBattleToggleB').onclick = function(){
 // 使用者後來又要求「默認1X」：預設值從原本對應「正常」的 index 1 改成 index 0；已經存過設定的話
 // 還是優先用 localStorage 裡的值（見 __savedSettings 的說明），只有第一次、從來沒存過時才套用
 // 這個新的預設 1X。
-const AUTO_BATTLE_SPEEDS = [600, 280, 80];
+// 這三個值＝每次出手的「總停頓」（1500/倍率），不再是單純的空檔；
+// 因此 1X/2X/3X 的比例就是 1:2:3，跟按鈕上的標示一致。
+const AUTO_BATTLE_SPEEDS = [1500, 750, 500];
 const AUTO_BATTLE_SPEED_LABELS = ['1X', '2X', '3X'];
 let autoBattleSpeedIdx = ('speedIdx' in __savedSettings) ? __savedSettings.speedIdx : 0;
 // 注意：這裡不能寫 state.autoBattleDelay = ...——這個檔案最下面 state=newState() 那行還沒執行到
@@ -10909,6 +10942,8 @@ let autoBattleSpeedIdx = ('speedIdx' in __savedSettings) ? __savedSettings.speed
 // 呼叫，讀得到正確的值，不會有這個問題。
 function syncAutoBattleSpeedBtn(){
   document.getElementById('autoBattleSpeedBtn').textContent = AUTO_BATTLE_SPEED_LABELS[autoBattleSpeedIdx];
+  // 倍率同時推給 CSS，戰鬥特效／招式插畫的動畫時長才會一起縮放（見 --battle-speed）。
+  syncBattleSpeedCss();
 }
 document.getElementById('autoBattleSpeedBtn').onclick = function(){
   autoBattleSpeedIdx = (autoBattleSpeedIdx + 1) % AUTO_BATTLE_SPEEDS.length;
@@ -13595,6 +13630,11 @@ document.getElementById('admin1v1BattleBtn').onclick=function(){ closeAdminPanel
       ownBtn.textContent='自動戰鬥';
       ownBtn.title='自動代打自己的隊伍（只會在輪到你時出手）';
       ownBtn.classList.toggle('on', onlineAutoBattleEnabled);
+      // 跨網對戰不提供加速：速度只是「本機的出招間隔」，改了不會同步給對手，
+      // 兩邊看到的節奏會不一致；而且對手的回合本來就受制於他的 30 秒操作期限，
+      // 本機調快也快不了。單人／本機雙人／故事模式維持原本的 1X/2X/3X 切換。
+      const speedBtn=document.getElementById('autoBattleSpeedBtn');
+      if(speedBtn)speedBtn.style.display='none';
     }
     function onlineMaybeAutoBattle(){
       if(onlineAutoBattleTimer || onlineAutoBattleExecuting || !onlineInRoom || !onlineRole || !onlineAutoBattleEnabled || onlineApplying) return;
@@ -13612,7 +13652,10 @@ document.getElementById('admin1v1BattleBtn').onclick=function(){ closeAdminPanel
         onlineAutoBattleExecuting=true;
         try { autoDecideCurrentTurn(); }
         finally { onlineAutoBattleExecuting=false; onlineAfterRender(); }
-      }, Math.max(80, state.autoBattleDelay||280));
+      // 跨網對戰沒有速度按鈕（見 onlineRefreshAutoBattleControls），所以這裡不能沿用
+      // state.autoBattleDelay——那是本機速度設定，值會因玩家上次在單人模式選的檔位而變，
+      // 同一場對戰兩邊的代打節奏還會不一樣。固定成一個中性的思考停頓。
+      }, ONLINE_AUTO_BATTLE_DELAY_MS);
     }
     function onlineController(st){
       if(!st) return 'A';
