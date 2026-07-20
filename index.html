@@ -621,9 +621,26 @@
   .gacha-badge-dup{background:var(--panel2);color:var(--muted);border:1px solid var(--line);}
   #gachaCollectionLabel{font-size:14px;color:var(--gold);font-weight:bold;margin-bottom:10px;
     text-shadow:0 1px 2px rgba(0,0,0,1), 0 0 8px rgba(0,0,0,.9);}
-  #gachaCollectionGrid,#monsterCodexGrid{display:grid;grid-template-columns:repeat(7,1fr);gap:10px;margin-bottom:10px;}
-  @media (max-width:900px){ #gachaCollectionGrid,#monsterCodexGrid{grid-template-columns:repeat(5,1fr);} }
-  @media (max-width:600px){ #gachaCollectionGrid,#monsterCodexGrid{grid-template-columns:repeat(4,1fr);gap:8px;} }
+  #gachaCollectionGrid,#monsterCodexGrid,#storyCgGalleryGrid{display:grid;grid-template-columns:repeat(7,1fr);gap:10px;margin-bottom:10px;}
+  @media (max-width:900px){ #gachaCollectionGrid,#monsterCodexGrid,#storyCgGalleryGrid{grid-template-columns:repeat(5,1fr);} }
+  @media (max-width:600px){ #gachaCollectionGrid,#monsterCodexGrid,#storyCgGalleryGrid{grid-template-columns:repeat(4,1fr);gap:8px;} }
+  /* 圖鑑分頁籤：使用者要求「圖鑑把角色/怪物/CG分類」，見 #screen-collection 那段HTML的說明。 */
+  .collection-tabs{display:flex;gap:8px;margin-bottom:14px;border-bottom:1px solid var(--line);padding-bottom:10px;}
+  .collection-tab{flex:0 0 auto;padding:7px 18px;border-radius:999px;border:1px solid var(--line);background:var(--panel2);color:var(--muted);font-size:13px;font-weight:bold;cursor:pointer;transition:background .15s,color .15s,border-color .15s;}
+  .collection-tab:hover{border-color:#7a82ab;}
+  .collection-tab.active{background:var(--gold);color:#241c04;border-color:var(--gold);}
+  .collection-pane.hidden{display:none;}
+  /* CG圖鑑格子：跟角色/怪物圖鑑共用.gacha-card視覺，但CG本身是橫幅劇照，長寬比跟角色立繪
+     不一樣，另外覆寫圖片的object-fit讓橫幅CG也能好好塞進同一個方格。 */
+  #storyCgGalleryGrid .gacha-card-art img{object-fit:cover;}
+  #storyCgGalleryGrid .gacha-card.owned{cursor:pointer;}
+  #storyCgGalleryGrid .gacha-card.owned:hover{border-color:var(--gold);}
+  #storyCgViewerBackdrop{position:fixed;inset:0;z-index:99990;display:flex;align-items:center;justify-content:center;background:rgba(4,5,9,.88);padding:24px;}
+  #storyCgViewerBackdrop.hidden{display:none;}
+  .story-cg-viewer{position:relative;max-width:min(92vw,1100px);max-height:92vh;display:flex;flex-direction:column;align-items:center;gap:10px;}
+  .story-cg-viewer img{max-width:100%;max-height:80vh;border-radius:10px;box-shadow:0 12px 40px rgba(0,0,0,.6);}
+  .story-cg-viewer-title{color:#fff;font-size:14px;font-weight:bold;text-shadow:0 2px 4px rgba(0,0,0,.8);}
+  #storyCgViewerCloseBtn{position:absolute;top:-40px;right:0;}
   /* 商店畫面：使用者要求「新增商店：可以課金或用金幣購買卡片」。#shopCardGrid跟組卡畫面的
      #deck-picker共用差不多的卡片排版習慣（renderCardFace()同一顆function），每張卡下面
      疊一排「已擁有／購買」的狀態列。 */
@@ -8173,8 +8190,7 @@ function goToGacha(){
 }
 function goToCollection(){
   showTopScreen('screen-collection');
-  renderGachaCollectionGrid();
-  renderMonsterCodexGrid();
+  goToCollectionTab(collectionActiveTab||'chars');
 }
 
 /* ---- 怪物圖鑑（使用者要求「故事中擊倒的怪物會加入收藏」）----
@@ -8213,6 +8229,78 @@ function renderMonsterCodexGrid(){
   }).join('');
   document.getElementById('monsterDefeatedCount').textContent=list.filter(m=>codex.indexOf(m.id)>=0).length;
   document.getElementById('monsterTotalCount').textContent=list.length;
+}
+
+/* ---- CG 圖鑑（使用者要求「圖鑑裡新增CG圖，故事裡出現的CG圖會收藏在這，玩家按SKIP也要
+   記得收藏」）---- 沿用跟怪物圖鑑一樣的「看過就記錄，未看過顯示鎖頭」模式。CG本身分散在三個
+   地方（各路線開場CG／關卡層級CG／文本內【CG：…】標記），但全部最終都會被
+   storyBlockCgDirective()正規化成同一種{src,marquee}形狀、掛在beat.cg上、經由storySetCg()
+   顯示——所以只要在storySetCg()一個地方掛勾就能涵蓋所有CG來源（正常閱讀時）。SKIP另外處理，
+   見storySkipToBattle()裡的storyMarkBlockVisited()旁邊那行，因為SKIP整段跳過、根本不會呼叫
+   storySetCg()。
+   這裡手動列出目前存在的6張CG（黑白各自的開場、Boss戰敗北共用、尾聲1黑白各自、尾聲2共用）
+   ——之後新增章節/CG時，把新的src加進這個陣列即可，圖鑑格子數會自動跟著長。 */
+const STORY_CG_GALLERY=[
+  {id:'01_01',src:'story/01_01.png',title:'序章：黑方視角'},
+  {id:'01_02',src:'story/01_02.png',title:'序章：白方視角'},
+  {id:'01_04',src:'story/01_04.png',title:'Boss戰敗北：無名戰士跪地'},
+  {id:'01_05_01',src:'story/01_05_01.png',title:'尾聲1：第一章結尾（黑方）'},
+  {id:'01_05_02',src:'story/01_05_02.png',title:'尾聲1：第一章結尾（白方）'},
+  {id:'01_06',src:'story/01_06.png',title:'尾聲2：注視的目光'},
+];
+const STORY_CG_SEEN_KEY='chanceboard_story_cg_seen_v1';
+function loadStoryCgSeen(){try{const v=JSON.parse(localStorage.getItem(STORY_CG_SEEN_KEY)||'[]');return Array.isArray(v)?v.filter(s=>typeof s==='string'):[];}catch(e){return [];}}
+function saveStoryCgSeen(list){try{localStorage.setItem(STORY_CG_SEEN_KEY,JSON.stringify(list));}catch(e){}}
+// src可以是完整路徑（storySetCg傳來的）或只有編號（storyBlockCgDirective正規化前），這裡統一
+// 用正規化過的完整路徑當key，跟STORY_CG_GALLERY裡登記的src格式一致。預覽模式不計入收藏，
+// 跟storyRecordDefeatedMonsters()同一個理由（預覽只是後台在測內容，不是玩家真的玩到）。
+function storyMarkCgSeen(src){
+  if(!src||storyPreviewMode)return;
+  const seen=loadStoryCgSeen();
+  if(seen.indexOf(src)<0){seen.push(src);saveStoryCgSeen(seen);}
+}
+let storyCgViewerList=[];
+function renderStoryCgGallery(){
+  const grid=document.getElementById('storyCgGalleryGrid');if(!grid)return;
+  const seen=loadStoryCgSeen();
+  storyCgViewerList=STORY_CG_GALLERY;
+  grid.innerHTML=STORY_CG_GALLERY.map(function(cg,idx){
+    const known=seen.indexOf(cg.src)>=0;
+    return '<div class="gacha-card'+(known?' owned':' locked')+'" data-cg-idx="'+idx+'">'
+      +'<div class="gacha-card-art">'
+      +(known?'<img src="'+escHtml(cg.src)+'" alt="" onerror="this.remove()">':'<div class="gacha-card-lock">🔒</div>')
+      +'</div>'
+      +'<div class="gacha-card-name">'+(known?escHtml(cg.title):'？？？')+'</div>'
+      +'</div>';
+  }).join('');
+  document.getElementById('storyCgSeenCount').textContent=STORY_CG_GALLERY.filter(function(cg){return seen.indexOf(cg.src)>=0;}).length;
+  document.getElementById('storyCgTotalCount').textContent=STORY_CG_GALLERY.length;
+  grid.querySelectorAll('.gacha-card.owned[data-cg-idx]').forEach(function(el){
+    el.onclick=function(){openStoryCgViewer(Number(el.dataset.cgIdx));};
+  });
+}
+function openStoryCgViewer(idx){
+  const cg=storyCgViewerList[idx];if(!cg)return;
+  const seen=loadStoryCgSeen();if(seen.indexOf(cg.src)<0)return; // 沒收集過的不能開，跟格子上鎖一致
+  document.getElementById('storyCgViewerImg').src=cg.src;
+  document.getElementById('storyCgViewerTitle').textContent=cg.title;
+  document.getElementById('storyCgViewerBackdrop').classList.remove('hidden');
+}
+function closeStoryCgViewer(){document.getElementById('storyCgViewerBackdrop').classList.add('hidden');}
+// 圖鑑分頁籤：角色/怪物/CG，三塊資料各自獨立render，這裡只切換顯示/隱藏，並在切到某頁時
+// 才重新render那一頁（隨手保持最新，不用整頁一次全部重畫）。
+let collectionActiveTab='chars';
+function goToCollectionTab(tab){
+  collectionActiveTab=tab;
+  document.querySelectorAll('#collectionTabs .collection-tab').forEach(function(btn){
+    btn.classList.toggle('active',btn.dataset.tab===tab);
+  });
+  ['chars','monsters','cg'].forEach(function(t){
+    const pane=document.getElementById('collectionPane-'+t);if(pane)pane.classList.toggle('hidden',t!==tab);
+  });
+  if(tab==='chars')renderGachaCollectionGrid();
+  else if(tab==='monsters')renderMonsterCodexGrid();
+  else if(tab==='cg')renderStoryCgGallery();
 }
 
 /* ============ 棋子培養／技能碎片／狩獵 ============ */
@@ -9302,6 +9390,10 @@ function storySetCg(){
   const screen=document.getElementById('screen-story');
   if(screen)screen.classList.toggle('cg-scene',!!src);
   if(!src){img.dataset.cgSrc='';clear();return;}
+  // 使用者要求「圖鑑裡新增CG圖，故事裡出現的CG圖會收藏在這」：正常閱讀（不管是不是第一次看
+  // 到、有沒有換過圖）只要有真的顯示src就記一筆，見 storyMarkCgSeen()。SKIP整段跳過不會走
+  // 這個函式，另外在 storySkipToBattle() 裡補了一份，見那裡的說明。
+  storyMarkCgSeen(src);
   if(img.dataset.cgSrc===src){[img,blur].forEach(el=>el.classList.add('show'));return;}
   // 使用者反應「看CG時前面都會先跑出前一張圖，有點突兀」：<img> 換 src 之後，瀏覽器要等新圖
   // 解碼完成才會換畫面，在那之前畫面上留著的仍是「上一張已解碼的圖」——再加上 .show 有 0.7 秒
@@ -9463,6 +9555,10 @@ function storySkipToBattle(){if(!storyRun||!storyRun.active)return;storyCancelRe
     // 於是「Boss戰按SKIP」時那段戰前台詞雖然真的播放（進了對話記錄）卻沒被標記為已探索，
     // 命運棋譜的「戰前台詞」節點就一直顯示 ???。
     storyMarkBlockVisited(storyRun.route,storyRun.block);
+    // 使用者要求「玩家按SKIP也要記得收藏CG」：同一個理由——storySetCg()只有正常render路徑
+    // 會呼叫，SKIP完全不經過那裡，這個block如果掛了CG（尾聲1/尾聲2那種關卡層級CG最常見）
+    // 就會被跳過去而漏收藏。這裡跟上面的storyMarkBlockVisited()一樣，每換一個新block就補記一次。
+    (function(){const cg=storyBlockCgDirective(storyRun.block);if(cg&&cg.src)storyMarkCgSeen(cg.src);})();
     continue;}if(beat.type==='battle'){saveStoryProgress();storyRenderCurrent();storyFlash('已跳到戰鬥前，點擊後開始戰鬥');return;}if(beat.type==='choice'){saveStoryProgress();storyRenderCurrent();storyFlash('請先選擇路線，再繼續 SKIP');return;}if(beat.type==='reward'||beat.type==='complete'){saveStoryProgress();storyRenderCurrent();storyFlash('請先處理目前的章節事件');return;}if(beat.type==='dialogue'||beat.type==='narration'){const speaker=beat.speaker||'',text=beat.text||'';storyAppendLog(beat,speaker,text);if(beat.type==='narration')storyRun.lastContext={type:'narration',speaker:'',text};else{const normalized=storyNormalizeSpeaker(speaker),isPlayer=normalized===(playerName||'玩家')||normalized==='玩家';if(isPlayer){storyRun.lastNpcLine=null;storyRun.lastContext={type:'player',speaker,text};}else{storyRun.lastNpcLine={speaker,text};storyRun.lastContext={type:'dialogue',speaker,text};}}}storyApplyBeatEvent(beat);storyRun.beat++;}storyRenderCurrent();}
 async function storyClaimReward(name){const charId=storyRun.route==='white'?'009':'005',key=storyRun.block+':'+storyRun.beat;if(storyRun.applied&&storyRun.applied[key])return;if(storyPreviewMode){storyRun.applied[key]=true;storyFlash('預覽模式：模擬獲得角色 '+name);return;}try{if(window.__accountMode&&typeof window.__adminAccountApi==='function'){const d=await window.__adminAccountApi('story-reward',{route:storyRun.route});if(d&&d.state&&window.__applyAccountState)window.__applyAccountState(d.state);}else if(!ownedCharIds.includes(charId)){ownedCharIds.push(charId);charStars[charId]=1;saveOwnedChars();saveCharStars();}storyRun.applied[key]=true;saveStoryProgress();storyFlash('獲得角色：'+name);}catch(e){alert('角色獎勵尚未領取成功：'+e.message);throw e;}}
 function storyCompleteStage(stageNumber){
@@ -11000,6 +11096,11 @@ document.getElementById('lobbyHuntBtn').onclick = goToHunt;
 });
 document.getElementById('collectionBackBtn').onclick = goToLobby;
 document.getElementById('collectionGoGachaBtn').onclick = goToGacha;
+document.querySelectorAll('#collectionTabs .collection-tab').forEach(function(btn){
+  btn.onclick=function(){goToCollectionTab(btn.dataset.tab);};
+});
+document.getElementById('storyCgViewerCloseBtn').onclick = closeStoryCgViewer;
+document.getElementById('storyCgViewerBackdrop').onclick = function(e){ if(e.target.id==='storyCgViewerBackdrop') closeStoryCgViewer(); };
 document.getElementById('piecesBackBtn').onclick = goToLobby;
 document.getElementById('piecesGoHuntBtn').onclick = goToHunt;
 document.getElementById('huntBackBtn').onclick = goToLobby;
@@ -12818,6 +12919,16 @@ document.addEventListener('click',function(e){
 function tutorialAvoidOverlap(el){
   const box=document.getElementById('tutorialBox');
   if(!box)return;
+  // 使用者反應「對話框一直上下亂跑」：這是加了輪詢（tutorialWatchOverlap，見下面說明）之後
+  // 自己造成的回饋迴圈——原本直接量「目前」的box.getBoundingClientRect()，但目前的位置本身
+  // 就是上一次判斷的結果（在上方就量到上方的rect，在下方就量到下方的rect）。於是變成：在下方
+  // →量到重疊→跳上方；下一次輪詢，在上方→量到不重疊→跳回下方；再下一次又重疊→跳上方……
+  // 每 400ms 來回跳一次，就是「一直上下亂跑」。修法：量測前一律先強制回到預設（下方）位置當
+  // 基準，判斷完才套用結果——這樣判斷永遠是「以同一個基準位置」在比較，不會因為自己上一次的
+  // 決定而反覆橫跳。拿掉 class 到量完 rect 是同一個同步函式呼叫、中間沒有任何畫面更新機會
+  // （沒有 await/setTimeout），瀏覽器不會畫出這個暫時狀態，不會有肉眼可見的閃爍。
+  const wasAvoiding=box.classList.contains('avoid-bottom');
+  if(wasAvoiding)box.classList.remove('avoid-bottom');
   const rect=box.getBoundingClientRect();
   const candidates=[el].concat(tutorialAllowedEls).filter(function(t){
     return t&&typeof t.getBoundingClientRect==='function';
@@ -12946,7 +13057,12 @@ function fitTutorialCrawl(){
   crawl.style.transform = 'none';
   // #tutorialCrawlWrap 的 CSS 是 padding:60px 40px（見那條規則），量可用高度要先扣掉，
   // 不然算出來的縮放比例會偏大，實際還是會被上下 padding 頂到溢出。
-  const availH = wrap.clientHeight - 120;
+  // 使用者反應「跑馬燈跑到繼續點擊以下了」：#tutorialCrawlHint 是 position:fixed，卡在螢幕
+  // 底部 bottom:36px 那一小塊固定區域，跟 #tutorialCrawlWrap 自己的高度完全無關，這裡原本沒有
+  // 把那塊區域算進「可用高度」的預算——縮放比例只保證塞得進 wrap 的 padding 內側，卻沒保證
+  // 內容底部（含最後一行）不會延伸進提示字那塊固定區域，短螢幕/矮視窗時最後一兩行就會蓋到
+  // 「▼ 點擊繼續」下面。多扣一段給提示字的空間（36px底距＋文字本身高度，抓 60px 保守值）。
+  const availH = wrap.clientHeight - 120 - 60;
   const naturalH = crawl.scrollHeight;
   if(availH>0 && naturalH>availH){
     crawl.style.transform = 'scale('+(availH/naturalH)+')';
