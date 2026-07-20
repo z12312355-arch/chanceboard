@@ -9574,6 +9574,12 @@ function storySetCg(){
     // 瀏覽器會重新下載、邊下載邊畫——而 .show 已經加上（透明度1），半張圖就這樣露出來。
     // 改成：src 塞進「真正掛在畫面上的元素」後，等該元素自己的 decode() 完成才加 .show；
     // 解碼完成前元素維持 opacity:0，任何時候都不可能看到畫到一半的圖。
+    // 同立繪的修正：.show 的 opacity 過渡是 0.7s，clear() 移除 .show 後元素仍在淡出中
+    // （半透明可見）；若 onload 在這 0.7s 內觸發（快取過的圖幾乎必然），此時塞 src 會讓
+    // 淡出中的元素直接畫出載入中的新圖。先強制立刻隱形再動 src。
+    [img,blur].forEach(el=>{el.style.transition='none';el.style.opacity='0';});
+    void img.offsetWidth;
+    [img,blur].forEach(el=>{el.style.transition='';el.style.opacity='';});
     img.src=src;blur.src=src;
     const show=function(){if(img.dataset.cgSrc===src)[img,blur].forEach(el=>el.classList.add('show'));};
     if(img.decode)Promise.all([img.decode(),blur.decode()]).then(show).catch(show);
@@ -9628,12 +9634,21 @@ function storyRenderStage(beat){
       return;
     }
     el.dataset.actorSrc=p.src;
+    // 使用者回報「點選項還是會閃一瞬間一左一右的破圖」：真兇是 .story-actor 的
+    // opacity 有 .35s transition——上面 className 重設移除 .visible 之後，立繪並不是
+    // 馬上隱形，而是花 350ms 淡出；decode 修法假設「換 src 時元素是隱形的」，但在
+    // 這個淡出窗口裡換 src（下面 onload 對快取過的圖幾乎立刻觸發），半透明的元素就
+    // 會被重畫成載入中的新圖——一瞬間的破圖。這裡先關掉 transition、強制 opacity:0
+    // ＋reflow 讓隱形「立刻」生效，再交還給 class 控制（之後 decode 完加 .visible
+    // 才會從 0 正常淡入）。
+    el.style.transition='none';el.style.opacity='0';
+    void el.offsetWidth; // 強制 reflow，讓上面兩行在下一次繪製前生效
+    el.style.transition='';el.style.opacity='';
     const pre=new Image();
     pre.onload=function(){
       if(el.dataset.actorSrc!==p.src)return; // 已被更後面的渲染換掉，放棄這次結果
       // 同 storySetCg()：換完 src 後等「畫面上的元素自己」decode() 完成才顯示。
-      // 光靠 pre 的 onload 不夠——快取被回收時 el.src 會觸發重新下載＋漸進式渲染，
-      // 這正是「點完選項偶爾還是破圖」的來源（點選項後常常正好要換立繪）。
+      // 光靠 pre 的 onload 不夠——快取被回收時 el.src 會觸發重新下載＋漸進式渲染。
       el.src=p.src;
       const show=function(){
         if(el.dataset.actorSrc!==p.src)return;
