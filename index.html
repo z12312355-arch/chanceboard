@@ -9112,7 +9112,12 @@ function storyFateVisualHtml(route,data){
   // 直接使用目前視窗可供棋譜使用的高度，不再固定 250px。保留標題列與橫向捲軸的預算後，
   // 畫布吃滿剩餘空間；短螢幕至少 280px，足以讓四個結果節點不重疊。
   const canvasH=Math.max(compact?280:420,Math.min(compact?520:780,viewportH-(compact?105:(narrow?120:150))));
-  const colCount=4+(hasBoss?1:0)+(hasEndings?1:0),colGap=small?230:380,marginX=small?20:30;
+  // 使用者（第四輪標籤回饋）點破盲點「你不能單純讓線長一點嗎？」：手機版欄距 230−卡寬 190
+  // ＝縫隙只有 40px，標籤最寬 104px，之前三輪演算法怎麼調都只是在「塞不下」裡挑姿勢。
+  // 直接把欄距拉開，讓縫隙(colGap−nodeW)一定寬過最寬的標籤（小螢幕 104px→留 140px；
+  // 桌機 130px→留 200px），標籤自然落在空隙正中，不必再跟卡片搶位置。畫布本來就是
+  // 橫向捲動的（story-fate-visual-scroll），變寬只是多捲一點，沒有版面代價。
+  const colCount=4+(hasBoss?1:0)+(hasEndings?1:0),colGap=small?330:420,marginX=small?20:30;
   const xs=[];for(let i=0;i<colCount;i++)xs.push(marginX+i*colGap);
   const canvasW=xs[colCount-1]+nodeW+marginX,top=compact?24:(narrow?38:45);
   // 畫布底部保留一條走線道，給「跨越多欄」的長邊繞路用（見 linkPath 的 lane 分支）。
