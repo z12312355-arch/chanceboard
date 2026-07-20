@@ -7396,9 +7396,19 @@ function runLoop(){
     state.actPending = null;
     state.actMovePicked = null;
     state.actMoveTarget = null; // 這回合「預計」移動到哪一格；出手前都可以隨意重選，見 moveActingUnitTo()
-    // 這是「真實時間」期限，不是遊戲內 speed/clock；同步到跨網房間後，兩端會顯示相同截止時刻。
-    state.turnDeadlineAt = Date.now() + ACTION_TIMEOUT_MS;
-    state.turnDeadlineTotalMs = ACTION_TIMEOUT_MS;
+    // 使用者要求「新手教學的時間條讓他暫停，不要給新手壓力」：逐招引導期間（suitTutor 進行中
+    // 未教完）完全不設真的倒數期限，state.turnDeadlineAt 維持 0——syncActionDeadlineUi() 一看到
+    // 這個值就會畫出「滿環、不跑動」的靜止狀態且不鎖按鈕（見那裡的說明），玩家想花多久想清楚
+    // 都可以，教完（suitTutor.done）之後才恢復下面正常的 30 秒倒數。
+    const tutorNoPressure = !!(next.side==='A' && window.__tutorialSuitTutor && !window.__tutorialSuitTutor.done);
+    if(tutorNoPressure){
+      state.turnDeadlineAt = 0;
+      state.turnDeadlineTotalMs = 0;
+    } else {
+      // 這是「真實時間」期限，不是遊戲內 speed/clock；同步到跨網房間後，兩端會顯示相同截止時刻。
+      state.turnDeadlineAt = Date.now() + ACTION_TIMEOUT_MS;
+      state.turnDeadlineTotalMs = ACTION_TIMEOUT_MS;
+    }
     actInfoRequest = null; // 新的一輪出手，上一位角色開著的招式/花牌詳情彈窗不該繼續顯示
     actDiscardPending = []; // 新的一輪出手，理論上 confirmAct() 已經清空過，這裡是保險
     state.phase = 'act';
@@ -7814,7 +7824,8 @@ function confirmAct(){
     else if(wantSlot!=null&&plannedSlot!==wantSlot)block='先點「移動到：'+slotDistLabel(unit.side,wantSlot)+'」，這一招才打得到對手。';
     if(block){
       actionTimedOutForId=null;actionTimeoutHandledKey=null;
-      state.turnDeadlineAt=Date.now()+ACTION_TIMEOUT_MS;state.turnDeadlineTotalMs=ACTION_TIMEOUT_MS;
+      // 逐招引導期間不給真的倒數（見上面 runLoop 那段同一個理由的說明），維持暫停。
+      state.turnDeadlineAt=0;state.turnDeadlineTotalMs=0;
       tutorialBattleSay([block]);
       render();
       scheduleActionDeadline();
@@ -10636,10 +10647,15 @@ function renderBattle(){
     // 一次結算（見那裡的說明）。
     // 教學：花牌／棄牌這兩步原本只有文字說「挑一張」「點🗑」，卡片本身沒有任何視覺標示，
     // 玩家得自己在整排手牌裡找目標，比劍槍法願（招式鈕本身會脈動高亮）難懂。這裡比照招式鈕
-    // 的做法，把整張卡（.cardface 本身就是 position:relative，跟 .tutorial-suit-target 不衝突，
-    // 故意不直接套在 .act-discardbtn 這個小圖示上——它是 position:absolute 定位，套上去會被
-    // .tutorial-suit-target 的 position:relative 蓋掉，位置整個跑掉）加上同一顆
-    // .tutorial-suit-target 脈動外框，讓「該點哪裡」跟招式鈕一樣一眼就看到。
+    // 的做法加上脈動外框，讓「該點哪裡」跟招式鈕一樣一眼就看到。
+    // 使用者反應「棄牌的引導也很不直觀」：棄牌這步真正該點的是卡片左上角那顆小小的🗑圖示
+    // （.act-discardbtn），不是卡片本身——suit卡本身沒有onClick，點卡面中間完全沒反應。原本
+    // 整張卡一起發光，等於在暗示「點卡片」，跟真正該做的事（點小圖示）對不上，這就是「不直觀」
+    // 的根源。改成只把🗑圖示本身圈起來（用 .tutorial-suit-target-icon，這個變體不覆寫
+    // position——.act-discardbtn 本身是 position:absolute 定位，套用一般的
+    // .tutorial-suit-target 會被它的 position:relative 蓋掉，位置整個跑掉，見那個class的
+    // 說明），箭頭＋外框直接落在真正要點的那個小圖示上。花牌步驟則維持整張卡發光，因為
+    // 花牌本身就是onClick目標，點哪都一樣。
     const cardTutor = window.__tutorialSuitTutor;
     const cardTutorStep = (cardTutor && !cardTutor.done && currentActUnit.side==='A') ? cardTutor.current : null;
     const suitEntries = suitHandEntries(currentActUnit);
@@ -10650,7 +10666,10 @@ function renderBattle(){
       const face = renderCardFace(entry.card, {onDiscardClick: ()=> toggleActDiscardPending('suit', idx),
         isCustom: entry.source==='custom'});
       face.classList.toggle('discard-marked', marked);
-      if(cardTutorStep==='discard')face.classList.add('tutorial-suit-target');
+      if(cardTutorStep==='discard'){
+        const discardIcon=face.querySelector('.act-discardbtn');
+        if(discardIcon)discardIcon.classList.add('tutorial-suit-target-icon');
+      }
       actCardZone.appendChild(face);
     });
     const flowers = combinedFlowerHand(currentActUnit);
@@ -12594,8 +12613,19 @@ function tutorialInjectStyle(){
     +"@keyframes tutorialPulse{0%,100%{box-shadow:0 0 0 4px #ffd35a,0 0 18px 4px rgba(255,211,90,.7);}50%{box-shadow:0 0 0 6px #ffd35a,0 0 30px 10px rgba(255,211,90,.95);}}"
     // 選擇器不能綁死 .movebtn——站位按鈕（.slotbtn）也會被指定成「這一步要點的目標」，
     // 原本只寫 .movebtn 導致站位鈕拿到 class 卻沒有任何高亮，玩家根本看不出要先移動。
-    +".tutorial-suit-target{position:relative;z-index:2;animation:tutorialSuitPulse 1.1s infinite;}"
-    +"@keyframes tutorialSuitPulse{0%,100%{box-shadow:0 0 0 3px #ffd35a,0 0 14px 3px rgba(255,211,90,.6);}50%{box-shadow:0 0 0 5px #ffd35a,0 0 24px 8px rgba(255,211,90,.9);}}"
+    // 使用者反應「引導的框跟我選擇卡牌選取的框，根本分不出來」：這裡原本也用金色
+    // （跟 .cardface.picked 選中狀態、.tutorial-highlight 是同一個 #ffd35a），玩家點下花牌後
+    // 「這是教學要我點的」跟「這是我已經選中的」視覺上完全疊在一起、分不出來。改用跟遊戲裡
+    // 任何選取/棄牌狀態都不撞色的青色，再加一個在外框上方彈跳的「▼」箭頭——箭頭不需要額外
+    // JS，純CSS偽元素，任何套用這個class的地方都自動有。.tutorial-suit-target-icon是給
+    // 本身已經是position:absolute的小圖示用的變體（例如棄牌🗑），不覆寫position（見下面棄牌
+    // 那段呼叫端的說明：如果覆寫成relative，.act-discardbtn的絕對定位會整個跑掉）。
+    +".tutorial-suit-target,.tutorial-suit-target-icon{animation:tutorialSuitPulse 1.1s infinite;}"
+    +".tutorial-suit-target{position:relative;z-index:2;}"
+    +".tutorial-suit-target-icon{z-index:5;}"
+    +".tutorial-suit-target::after,.tutorial-suit-target-icon::after{content:'▼';position:absolute;left:50%;top:-20px;transform:translateX(-50%);color:#4fd1ff;font-size:15px;font-weight:bold;text-shadow:0 0 6px rgba(79,209,255,.9),0 2px 3px rgba(0,0,0,.7);animation:tutorialSuitBounce 1.1s infinite;pointer-events:none;}"
+    +"@keyframes tutorialSuitPulse{0%,100%{box-shadow:0 0 0 3px #4fd1ff,0 0 14px 3px rgba(79,209,255,.65);}50%{box-shadow:0 0 0 5px #4fd1ff,0 0 24px 8px rgba(79,209,255,.95);}}"
+    +"@keyframes tutorialSuitBounce{0%,100%{transform:translateX(-50%) translateY(0);}50%{transform:translateX(-50%) translateY(4px);}}"
     +".tutorial-starter-note{margin:0;color:#b8bfd3;font-size:12px;line-height:1.55;}"
     +"#tutorialStarterGrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-top:14px;}"
     +".tutorial-starter-card{min-width:0;cursor:pointer;border:2px solid #333850;border-radius:12px;padding:8px;background:#1c1f2b;color:#f0f0f5;font:inherit;text-align:center;transition:transform .15s,border-color .15s;}"
@@ -13186,7 +13216,9 @@ function tutorialBattleSay(lines,onDone){
     overlay.classList.remove('active');
     document.getElementById('tutorialBox').classList.add('hidden');
     if(state.phase==='act'&&getActingUnit()&&getActingUnit().side==='A'){
-      state.turnDeadlineAt=Date.now()+ACTION_TIMEOUT_MS;state.turnDeadlineTotalMs=ACTION_TIMEOUT_MS;
+      // 逐招引導還沒教完時維持暫停（見 runLoop 裡同一個理由的說明）；教完之後才恢復正常倒數。
+      if(tutor&&!tutor.done){ state.turnDeadlineAt=0;state.turnDeadlineTotalMs=0; }
+      else { state.turnDeadlineAt=Date.now()+ACTION_TIMEOUT_MS;state.turnDeadlineTotalMs=ACTION_TIMEOUT_MS; }
       scheduleActionDeadline();
     }
     render();
