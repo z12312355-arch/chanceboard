@@ -2607,18 +2607,46 @@
        本身（#gachaCollectionGrid等id、renderGachaCollectionGrid()）維持原本命名沒有改，
        純粹只是移動了放在哪個screen，JS完全不用重寫渲染邏輯。 -->
   <div id="screen-collection" class="hidden panel">
-    <h2 style="margin-top:0;font-size:16px;">收藏</h2>
-    <div id="gachaCollectionLabel">已擁有 <span id="gachaOwnedCount">0</span> / <span id="gachaTotalCount">21</span>　💠願望結晶 <span id="collectionCrystalAmt">0</span></div>
-    <div id="gachaCollectionGrid"></div>
+    <h2 style="margin-top:0;font-size:16px;">圖鑑</h2>
+    <!-- 使用者要求「圖鑑把角色/怪物/CG分類」：原本三塊（角色收藏／怪物圖鑑，CG是新加的）
+         全部直接堆在同一個畫面上下排開，越加越長。改成分頁籤，同一時間只顯示一塊，
+         切換用 .collection-tab 的 active class（見 goToCollectionTab()），純CSS
+         display控制，資料本身三塊都還是各自獨立的render函式，互不影響。 -->
+    <div id="collectionTabs" class="collection-tabs">
+      <button type="button" class="collection-tab active" data-tab="chars">角色</button>
+      <button type="button" class="collection-tab" data-tab="monsters">怪物</button>
+      <button type="button" class="collection-tab" data-tab="cg">CG</button>
+    </div>
+    <div id="collectionPane-chars" class="collection-pane">
+      <div id="gachaCollectionLabel">已擁有 <span id="gachaOwnedCount">0</span> / <span id="gachaTotalCount">21</span>　💠願望結晶 <span id="collectionCrystalAmt">0</span></div>
+      <div id="gachaCollectionGrid"></div>
+    </div>
     <!-- 使用者要求「故事中擊倒的怪物會加入收藏」：怪物不進召喚池、也不是可操作棋子，
          所以另開一區當作「怪物圖鑑」，只記錄「打倒過」而不是「擁有」。沿用同一套
-         .gacha-card 樣式，未擊倒顯示剪影，跟上面的角色收藏視覺一致。 -->
-    <h2 style="margin-top:26px;font-size:16px;">怪物圖鑑</h2>
-    <div id="monsterCodexLabel">已擊倒 <span id="monsterDefeatedCount">0</span> / <span id="monsterTotalCount">0</span></div>
-    <div id="monsterCodexGrid"></div>
+         .gacha-card 樣式，未擊倒顯示剪影，跟角色收藏視覺一致。 -->
+    <div id="collectionPane-monsters" class="collection-pane hidden">
+      <div id="monsterCodexLabel">已擊倒 <span id="monsterDefeatedCount">0</span> / <span id="monsterTotalCount">0</span></div>
+      <div id="monsterCodexGrid"></div>
+    </div>
+    <!-- 使用者要求「圖鑑裡新增CG圖，故事裡出現的CG圖會收藏在這，玩家按SKIP也要記得收藏」：
+         見 storyMarkCgSeen()／STORY_CG_GALLERY 的說明，這裡只負責畫格子，未看過的CG用鎖頭
+         佔位，跟角色/怪物圖鑑同一套視覺語言，維持圖鑑三分類的一致感。 -->
+    <div id="collectionPane-cg" class="collection-pane hidden">
+      <div id="storyCgGalleryLabel">已收集 <span id="storyCgSeenCount">0</span> / <span id="storyCgTotalCount">0</span></div>
+      <div id="storyCgGalleryGrid"></div>
+    </div>
     <div id="confirm-row">
       <button type="button" class="btn small" id="collectionBackBtn">◂ 返回大廳</button>
       <button type="button" class="btn primary" id="collectionGoGachaBtn">✨ 前往召喚</button>
+    </div>
+  </div>
+
+  <!-- CG 圖鑑放大檢視：點格子彈出全螢幕大圖，未收集的不能點開（見 renderStoryCgGallery()）。 -->
+  <div id="storyCgViewerBackdrop" class="hidden">
+    <div class="story-cg-viewer">
+      <button type="button" class="btn small" id="storyCgViewerCloseBtn">✕</button>
+      <img id="storyCgViewerImg" src="" alt="">
+      <div id="storyCgViewerTitle" class="story-cg-viewer-title"></div>
     </div>
   </div>
 
@@ -12781,14 +12809,27 @@ document.addEventListener('click',function(e){
 // 原本的onclick，原有功能完全不受影響，純粹多監聽一次藉此知道「玩家點了」。
 // 對話框固定在畫面底部，手機上常常正好蓋住玩家被要求點的那顆按鈕（組隊伍的「確定」「儲存隊伍」
 // 都在底部）。等待點擊前量一次：真的重疊才把對話框讓到上方，桌機或沒重疊時完全不動。
+// 使用者反應「隨機組成10張的按鈕被擋住了」：那顆按鈕不是這一步的「主要目標」（主要目標是
+// 儲存隊伍），是額外開放點擊的 allowedIds 之一（見 tutorialHighlight 的 allowedIds／
+// tutorialWaitForSuccessfulTeamSave 呼叫端的 ['deck-picker','deckRandomBtn']）。舊版只拿
+// 主要目標的位置去判斷要不要讓開，儲存隊伍（右下角）沒被蓋到就不會觸發 avoid-bottom，但
+// 對話框自己橫向夠寬，左下角的隨機組成10張還是被蓋住了。改成把主要目標＋所有 allowedIds
+// 一起檢查，只要任何一個會被蓋住就讓對話框整個移到上方。
 function tutorialAvoidOverlap(el){
   const box=document.getElementById('tutorialBox');
-  if(!box||!el||typeof el.getBoundingClientRect!=='function')return;
-  const target=el.getBoundingClientRect(),rect=box.getBoundingClientRect();
-  if(!target.width&&!target.height)return;
-  const overlaps=target.left<rect.right&&target.right>rect.left&&target.top<rect.bottom&&target.bottom>rect.top;
-  // 讓到上方之後若反而蓋住目標（目標本來就在畫面頂端）就維持原位，至少不會更糟。
-  const shouldAvoid = overlaps&&target.top>rect.height+24;
+  if(!box)return;
+  const rect=box.getBoundingClientRect();
+  const candidates=[el].concat(tutorialAllowedEls).filter(function(t){
+    return t&&typeof t.getBoundingClientRect==='function';
+  });
+  let shouldAvoid=false;
+  candidates.forEach(function(t){
+    const target=t.getBoundingClientRect();
+    if(!target.width&&!target.height)return;
+    const overlaps=target.left<rect.right&&target.right>rect.left&&target.top<rect.bottom&&target.bottom>rect.top;
+    // 讓到上方之後若反而蓋住目標（目標本來就在畫面頂端）就維持原位，至少不會更糟。
+    if(overlaps&&target.top>rect.height+24)shouldAvoid=true;
+  });
   box.classList.toggle('avoid-bottom', shouldAvoid);
 }
 // 使用者反應「第一步點得到、第二步（儲存隊伍）點不到，對話框卻在下面」：舊版只在等待開始那
