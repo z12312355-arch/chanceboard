@@ -9548,7 +9548,14 @@ function storySetCg(){
   // beat 由呼叫端傳入（storyRenderCurrent 已經解析過），避免重複解析、也確保兩邊看到同一拍。
   const beat=arguments.length?arguments[0]:(storyRun?storyParseBlock(storyRun.block)[storyRun.beat]:null);
   const directive=beat&&beat.cg||null,src=directive&&directive.src||'';
-  const clear=function(){[img,blur].forEach(el=>{el.classList.remove('show');el.removeAttribute('src');});};
+  const clear=function(){
+    // 同立繪的「broken 占位框」問題：.show 的淡出是 0.7s，淡出中（還看得見）的元素拔掉
+    // src 會露出全螢幕大小的淺色外框＋左上角小破圖示。「立刻淨空」的原意不變，但要先
+    // 關 transition 強制 opacity 歸零（reflow 生效）再拔 src，占位框就永遠不會被看到。
+    [img,blur].forEach(el=>{el.style.transition='none';el.style.opacity='0';});
+    void img.offsetWidth;
+    [img,blur].forEach(el=>{el.style.transition='';el.style.opacity='';el.classList.remove('show');el.removeAttribute('src');});
+  };
   // 有沒有 CG 這件事在圖片載好之前就要反映到背景上，否則載入空檔會露出場景底圖（兵的圖）。
   const screen=document.getElementById('screen-story');
   if(screen)screen.classList.toggle('cg-scene',!!src);
@@ -9630,7 +9637,16 @@ function storyRenderStage(beat){
   [left,right].forEach((el,i)=>{
     const p=cast[i];const pos=cast.length===1&&i===0?'center':(i===0?'left':'right');
     el.className='story-actor '+pos;
-    if(!p){el.dataset.actorSrc='';el.removeAttribute('src');el.alt='';return;}
+    if(!p){
+      // 使用者影片逐幀（點選項後的那一格）＋實機驗證抓到的真兇：「可見的 <img> 一拔掉 src」
+      // 就進入 broken 狀態，Chrome 會畫出「淺色外框＋左上角小破圖示」的占位框；而上面
+      // className 重設移除 .visible 只是「開始 0.35s 的淡出」，這段期間元素還看得見——
+      // 點完選項接玩家台詞、兩側立繪同時退場時，就是兩個空框一左一右閃到淡出結束。
+      // 這跟快取冷熱無關，所以不管圖片修幾輪載入邏輯都修不掉。修法：退場「不拔 src」，
+      // 讓舊圖帶著畫面淡出（本來要的效果），只清 dataset 記號與 alt；下次要用時 dataset
+      // 不匹配，自然走完整的預載→解碼→現身流程，src 屆時才會被換掉。
+      el.dataset.actorSrc='';el.alt='';return;
+    }
     el.alt=p.name;
     const isActive=!!(active&&p.src===active.src);
     el.dataset.actorActive=isActive?'1':'';
