@@ -10536,6 +10536,14 @@ function renderBattle(){
     // isDiscardPending()／toggleActDiscardPending()。.discard-marked 這個 class 負責畫出
     // 「已標記」的視覺提示，真正的移除/進棄牌堆動作要等到按下「出手」才會在 confirmAct() 裡
     // 一次結算（見那裡的說明）。
+    // 教學：花牌／棄牌這兩步原本只有文字說「挑一張」「點🗑」，卡片本身沒有任何視覺標示，
+    // 玩家得自己在整排手牌裡找目標，比劍槍法願（招式鈕本身會脈動高亮）難懂。這裡比照招式鈕
+    // 的做法，把整張卡（.cardface 本身就是 position:relative，跟 .tutorial-suit-target 不衝突，
+    // 故意不直接套在 .act-discardbtn 這個小圖示上——它是 position:absolute 定位，套上去會被
+    // .tutorial-suit-target 的 position:relative 蓋掉，位置整個跑掉）加上同一顆
+    // .tutorial-suit-target 脈動外框，讓「該點哪裡」跟招式鈕一樣一眼就看到。
+    const cardTutor = window.__tutorialSuitTutor;
+    const cardTutorStep = (cardTutor && !cardTutor.done && currentActUnit.side==='A') ? cardTutor.current : null;
     const suitEntries = suitHandEntries(currentActUnit);
     suitEntries.forEach((entry, idx)=>{
       const marked = isDiscardPending('suit', idx);
@@ -10544,6 +10552,7 @@ function renderBattle(){
       const face = renderCardFace(entry.card, {onDiscardClick: ()=> toggleActDiscardPending('suit', idx),
         isCustom: entry.source==='custom'});
       face.classList.toggle('discard-marked', marked);
+      if(cardTutorStep==='discard')face.classList.add('tutorial-suit-target');
       actCardZone.appendChild(face);
     });
     const flowers = combinedFlowerHand(currentActUnit);
@@ -10554,6 +10563,7 @@ function renderBattle(){
         onDiscardClick: ()=> toggleActDiscardPending('flower', idx), isCustom: entry.source==='custom'};
       const face = renderCardFace(entry.card, opts);
       face.classList.toggle('discard-marked', marked);
+      if(cardTutorStep==='flower')face.classList.add('tutorial-suit-target');
       actCardZone.appendChild(face);
     });
     // 使用者要求移除「目前手上沒有花牌」這段文字：手上沒有任何花色卡／花牌時這一區塊維持空白

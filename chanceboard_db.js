@@ -3586,7 +3586,7 @@ window.CHANCEBOARD_DB = {
       "critRate": null,
       "cooldown": 2,
       "coefficient": 0.3,
-      "description": "終焉之環於天空展開，黑炎自法陣傾瀉而下。命中時45%令目標陷入燃燒狀態20秒，每次行動結束損失最大HP的5%，最低100HP。",
+      "description": "終焉之環於天空展開，黑炎自法陣傾瀉而下。命中時50%令目標陷入燃燒狀態20秒，每次行動結束損失最大HP的5%，最低100HP。",
       "expectedValue": null,
       "strength": 1,
       "ownerName": "黑炎．芙蕾雅(Blackflame Freya)",
@@ -3597,7 +3597,7 @@ window.CHANCEBOARD_DB = {
           "key": "燃燒",
           "mode": "value",
           "target": "target",
-          "chance": 0.45,
+          "chance": 0.5,
           "durSec": 20
         }
       ],
@@ -3611,12 +3611,12 @@ window.CHANCEBOARD_DB = {
       "condition": 3,
       "rangeType": "法",
       "scope": "群",
-      "powerRatio": 260,
+      "powerRatio": 310,
       "hitRate": 0.85,
       "critRate": null,
-      "cooldown": 4,
+      "cooldown": null,
       "coefficient": 2,
-      "description": "她解開眼罩下的封印，令虛空短暫覆蓋戰場。命中時30%令目標陷入麻痺狀態20秒，行動間隔加倍。",
+      "description": "她解開眼罩下的封印，令虛空短暫覆蓋戰場。命中時50%令目標陷入麻痺狀態20秒，行動間隔加倍。",
       "expectedValue": null,
       "strength": 1.1,
       "ownerName": "黑炎．芙蕾雅(Blackflame Freya)",
@@ -3627,7 +3627,7 @@ window.CHANCEBOARD_DB = {
           "key": "麻痺",
           "mode": "value",
           "target": "target",
-          "chance": 0.3,
+          "chance": 0.5,
           "durSec": 20
         }
       ],
