@@ -2269,7 +2269,7 @@
 </head>
 <body>
 <!-- 發布版本唯一維護位置：每次正式同步／部署時更新日期與當日版次。 -->
-<div id="appVersionBadge" data-version="v2026.07.21-09" aria-label="目前版本">讀取版本…</div>
+<div id="appVersionBadge" data-version="v2026.07.21-10" aria-label="目前版本">讀取版本…</div>
 <script>
 (function showOnlineBuildVersion(){
   const badge=document.getElementById('appVersionBadge'),version=badge.dataset.version||'dev';
@@ -8957,7 +8957,7 @@ const DEFAULT_STORY_FLOW={
   next:{'black:2':3,'black:3':4,'black:4':5,'black:8':14,'black:9':14,'black:11':14,'black:12':14,'black:13':14,'black:15':17,'black:16':17,'black:17':18,'black:19':21,'black:20':21,'white:23':24,'white:24':25,'white:25':26,'white:29':35,'white:30':35,'white:32':35,'white:33':35,'white:34':35,'white:36':38,'white:37':38,'white:38':39,'white:40':42,'white:41':42},
   conditions:[
     {route:'black',from:14,flag:'joined',equals:true,to:15,otherwise:16},{route:'black',from:18,flag:'joined',equals:true,to:20,otherwise:19},
-    {route:'white',from:35,flag:'joined',equals:true,to:36,otherwise:37},{route:'white',from:39,scoreMin:1,to:40,otherwise:41}
+    {route:'white',from:35,flag:'joined',equals:true,to:36,otherwise:37},{route:'white',from:39,flag:'joined',equals:true,to:40,otherwise:41}
   ]
 };
 function storyRefreshRuntimeConfig(){
@@ -9139,6 +9139,16 @@ function storyRefreshFateConfig(){const fate=globalStoryModeConfig.fate&&typeof 
   if(endingRule&&companionEnding!=null&&survivalEnding!=null){
     endingRule.flag='joined';endingRule.equals=true;endingRule.to=Number(companionEnding);endingRule.otherwise=Number(survivalEnding);
     delete endingRule.scoreMin;delete endingRule.scoreMax;
+  }
+  // 白方同樣依是否有同伴同行判定尾聲：同行進守護結局，獨自應戰進遺憾結局；不再以守護之心分數
+  // 決定尾聲。這裡同步遷移可能仍存在 D1 裡的舊 scoreMin 規則。
+  const whiteEndings=STORY_BRANCH_OUTCOMES.white&&STORY_BRANCH_OUTCOMES.white.ending||[];
+  const protectEnding=whiteEndings.find(block=>/守護結局/.test(STORY_OUTCOME_LABELS[block]||''));
+  const regretEnding=whiteEndings.find(block=>/遺憾結局/.test(STORY_OUTCOME_LABELS[block]||''));
+  const whiteEndingRule=(flow.conditions||[]).find(rule=>rule&&rule.route==='white'&&whiteEndings.includes(Number(rule.to))&&whiteEndings.includes(Number(rule.otherwise)));
+  if(whiteEndingRule&&protectEnding!=null&&regretEnding!=null){
+    whiteEndingRule.flag='joined';whiteEndingRule.equals=true;whiteEndingRule.to=Number(protectEnding);whiteEndingRule.otherwise=Number(regretEnding);
+    delete whiteEndingRule.scoreMin;delete whiteEndingRule.scoreMax;
   }
   if(!globalStoryModeConfig.fate)globalStoryModeConfig.fate=JSON.parse(JSON.stringify(DEFAULT_STORY_FATE_CONFIG));}
 function storyBranchOutcomeList(route,kind){return (STORY_BRANCH_OUTCOMES[route]&&STORY_BRANCH_OUTCOMES[route][kind])||[];}
