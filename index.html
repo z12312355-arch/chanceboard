@@ -1505,11 +1505,13 @@
      不變、只往上（頭頂方向）撐滿，寬度也跟著等比放大，所以會左右超出格子——這正是使用者要的
      效果。 */
   .unit[data-base-id="016"] .unit-art-img{transform:scale(1.318);transform-origin:50% 97.9%;}
+  .unit[data-base-id="016"] .unit-art-img.mirror{transform:scale(-1.318,1.318);}
   /* 怪物「守關戰士」(m002) 立繪同樣是寬、矮的構圖，量測結果甚至比016更誇張：角色本體只佔
      畫布高度的51.6%（頭頂約在47.9%處，腳底貼齊畫布底部），寬度已經是整張畫布滿版（是被裁到
      畫布邊緣，不是留白）。原本用 scale 1.938 撐滿角色本體；依使用者要求再放大為畫面現況的
      兩倍，因此改成 3.876，並繼續以角色腳底（畫布98.95%處）為縮放原點，向上與左右超出格子。 */
   .unit[data-base-id="m002"] .unit-art-img{transform:scale(3.876);transform-origin:50% 98.95%;}
+  .unit[data-base-id="m002"] .unit-art-img.mirror{transform:scale(-3.876,3.876);}
   .cell .slotlabel{position:absolute;top:4px;right:8px;font-size:10px;color:var(--muted);z-index:10;}
   .cell.emptycell{align-items:center;justify-content:center;color:var(--muted);font-size:12px;opacity:.6;}
   /* 招式命中預覽（見 renderBattle() 裡 targetPreviewSlots 的說明）：選好招式後，用一圈脈動的
@@ -1580,6 +1582,10 @@
      浮起來一點，不是完全貼平；陣亡/暈眩等狀態的變化（.dead、.stealth等）都是疊加透明度/濾鏡，
      不受這裡背景改成漸層影響。 */
   .unit{background:linear-gradient(165deg,#22263a 0%,#1a1d29 60%,#15171f 100%);border:1px solid rgba(255,255,255,.06);border-radius:8px;position:relative;overflow:hidden;box-shadow:0 2px 6px rgba(0,0,0,.35);will-change:transform;}
+  /* The image loader sets visibility:visible directly on loaded artwork. Hiding
+     only the parent with visibility therefore allowed that child image to show
+     through before a move ended. Parent opacity cannot be overridden by a child. */
+  .unit.mid-move-hidden{opacity:0 !important;visibility:hidden !important;pointer-events:none !important;}
   /* 移動中的分身會掛在 body 上方，不受棋盤格 overflow:hidden 裁切；角色穿越格子縫隙時不會消失。 */
 .move-ghost{position:fixed !important;z-index:1000 !important;display:block !important;margin:0 !important;pointer-events:none !important;will-change:transform,width,height;overflow:visible !important;}
 /* 分身離開棋盤格後不再受格子的響應式尺寸限制：移動途中沿用起點量到的立繪尺寸，
@@ -6877,7 +6883,12 @@ function playPendingEffects(){
       el.classList.remove('mid-move-hidden');
     };
     const onMoveGhostTransitionEnd = function(event){
-      if(event.target===ghost && event.propertyName==='transform') finishMoveGhost();
+      // Wait a short post-transition buffer before revealing the real unit. This
+      // guarantees the ghost's final painted frame has landed before the
+      // destination artwork is allowed to appear.
+      if(event.target===ghost && event.propertyName==='transform') {
+        setTimeout(finishMoveGhost, battleScaledMs(100));
+      }
     };
     ghost.addEventListener('transitionend', onMoveGhostTransitionEnd);
     void ghost.offsetWidth;
@@ -14625,7 +14636,11 @@ document.getElementById('admin1v1BattleBtn').onclick=function(){ closeAdminPanel
           // shown on the left faces right, and the unit shown on the right
           // faces left. In B's perspective the physical sides are swapped.
           const rightSide = perspectiveB ? 'A' : 'B';
-          img.style.transform=(localUnit && localUnit.side===rightSide)?'scaleX(-1)':'';
+          // Use a class rather than an inline transform. Inline scaleX(-1)
+          // replaced character-specific transforms (notably m002's large scale)
+          // and made story-enemy move ghosts inherit the wrong visual transform.
+          img.style.transform='';
+          img.classList.toggle('mirror', !!(localUnit && localUnit.side===rightSide));
         });
       }
       let colorStyle=document.getElementById('online-perspective-colors');
