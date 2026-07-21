@@ -8297,17 +8297,23 @@ function goToCollection(){
    怪物不進召喚池、也不是可操作棋子，因此不寫進 ownedCharIds，另外用一份「打倒過的怪物 id」
    清單。故事戰勝利時由 storyRecordDefeatedMonsters() 記錄；教學戰的稻草人刻意排除，那是靶子
    不是戰績。跟帳號同步無關，純本機收藏紀錄。 */
-const MONSTER_CODEX_KEY='chanceboard_monster_codex_v1';
+// v1→v2：v1 時期 storyRecordDefeatedMonsters() 有 bug，限時戰只要「總血量贏」就把對方整隊
+// 都記成打倒，即使那隻怪根本沒死。bug 已修好，但玩家瀏覽器裡的 v1 資料可能已經錯誤記錄，
+// 且沒辦法分辨哪些是真的打倒、哪些是誤記，所以直接換一把新 key，讓圖鑑重新從空的開始算。
+const MONSTER_CODEX_KEY='chanceboard_monster_codex_v2';
 const MONSTER_CODEX_EXCLUDE=['m004']; // 教學稻草人不列入圖鑑
 function loadMonsterCodex(){try{const v=JSON.parse(localStorage.getItem(MONSTER_CODEX_KEY)||'[]');return Array.isArray(v)?v.filter(id=>typeof id==='string'):[];}catch(e){return [];}}
 function saveMonsterCodex(list){try{localStorage.setItem(MONSTER_CODEX_KEY,JSON.stringify(list));}catch(e){}}
 function monsterCodexList(){return (DB.monsters||[]).filter(m=>MONSTER_CODEX_EXCLUDE.indexOf(m.id)<0);}
 // 戰鬥結束時把「這場打倒的怪物」記進圖鑑。只在玩家獲勝時呼叫，預覽模式不記錄。
+// 注意：勝利不代表對方全滅——限時戰是比雙方剩餘血量，teamB 可能還有活著的怪物，
+// 那些不算「打倒」，只有 unit.alive===false（hp 真的歸零過）才算數，不然圖鑑會冒出沒打死過的怪。
 function storyRecordDefeatedMonsters(){
   if(storyPreviewMode)return;
   const codex=loadMonsterCodex();let changed=false;
   (state.teamB||[]).forEach(unit=>{
-    const id=unit&&unit.isMonster&&unit.baseId;
+    if(!unit||unit.alive)return;
+    const id=unit.isMonster&&unit.baseId;
     if(!id||MONSTER_CODEX_EXCLUDE.indexOf(id)>=0)return;
     if(!MONSTER_BY_ID[id])return;
     if(codex.indexOf(id)<0){codex.push(id);changed=true;}
