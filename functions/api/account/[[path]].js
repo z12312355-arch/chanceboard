@@ -217,6 +217,7 @@ function profileFromRow(row) {
   const progression = progressionFromRow(row);
   return {
     playerName: row.player_name || '',
+    friendCode: row.friend_code || '',
     gold: row.gold, diamond: row.diamond,
     ownedCharIds: parseJson(row.owned_chars, []), charStars: parseJson(row.char_stars, {}),
     // 2026-07 升星改制：願望結晶餘額與（預留的）招式技能等級。
@@ -358,12 +359,38 @@ function tutorialStepAtLeast(current, expected) {
   return TUTORIAL_STEPS.indexOf(current) >= TUTORIAL_STEPS.indexOf(expected);
 }
 async function friendList(db, uid) {
-  const result = await db.prepare(`SELECT p.uid,p.player_name
+  const result = await db.prepare(`SELECT p.uid,p.player_name,p.friend_code
     FROM friendships f JOIN players p ON p.uid=CASE WHEN f.user_a=?1 THEN f.user_b ELSE f.user_a END
     WHERE f.user_a=?1 OR f.user_b=?1 ORDER BY p.player_name COLLATE NOCASE`).bind(uid).all();
-  return (result.results || []).map(row => ({ uid: row.uid, playerName: row.player_name || '未命名玩家' }));
+  return (result.results || []).map(row => ({ uid: row.uid, playerName: row.player_name || '未命名玩家', friendCode: row.friend_code || '' }));
 }
 function randomPick(items) { return items[crypto.getRandomValues(new Uint32Array(1))[0] % items.length]; }
+// 2026-07：加好友碼——原始 Firebase UID 太長不適合手動輸入/分享，改用 8 位數字短碼，
+// 畫面上顯示成 XXXX-XXXX。normalizeFriendCode() 負責把使用者貼上來的字串（可能含 - 或空白）
+// 清成純數字比對用；generateFriendCode() 產生候選碼；ensureFriendCode() 在帳號還沒有
+// 短碼時（新帳號，或 migration 剛跑完的舊帳號）補一個，靠 UNIQUE 索引擋碰撞、失敗就重試。
+function normalizeFriendCode(value) {
+  return String(value || '').replace(/[^0-9]/g, '');
+}
+function generateFriendCode() {
+  const n = crypto.getRandomValues(new Uint32Array(1))[0] % 100000000;
+  return String(n).padStart(8, '0');
+}
+async function ensureFriendCode(db, row) {
+  if (row.friend_code) return row;
+  for (let attempt = 0; attempt < 8; attempt++) {
+    const code = generateFriendCode();
+    try {
+      await db.prepare('UPDATE players SET friend_code=?2,updated_at=unixepoch() WHERE uid=?1').bind(row.uid, code).run();
+      return await db.prepare('SELECT * FROM players WHERE uid=?1').bind(row.uid).first();
+    } catch (error) {
+      if (!/UNIQUE|constraint/i.test(String(error && error.message))) throw error;
+      // 撞號了，換一個候選碼重試。
+    }
+  }
+  // 8 位數字空間撞號 8 次機率極低；真的發生就先留空，下一次請求會再試一次。
+  return row;
+}
 
 export async function onRequest(context) {
   const { request, env, params } = context;
@@ -373,6 +400,7 @@ export async function onRequest(context) {
     const db = env.PLAYER_DB;
     let row = await ensureProfile(db, user);
     row = await migrateStarsToV2(db, row); // 舊制星級一次性遷移（見函式說明）
+    row = await ensureFriendCode(db, row); // 沒有好友碼的帳號（新帳號／舊資料）補一組
     const action = Array.isArray(params.path) ? params.path.join('/') : String(params.path || '');
     const body = request.method === 'POST' ? await request.json().catch(() => ({})) : {};
     const admin = isAdminUser(env, user, row);
@@ -528,11 +556,12 @@ export async function onRequest(context) {
       const nextStep = tutorialStepFromRow(row) === 'intro' ? 'starter' : tutorialStepFromRow(row);
       await db.prepare('UPDATE players SET player_name=?2,tutorial_step=?3,updated_at=unixepoch() WHERE uid=?1').bind(user.uid, playerName, nextStep).run();
     } else if (action === 'friend-add') {
-      const targetUid = String(body.uid || '').trim();
-      if (!targetUid) throw apiError('請輸入好友的 UID。');
-      if (targetUid === user.uid) throw apiError('不能把自己加為好友。');
-      const target = await db.prepare('SELECT uid FROM players WHERE uid=?1').bind(targetUid).first();
-      if (!target) throw apiError('找不到這個 UID 的玩家，請確認 UID 是否正確。', 404);
+      const targetCode = normalizeFriendCode(body.friendCode);
+      if (targetCode.length !== 8) throw apiError('請輸入完整的 8 碼好友碼。');
+      if (targetCode === row.friend_code) throw apiError('不能把自己加為好友。');
+      const target = await db.prepare('SELECT uid FROM players WHERE friend_code=?1').bind(targetCode).first();
+      if (!target) throw apiError('找不到這組好友碼，請確認是否正確。', 404);
+      if (target.uid === user.uid) throw apiError('不能把自己加為好友。');
       const ownCount = await db.prepare('SELECT COUNT(*) AS n FROM friendships WHERE user_a=?1 OR user_b=?1').bind(user.uid).first();
       const targetCount = await db.prepare('SELECT COUNT(*) AS n FROM friendships WHERE user_a=?1 OR user_b=?1').bind(target.uid).first();
       if ((ownCount && ownCount.n >= 50) || (targetCount && targetCount.n >= 50)) throw apiError('好友人數已達 50 人上限。');

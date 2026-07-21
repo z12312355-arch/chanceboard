@@ -24,13 +24,19 @@ CREATE TABLE IF NOT EXISTS players (
   story_progress TEXT,
   story_stage_progress TEXT,
   story_discovery TEXT,
+  -- 2026-07：加好友用的短碼，8 位數字字串（保留前導零），畫面上顯示成 XXXX-XXXX。
+  -- 帳號建立時是空字串，第一次讀取帳號狀態時由 API 端隨機產生並補回（見 ensureFriendCode()）。
+  friend_code TEXT NOT NULL DEFAULT '',
   created_at INTEGER NOT NULL,
   updated_at INTEGER NOT NULL
 );
 
--- 2026-07：玩家名字改為可重複（不再要求唯一），加好友一律改用 UID。
--- 舊資料庫如已建立過 players_player_name_unique，需另外執行
+-- 2026-07：玩家名字改為可重複（不再要求唯一），加好友改用下面的 friend_code 短碼查詢，
+-- 不再用玩家名字或原始 UID。舊資料庫如已建立過 players_player_name_unique，需另外執行
 -- migration-2026-07-drop-name-unique.sql 移除該索引。
+
+CREATE UNIQUE INDEX IF NOT EXISTS players_friend_code_unique
+  ON players(friend_code) WHERE friend_code <> '';
 
 CREATE TABLE IF NOT EXISTS friendships (
   user_a TEXT NOT NULL,
@@ -47,6 +53,7 @@ CREATE INDEX IF NOT EXISTS friendships_user_b_idx ON friendships(user_b);
 -- Existing databases need this one-time migration before rerunning the indexes/tables above:
 -- ALTER TABLE players ADD COLUMN player_name TEXT NOT NULL DEFAULT '' COLLATE NOCASE;
 -- See migration-2026-07-admin-story-progress.sql for account-admin and story-progress columns.
+-- See migration-2026-07-friend-code.sql for the friend_code column + unique index above.
 
 -- One shared row for live game balance and economy settings.  Player data remains
 -- per-account in `players`; this table is deliberately global and admin-only.

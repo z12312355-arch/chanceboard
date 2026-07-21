@@ -2522,10 +2522,10 @@
     <div class="battlelog-panel" style="max-width:480px;width:100%;max-height:80vh;overflow:auto">
       <div class="bl-head"><div class="bl-title">👥 好友 <span id="friendsCount">0 / 50</span></div><button class="btn small" id="friendsCloseBtn">✕</button></div>
       <div style="display:flex;align-items:center;gap:7px;margin:10px 0;font-size:12px;color:var(--muted)">
-        <span>我的 UID：</span><code id="myUidText" style="flex:1;min-width:0;overflow:auto;white-space:nowrap;color:var(--text)"></code>
-        <button type="button" class="btn small" id="myUidCopyBtn">複製</button>
+        <span>我的好友碼：</span><code id="myFriendCodeText" style="flex:1;min-width:0;overflow:auto;white-space:nowrap;color:var(--text);font-size:14px;letter-spacing:.5px">------</code>
+        <button type="button" class="btn small" id="myFriendCodeCopyBtn">複製</button>
       </div>
-      <div style="display:flex;gap:7px;margin:10px 0"><input id="friendUidInput" placeholder="輸入好友的 UID" style="flex:1;min-width:0;padding:8px;border-radius:6px;border:1px solid var(--line);background:var(--panel2);color:var(--text)"><button type="button" class="btn primary" id="friendAddBtn">新增</button></div>
+      <div style="display:flex;gap:7px;margin:10px 0"><input id="friendCodeInput" maxlength="9" placeholder="輸入好友碼，例如 1234-5678" style="flex:1;min-width:0;padding:8px;border-radius:6px;border:1px solid var(--line);background:var(--panel2);color:var(--text)"><button type="button" class="btn primary" id="friendAddBtn">新增</button></div>
       <div id="friendsMessage" style="font-size:12px;color:var(--muted);margin-bottom:8px"></div>
       <div id="friendsList"></div>
     </div>
@@ -14922,6 +14922,7 @@ document.getElementById('admin1v1BattleBtn').onclick=function(){ closeAdminPanel
       playerName=p.playerName; window.__playerName=playerName;
       try{ if(playerName)localStorage.setItem(PLAYER_NAME_KEY,playerName);else localStorage.removeItem(PLAYER_NAME_KEY); }catch(e){}
     }
+    if(typeof p.friendCode==='string')window.__friendCode=p.friendCode;
     goldAmount=Number(p.gold)||0; diamondAmount=Number(p.diamond)||0;
     ownedCharIds=Array.isArray(p.ownedCharIds)?p.ownedCharIds:[];
     charStars=p.charStars&&typeof p.charStars==='object'?p.charStars:{};
@@ -15128,10 +15129,14 @@ document.getElementById('admin1v1BattleBtn').onclick=function(){ closeAdminPanel
     if(!name || name.length>16) throw new Error('名字須為 1～16 個字。');
     const d=await accountApi('profile-name',{playerName:name});applyAccountState(d.state);return playerName;
   };
+  // 好友碼固定 8 位數字，畫面上一律用 XXXX-XXXX 分段顯示，好唸好貼；比對/送出 API 時
+  // 再用 normalizeFriendCodeInput() 把使用者輸入裡的 - 或空白去掉還原成純數字。
+  function formatFriendCode(code){code=String(code||'');return code.length===8?code.slice(0,4)+'-'+code.slice(4):code;}
+  function normalizeFriendCodeInput(value){return String(value||'').replace(/[^0-9]/g,'');}
   function renderFriends(friends){
     const list=document.getElementById('friendsList'),count=document.getElementById('friendsCount');
     count.textContent=friends.length+' / 50';
-    list.innerHTML=friends.length?friends.map(function(friend){return '<div class="online-room-card" style="margin-bottom:7px"><b>'+escapeHtml(friend.playerName)+'</b><button type="button" class="btn small friend-remove" data-uid="'+escapeHtml(friend.uid)+'">刪除</button></div>';}).join(''):'<div class="online-empty">目前還沒有好友。</div>';
+    list.innerHTML=friends.length?friends.map(function(friend){return '<div class="online-room-card" style="margin-bottom:7px"><b>'+escapeHtml(friend.playerName)+'</b> <span style="color:var(--muted);font-size:11px">'+escapeHtml(formatFriendCode(friend.friendCode))+'</span><button type="button" class="btn small friend-remove" data-uid="'+escapeHtml(friend.uid)+'">刪除</button></div>';}).join(''):'<div class="online-empty">目前還沒有好友。</div>';
     list.querySelectorAll('.friend-remove').forEach(function(btn){btn.onclick=async function(){
       try{const d=await accountApi('friend-remove',{uid:btn.dataset.uid});renderFriends(d.friends);}catch(e){document.getElementById('friendsMessage').textContent=e.message;}
     };});
@@ -15139,22 +15144,24 @@ document.getElementById('admin1v1BattleBtn').onclick=function(){ closeAdminPanel
   openFriendsPanel=async function(){
     if(!accountReady){alert('請先登入帳號，才能使用好友功能。');return;}
     const backdrop=document.getElementById('friendsBackdrop'),message=document.getElementById('friendsMessage');
-    document.getElementById('myUidText').textContent=(currentUser&&currentUser.uid)||'';
+    document.getElementById('myFriendCodeText').textContent=formatFriendCode(window.__friendCode)||'------';
     backdrop.classList.remove('hidden');message.textContent='載入中…';
     try{const d=await accountApi('friends');renderFriends(d.friends);message.textContent='';}catch(e){message.textContent=e.message;}
   };
   document.getElementById('friendsCloseBtn').onclick=function(){document.getElementById('friendsBackdrop').classList.add('hidden');};
   document.getElementById('friendsBackdrop').onclick=function(e){if(e.target===this)this.classList.add('hidden');};
-  document.getElementById('myUidCopyBtn').onclick=async function(){
-    const uid=document.getElementById('myUidText').textContent,message=document.getElementById('friendsMessage');
-    if(!uid)return;
-    try{await navigator.clipboard.writeText(uid);message.textContent='已複製我的 UID，傳給朋友讓他加你好友吧。';}
-    catch(e){message.textContent='複製失敗，請手動選取複製：'+uid;}
+  document.getElementById('myFriendCodeCopyBtn').onclick=async function(){
+    const code=formatFriendCode(window.__friendCode),message=document.getElementById('friendsMessage');
+    if(!window.__friendCode)return;
+    try{await navigator.clipboard.writeText(code);message.textContent='已複製我的好友碼，傳給朋友讓他加你好友吧。';}
+    catch(e){message.textContent='複製失敗，請手動選取複製：'+code;}
   };
   document.getElementById('friendAddBtn').onclick=async function(){
-    const input=document.getElementById('friendUidInput'),message=document.getElementById('friendsMessage'),btn=this;
+    const input=document.getElementById('friendCodeInput'),message=document.getElementById('friendsMessage'),btn=this;
+    const code=normalizeFriendCodeInput(input.value);
+    if(code.length!==8){message.textContent='請輸入完整的 8 碼好友碼。';return;}
     btn.disabled=true;message.textContent='新增中…';
-    try{const d=await accountApi('friend-add',{uid:input.value.trim()});renderFriends(d.friends);input.value='';message.textContent='好友已新增。';}catch(e){message.textContent=e.message;}btn.disabled=false;
+    try{const d=await accountApi('friend-add',{friendCode:code});renderFriends(d.friends);input.value='';message.textContent='好友已新增。';}catch(e){message.textContent=e.message;}btn.disabled=false;
   };
   function queuePreferences(){
     if(!accountReady) return;
