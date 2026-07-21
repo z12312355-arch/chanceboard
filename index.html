@@ -6852,25 +6852,23 @@ function playPendingEffects(){
     // 分身飛行期間把這個單位記進「動畫進行中」名單：中途的 render() 會整個重建棋盤DOM，
     // 上面那行藏的是「舊的」元素，新建出來的元素要靠這份名單在建立當下就藏好（見
     // renderBattle() 裡 unit-<id> 建立處的說明），否則會看到目的地的圖跟半路的分身同時存在。
-    const animUntil = Date.now() + ghostMs + battleScaledMs(40);
+    // Use an identity token instead of a wall-clock deadline. The transform does
+    // not actually start until the next animation frame, so a timer counted from
+    // here can expire before the visible animation finishes on a busy device.
+    const animToken = {};
     window.__unitsMidMoveAnim = window.__unitsMidMoveAnim || {};
-    window.__unitsMidMoveAnim[m.unitId] = animUntil;
-    void ghost.offsetWidth;
-    requestAnimationFrame(()=>{
-      ghost.style.transform = 'translate('+dx+'px,'+dy+'px)';
-      ghost.style.width = newRect.width+'px';
-      ghost.style.height = newRect.height+'px';
-    });
-    setTimeout(()=>{
+    window.__unitsMidMoveAnim[m.unitId] = animToken;
+    let moveGhostFinished = false;
+    const finishMoveGhost = function(){
+      if(moveGhostFinished) return;
+      moveGhostFinished = true;
+      ghost.removeEventListener('transitionend', onMoveGhostTransitionEnd);
       if(ghost.parentNode) ghost.parentNode.removeChild(ghost);
-      // 只有這筆記錄還是「自己那一次」寫的才清除——如果同一個單位在飛行途中又排了下一段
-      // 移動動畫（覆寫了名單上的時間戳），這裡不能把別人的藏匿提前解除。
-    // 只有這筆記錄仍是目前動畫時，才允許目的地立繪現形；若同一單位已
-    // 開始下一段移動，舊動畫的清除計時器不能把新動畫中的立繪提前顯示。
-    const isCurrentAnim = window.__unitsMidMoveAnim && window.__unitsMidMoveAnim[m.unitId]===animUntil;
-    if(isCurrentAnim) {
+      // Only the currently active animation may reveal the destination. If the
+      // same unit has already started another move, leave it hidden for that move.
+      const isCurrentAnim = window.__unitsMidMoveAnim && window.__unitsMidMoveAnim[m.unitId]===animToken;
+      if(!isCurrentAnim) return;
       delete window.__unitsMidMoveAnim[m.unitId];
-      // 重建過的話 el 已經是死引用，一律重新用 id 抓「目前活著的那顆」來現形。
       const current = document.getElementById('unit-'+m.unitId);
       if(current) {
         current.style.visibility = '';
@@ -6878,8 +6876,20 @@ function playPendingEffects(){
       }
       el.style.visibility = '';
       el.classList.remove('mid-move-hidden');
-    }
-    }, ghostMs + battleScaledMs(40));
+    };
+    const onMoveGhostTransitionEnd = function(event){
+      if(event.target===ghost && event.propertyName==='transform') finishMoveGhost();
+    };
+    ghost.addEventListener('transitionend', onMoveGhostTransitionEnd);
+    void ghost.offsetWidth;
+    requestAnimationFrame(()=>{
+      ghost.style.transform = 'translate('+dx+'px,'+dy+'px)';
+      ghost.style.width = newRect.width+'px';
+      ghost.style.height = newRect.height+'px';
+    });
+    // Fallback for browsers that suppress transitionend (for example when a tab
+    // is backgrounded). It is deliberately later than the normal transition.
+    setTimeout(finishMoveGhost, ghostMs + 1000);
   });
   if(!effects.length) return;
   effects.forEach(fx=>{
@@ -10743,7 +10753,7 @@ function renderUnitBlock(u, isActing, compact, displaySlot){
   // 是可見的，於是「角色已經站在目的地」跟「分身還在半路」同時出現在畫面上。改用一份
   // 「移動動畫進行中的單位」名單（window.__unitsMidMoveAnim，playPendingEffects() 維護），
   // 重建DOM時查名單，還在飛的單位一律先藏起來，等分身抵達的 cleanup 再統一現形。
-  if(window.__unitsMidMoveAnim && window.__unitsMidMoveAnim[u.id] > Date.now()) {
+  if(window.__unitsMidMoveAnim && window.__unitsMidMoveAnim[u.id]) {
     div.style.visibility='hidden';
     div.classList.add('mid-move-hidden');
   }
