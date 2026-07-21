@@ -6812,10 +6812,6 @@ function playPendingEffects(){
     // The clone is moved outside #board, so it no longer inherits the joining
     // player's mirrored-board context. Reapply the exact left/right artwork rule
     // here: the unit displayed on the right faces left on both players' screens.
-    const boardEl = document.getElementById('board');
-    const perspectiveB = !!(boardEl && boardEl.classList.contains('online-perspective-b'));
-    const movingUnit = (state.teamA||[]).concat(state.teamB||[]).find(function(unit){ return unit.id===m.unitId; });
-    const rightSide = perspectiveB ? 'A' : 'B';
     const sourceImages = el.querySelectorAll('.unit-art-img');
     const sourceArts = el.querySelectorAll('.unit-art');
     const ghostArts = ghost.querySelectorAll('.unit-art');
@@ -6825,15 +6821,21 @@ function playPendingEffects(){
     ghost.querySelectorAll('.unit-art-img').forEach(function(img,index){
       const source = sourceImages[index];
       if(source){
-        const sourceRect = source.getBoundingClientRect();
-        // Keep the same artwork dimensions throughout the travel animation instead
-        // of letting the detached clone fall back to a smaller responsive size.
-        img.style.width=sourceRect.width+'px';
-        img.style.height=sourceRect.height+'px';
+        const sourceStyle = getComputedStyle(source);
+        // getBoundingClientRect() includes CSS transforms. 016 already has a
+        // character-specific scale, so using that transformed size as the clone's
+        // layout size and then applying the scale again made its move ghost huge.
+        // offsetWidth/offsetHeight are the pre-transform layout dimensions: copy
+        // those, then apply the source's resolved transform exactly once.
+        const sourceWidth = source.offsetWidth || parseFloat(sourceStyle.width);
+        const sourceHeight = source.offsetHeight || parseFloat(sourceStyle.height);
+        img.style.width=sourceWidth+'px';
+        img.style.height=sourceHeight+'px';
         img.style.maxWidth='none'; img.style.maxHeight='none';
         copyResolvedStyle(source,img,['position','top','right','bottom','left','objectFit','objectPosition','marginTop','marginRight','marginBottom','marginLeft','boxSizing']);
+        img.style.transform = sourceStyle.transform==='none' ? '' : sourceStyle.transform;
+        img.style.transformOrigin = sourceStyle.transformOrigin;
       }
-      img.style.transform=(movingUnit && movingUnit.side===rightSide)?'scaleX(-1)':'';
     });
     const oldWidth = m.width || newRect.width;
     const oldHeight = m.height || newRect.height;
@@ -6863,11 +6865,20 @@ function playPendingEffects(){
       if(ghost.parentNode) ghost.parentNode.removeChild(ghost);
       // 只有這筆記錄還是「自己那一次」寫的才清除——如果同一個單位在飛行途中又排了下一段
       // 移動動畫（覆寫了名單上的時間戳），這裡不能把別人的藏匿提前解除。
-      if(window.__unitsMidMoveAnim && window.__unitsMidMoveAnim[m.unitId]===animUntil) delete window.__unitsMidMoveAnim[m.unitId];
+    // 只有這筆記錄仍是目前動畫時，才允許目的地立繪現形；若同一單位已
+    // 開始下一段移動，舊動畫的清除計時器不能把新動畫中的立繪提前顯示。
+    const isCurrentAnim = window.__unitsMidMoveAnim && window.__unitsMidMoveAnim[m.unitId]===animUntil;
+    if(isCurrentAnim) {
+      delete window.__unitsMidMoveAnim[m.unitId];
       // 重建過的話 el 已經是死引用，一律重新用 id 抓「目前活著的那顆」來現形。
       const current = document.getElementById('unit-'+m.unitId);
-      if(current) current.style.visibility = '';
+      if(current) {
+        current.style.visibility = '';
+        current.classList.remove('mid-move-hidden');
+      }
       el.style.visibility = '';
+      el.classList.remove('mid-move-hidden');
+    }
     }, ghostMs + battleScaledMs(40));
   });
   if(!effects.length) return;
@@ -10732,7 +10743,10 @@ function renderUnitBlock(u, isActing, compact, displaySlot){
   // 是可見的，於是「角色已經站在目的地」跟「分身還在半路」同時出現在畫面上。改用一份
   // 「移動動畫進行中的單位」名單（window.__unitsMidMoveAnim，playPendingEffects() 維護），
   // 重建DOM時查名單，還在飛的單位一律先藏起來，等分身抵達的 cleanup 再統一現形。
-  if(window.__unitsMidMoveAnim && window.__unitsMidMoveAnim[u.id] > Date.now()) div.style.visibility='hidden';
+  if(window.__unitsMidMoveAnim && window.__unitsMidMoveAnim[u.id] > Date.now()) {
+    div.style.visibility='hidden';
+    div.classList.add('mid-move-hidden');
+  }
   // 戰鬥畫面的角色卡立繪：用橫向立繪(_wide.png)，B方（畫面右側）鏡像水平翻轉，讓兩邊的角色
   // 視覺上都「面對」棋盤中央對方。絕大多數角色目前還沒有畫真的立繪，圖片 404 時只把 <img> 自己
   // 拿掉（onerror），底下墊著一個放大版的生成頭像 SVG（跟小圓形頭像同一套生成邏輯，見
