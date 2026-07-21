@@ -1507,10 +1507,9 @@
   .unit[data-base-id="016"] .unit-art-img{transform:scale(1.318);transform-origin:50% 97.9%;}
   /* 怪物「守關戰士」(m002) 立繪同樣是寬、矮的構圖，量測結果甚至比016更誇張：角色本體只佔
      畫布高度的51.6%（頭頂約在47.9%處，腳底貼齊畫布底部），寬度已經是整張畫布滿版（是被裁到
-     畫布邊緣，不是留白）。用跟016一樣的算法：scale = 1/0.516 ≈ 1.938，transform-origin抓在
-     角色腳底（畫布98.95%處）。因為原本寬度就已經滿版，放大後左右超出格子的幅度會比016更明顯，
-     這是使用者要求「一樣的處理方式」下預期會有的結果。 */
-  .unit[data-base-id="m002"] .unit-art-img{transform:scale(1.938);transform-origin:50% 98.95%;}
+     畫布邊緣，不是留白）。原本用 scale 1.938 撐滿角色本體；依使用者要求再放大為畫面現況的
+     兩倍，因此改成 3.876，並繼續以角色腳底（畫布98.95%處）為縮放原點，向上與左右超出格子。 */
+  .unit[data-base-id="m002"] .unit-art-img{transform:scale(3.876);transform-origin:50% 98.95%;}
   .cell .slotlabel{position:absolute;top:4px;right:8px;font-size:10px;color:var(--muted);z-index:10;}
   .cell.emptycell{align-items:center;justify-content:center;color:var(--muted);font-size:12px;opacity:.6;}
   /* 招式命中預覽（見 renderBattle() 裡 targetPreviewSlots 的說明）：選好招式後，用一圈脈動的
