@@ -1169,6 +1169,14 @@
     box-shadow:0 2px 4px rgba(0,0,0,.4), inset 0 1px 0 rgba(255,255,255,.3);}
   .rcard-art{position:absolute;inset:4px;border-radius:10px;overflow:hidden;background:rgba(255,255,255,.04);display:flex;align-items:center;justify-content:center;z-index:0;}
   .rcard-art-img{width:100%;height:100%;object-fit:cover;object-position:50% 15%;display:block;}
+  /* 使用者反應「海瑟(018)太矮了看不到」：查了原圖，她本身是隻小貓，畫面裡人物本體只佔了畫布
+     最下面約30%高，其餘都是空的透明背景——不是圖壞掉，使用者確認過要保留原圖不放大，只改
+     這裡的裁切位置。.rcard-art-img 預設 object-position:50% 15%（裁切窗口偏上方，其他角色的
+     人物本體通常從接近畫布頂端就開始，這樣裁才看得到臉/上半身）套在海瑟身上，因為她的人物
+     本體整個都在下半部，偏上方的裁切窗口幾乎完全落在她本體「上面」那段空白，等於看不到她。
+     用 data-char-id 只覆寫她一位的 object-position 成偏下方（50% 100%，貼齊裁切窗口下緣），
+     不影響其他角色沿用的預設裁切位置。 */
+  .rcard[data-char-id="018"] .rcard-art-img{object-position:50% 100%;}
   /* 比之前的裝飾用暗角更高更深（40%→62%高，透明度也加深）：現在底部疊了真的文字資訊
      （姓名/稱號/屬性/數值），不是純裝飾，暗角必須夠強、夠高，才能保證16px文字在任何立繪
      底色上都讀得清楚，不會被立繪本身的亮色區域吃掉對比度。 */
@@ -10462,6 +10470,9 @@ function renderSelect(){
       // elem-劍/槍/法 套用跟牌組建構畫面 .cardface.suit-* 一致的屬性色調，讓選角卡片跟
       // 遊戲裡其他地方的卡牌視覺語言統一。
       div.className = 'rcard elem-'+r.element;
+      // 給 data-char-id，讓CSS可以針對「某個特定角色」單獨覆寫立繪裁切位置（見下面
+      // .rcard[data-char-id="018"] 那條規則的說明），不用為了一位角色去改全體共用的規則。
+      div.dataset.charId = r.id;
       // .check 原本固定顯示 ✓，使用者要求改成顯示「第幾個選的」（1/2/3），因為選角順序決定站位
       // （第1位站前、第2位站中、第3位站後，見上面 select-heading 的文字）——顯示數字能讓玩家
       // 一眼看出這張卡選了會排在哪個位置，不用另外去記順序。文字內容（selectedIds.indexOf+1）
