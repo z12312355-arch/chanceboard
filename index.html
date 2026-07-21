@@ -2269,7 +2269,7 @@
 </head>
 <body>
 <!-- 發布版本唯一維護位置：每次正式同步／部署時更新日期與當日版次。 -->
-<div id="appVersionBadge" data-version="v2026.07.21-06" aria-label="目前版本">讀取版本…</div>
+<div id="appVersionBadge" data-version="v2026.07.21-07" aria-label="目前版本">讀取版本…</div>
 <script>
 (function showOnlineBuildVersion(){
   const badge=document.getElementById('appVersionBadge'),version=badge.dataset.version||'dev';
@@ -9170,8 +9170,31 @@ function storyOutcomeBlockForState(route,state){
   }
   return null;
 }
-function storyRememberBranchState(route,state,block){if(storyPreviewMode)return;const terminal=storyBranchOutcomeList(route,'branch'),outcome=terminal.includes(Number(block))?Number(block):storyOutcomeBlockForState(route,state);if(!outcome)return;const data=loadStoryDiscovery(),r=data.routes[route],snapshot=storyRouteStateSnapshot(state),id=storyStableBlockId(route,outcome);r.branchStates[id]=snapshot;if(!r.visitedBlocks.includes(id))r.visitedBlocks.push(id);storyMergeSnapshotDiscovery(route,snapshot,data);saveStoryDiscovery(data);}
-function storySavedBranchStates(route,existingData){const data=existingData||loadStoryDiscovery(),r=data.routes[route],progress=loadStoryStageProgress(),routeData=progress.routes[route],branchStage=storyBranchStage(route),finalStage=storyEndingStage(route)||storyLastStage(route),branchNumber=branchStage?Number(branchStage.number):null,canonical=branchNumber!=null&&(routeData.checkpoints&&routeData.checkpoints[branchNumber]||routeData.cleared.includes(branchNumber)&&routeData.state)||null,outcome=storyOutcomeBlockForState(route,canonical),id=outcome?storyStableBlockId(route,outcome):null;let changed=false;if(canonical&&id&&!r.branchStates[id]){r.branchStates[id]=storyRouteStateSnapshot(canonical);changed=true;}if(storyMergeSnapshotDiscovery(route,canonical,data))changed=true;if(id&&!r.visitedBlocks.includes(id)){r.visitedBlocks.push(id);changed=true;}if(id&&finalStage&&routeData.cleared.includes(Number(finalStage.number))&&!r.endingPaths[id]){r.endingPaths[id]=storyEndingBlockForState(route,routeData.state||canonical);changed=true;}Object.keys(r.branchStates).forEach(branchId=>{const snapshot=r.branchStates[branchId];if(!r.visitedBlocks.includes(branchId)){r.visitedBlocks.push(branchId);changed=true;}if(storyMergeSnapshotDiscovery(route,snapshot,data))changed=true;});Object.keys(r.endingPaths).forEach(branchId=>{const ending=Number(r.endingPaths[branchId]);if(!r.visitedBlocks.includes(branchId)){r.visitedBlocks.push(branchId);changed=true;}if(ending){const endingId=storyStableBlockId(route,ending);if(!r.visitedBlocks.includes(endingId)){r.visitedBlocks.push(endingId);changed=true;}if(!r.endings.includes(endingId)){r.endings.push(endingId);changed=true;}}});if(changed)saveStoryDiscovery(data);return r.branchStates;}
+function storyBranchScoreForState(route,state){
+  // 回溯曾把舊時間線的 applied 一起帶入，造成新分支的分數事件被誤認為已執行。命運分支本身已
+  // 完整記錄 choices，因此直接沿選擇樹重算實際走過節點中的分數事件，既能修復舊存檔，也不必
+  // 寫死「哪個選項值幾分」。第一章的命運分數從分支關開始累計，所以基準為0。
+  if(!state||!storyBlocks)return Number(state&&state.score)||0;
+  const defs=storyFateChoiceDefs(route);let node=defs[0]||null,total=0;
+  const choices=state.choices||{},visited=new Set();
+  const addBlockScore=function(block){
+    if(visited.has(Number(block)))return;
+    visited.add(Number(block));
+    String(storyBlocks[Number(block)]||'').split(/\r?\n/).forEach(function(line){const hit=line.trim().match(/^【(?:求生意志|守護之心)(＋|－)(\d+)】$/);if(hit)total+=(hit[1]==='－'?-1:1)*Number(hit[2]);});
+  };
+  for(let guard=0;node&&guard<20;guard++){
+    addBlockScore(node.block);
+    const picked=choices[node.block];if(picked==null)return Number(state.score)||0;
+    const item=(node.choices||[]).find(function(pair){return pair[0]===picked;});if(!item)return Number(state.score)||0;
+    const dest=Number(item[1]),nextNode=defs.find(function(def){return Number(def.block)===dest;});
+    if(!nextNode){addBlockScore(dest);return total;}
+    node=nextNode;
+  }
+  return Number(state.score)||0;
+}
+function storyNormalizedBranchSnapshot(route,state){const snapshot=storyRouteStateSnapshot(state);snapshot.score=storyBranchScoreForState(route,snapshot);return snapshot;}
+function storyRememberBranchState(route,state,block){if(storyPreviewMode)return;const terminal=storyBranchOutcomeList(route,'branch'),outcome=terminal.includes(Number(block))?Number(block):storyOutcomeBlockForState(route,state);if(!outcome)return;const data=loadStoryDiscovery(),r=data.routes[route],snapshot=storyNormalizedBranchSnapshot(route,state),id=storyStableBlockId(route,outcome);r.branchStates[id]=snapshot;if(!r.visitedBlocks.includes(id))r.visitedBlocks.push(id);storyMergeSnapshotDiscovery(route,snapshot,data);saveStoryDiscovery(data);}
+function storySavedBranchStates(route,existingData){const data=existingData||loadStoryDiscovery(),r=data.routes[route],progress=loadStoryStageProgress(),routeData=progress.routes[route],branchStage=storyBranchStage(route),finalStage=storyEndingStage(route)||storyLastStage(route),branchNumber=branchStage?Number(branchStage.number):null,canonical=branchNumber!=null&&(routeData.checkpoints&&routeData.checkpoints[branchNumber]||routeData.cleared.includes(branchNumber)&&routeData.state)||null,outcome=storyOutcomeBlockForState(route,canonical),id=outcome?storyStableBlockId(route,outcome):null;let changed=false;if(canonical&&id&&!r.branchStates[id]){r.branchStates[id]=storyNormalizedBranchSnapshot(route,canonical);changed=true;}if(storyMergeSnapshotDiscovery(route,canonical,data))changed=true;if(id&&!r.visitedBlocks.includes(id)){r.visitedBlocks.push(id);changed=true;}if(id&&finalStage&&routeData.cleared.includes(Number(finalStage.number))&&!r.endingPaths[id]){r.endingPaths[id]=storyEndingBlockForState(route,routeData.state||canonical);changed=true;}Object.keys(r.branchStates).forEach(branchId=>{const snapshot=r.branchStates[branchId],corrected=storyBranchScoreForState(route,snapshot);if(Number(snapshot.score)!==Number(corrected)){snapshot.score=corrected;changed=true;}if(r.endingPaths[branchId]!=null){const correctedEnding=storyEndingBlockForState(route,snapshot);if(correctedEnding&&Number(r.endingPaths[branchId])!==Number(correctedEnding)){r.endingPaths[branchId]=correctedEnding;changed=true;}}if(!r.visitedBlocks.includes(branchId)){r.visitedBlocks.push(branchId);changed=true;}if(storyMergeSnapshotDiscovery(route,snapshot,data))changed=true;});Object.keys(r.endingPaths).forEach(branchId=>{const ending=Number(r.endingPaths[branchId]);if(!r.visitedBlocks.includes(branchId)){r.visitedBlocks.push(branchId);changed=true;}if(ending){const endingId=storyStableBlockId(route,ending);if(!r.visitedBlocks.includes(endingId)){r.visitedBlocks.push(endingId);changed=true;}if(!r.endings.includes(endingId)){r.endings.push(endingId);changed=true;}}});if(changed)saveStoryDiscovery(data);return r.branchStates;}
 function storyEndingBlockForState(route,state){
   // 依流程規則(conditions)中「兩個目的地都是結局」的那條規則判定結局，後台改寫流程也能生效。
   const endings=storyBranchOutcomeList(route,'ending'),flow=globalStoryModeConfig.flow||DEFAULT_STORY_FLOW;
@@ -10153,7 +10176,11 @@ function storyCompleteChapter(){storyCompleteStage(storyCurrentStageNumber(story
 function storyCarryForStage(routeData,stageNumber,override){
   const blank={score:0,flags:{helped:null,joined:false},choices:{},applied:{}},checkpoint=routeData.checkpoints&&routeData.checkpoints[stageNumber-1];
   const source=override||checkpoint||(stageNumber<=1?blank:routeData.state)||blank,carry=storyRouteStateSnapshot(source);
-  carry.applied=Object.assign({},routeData.state&&routeData.state.applied||{},carry.applied||{});return carry;
+  // applied 同時包含「永久獎勵已領取」與「這條時間線的分數已套用」。舊寫法把最終存檔全部合併
+  // 進回溯分支，會讓另一條路線的求生／守護分數被誤判成已處理。只跨時間線保留非分數事件；
+  // 分數事件完全以這次 carry 自己的紀錄為準。
+  const permanentApplied={};Object.keys(routeData.state&&routeData.state.applied||{}).forEach(function(key){const parts=key.split(':'),block=Number(parts[0]),beatIndex=Number(parts[1]),beat=storyBlocks&&storyParseBlock(block)[beatIndex];if(!beat||beat.type!=='score')permanentApplied[key]=true;});
+  carry.applied=Object.assign({},permanentApplied,carry.applied||{});return carry;
 }
 function storyLaunchStage(route,stage,options){
   const opts=options||{},progress=loadStoryStageProgress(),routeData=progress.routes[route],old=loadStoryProgress(),carry=storyCarryForStage(routeData,stage.number,opts.carry||null);storyDialogueLog=[];
