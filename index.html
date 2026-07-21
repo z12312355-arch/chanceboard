@@ -172,9 +172,9 @@
   #storyTeamSelect{min-width:190px;max-width:100%;padding:8px 10px;border-radius:7px;border:1px solid #56617f;background:#101420;color:#fff;}
   /* 隊伍頭像預覽（故事關卡地圖工具列＋戰敗結算頁共用同一套卡面） */
   .story-team-preview{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
-  .story-team-face{position:relative;width:44px;height:56px;border-radius:8px;border:1px solid rgba(242,193,78,.42);background:#0c0f18;overflow:hidden;flex:none}
+  .story-team-face{position:relative;width:36px;height:64px;aspect-ratio:9 / 16;border-radius:8px;border:1px solid rgba(242,193,78,.42);background:#0c0f18;overflow:hidden;flex:none}
   .story-team-face img{width:100%;height:100%;object-fit:cover;object-position:center 12%;display:block}
-  .story-team-face[data-char-id="018"] img{object-position:center 100%;transform:scale(2.2);transform-origin:center bottom;}
+  .story-team-face[data-char-id="018"] img{object-position:center 100%;}
   .story-team-face.empty{display:grid;place-items:center;border-style:dashed;border-color:#46506c;color:#5d6884;font-size:16px}
   .story-team-preview .story-team-more{color:#93a0bd;font-size:11px}
   /* 戰敗結算頁 */
@@ -190,7 +190,7 @@
   .story-defeat-team{display:flex;justify-content:center;gap:7px;flex-wrap:wrap;margin-top:15px}
   .story-defeat-actions{display:flex;flex-direction:column;gap:9px;margin-top:20px}
   .story-defeat-actions .btn{width:100%;padding:11px}
-  @media(max-height:500px) and (orientation:landscape){.story-defeat-panel{width:min(560px,100%);padding:13px 16px;border-radius:12px}.story-defeat-title{margin:6px 0 3px;font-size:19px}.story-defeat-sub{font-size:10.5px}.story-defeat-stats{margin-top:8px}.story-defeat-team{margin-top:8px}.story-defeat-team .story-team-face{width:34px;height:44px}.story-defeat-actions{flex-direction:row;margin-top:11px}.story-defeat-actions .btn{padding:7px;font-size:11px}}
+  @media(max-height:500px) and (orientation:landscape){.story-defeat-panel{width:min(560px,100%);padding:13px 16px;border-radius:12px}.story-defeat-title{margin:6px 0 3px;font-size:19px}.story-defeat-sub{font-size:10.5px}.story-defeat-stats{margin-top:8px}.story-defeat-team{margin-top:8px}.story-defeat-team .story-team-face{width:24.75px;height:44px}.story-defeat-actions{flex-direction:row;margin-top:11px}.story-defeat-actions .btn{padding:7px;font-size:11px}}
   #storySystemNote{position:absolute;z-index:14;left:50%;top:19%;transform:translateX(-50%);color:#f2c14e;font-size:15px;font-weight:800;text-shadow:0 2px 9px #000;opacity:0;transition:opacity .2s;pointer-events:none;}
   #storySystemNote.show{opacity:1;}
   #storyLogOverlay{position:absolute;z-index:12;inset:0;display:flex;align-items:center;justify-content:center;padding:22px;background:rgba(0,0,0,.68);backdrop-filter:blur(4px)}#storyLogOverlay.hidden{display:none}.story-log-panel{width:min(760px,100%);max-height:min(78vh,720px);display:flex;flex-direction:column;border:1px solid rgba(184,199,239,.42);border-radius:15px;background:rgba(10,13,22,.94);box-shadow:0 24px 80px #000}.story-log-head{display:flex;align-items:center;gap:10px;padding:14px 16px;border-bottom:1px solid rgba(255,255,255,.12);font-weight:850}.story-log-list{overflow:auto;padding:10px 16px 18px}.story-log-row{padding:11px 4px;border-bottom:1px solid rgba(255,255,255,.08);line-height:1.65}.story-log-speaker{font-size:12px;font-weight:850;color:#f2c14e;margin-bottom:2px}.story-log-row.player .story-log-speaker{color:#8fc2ff}.story-log-row.narration{color:#c9cede;text-align:center;font-style:italic}.story-top-btn.active{border-color:#f2c14e;color:#ffe18d;box-shadow:0 0 12px rgba(242,193,78,.2)}
@@ -2269,7 +2269,7 @@
 </head>
 <body>
 <!-- 發布版本唯一維護位置：每次正式同步／部署時更新日期與當日版次。 -->
-<div id="appVersionBadge" data-version="v2026.07.21-05" aria-label="目前版本">讀取版本…</div>
+<div id="appVersionBadge" data-version="v2026.07.21-06" aria-label="目前版本">讀取版本…</div>
 <script>
 (function showOnlineBuildVersion(){
   const badge=document.getElementById('appVersionBadge'),version=badge.dataset.version||'dev';
