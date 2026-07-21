@@ -1400,9 +1400,18 @@
      （(100%-放大後寬度)/2，數學上兩邊會裁掉一樣多），超出.unit-art本身overflow:hidden
      邊界的部分自然被裁掉。單人格（--w-num預設100）算出來剛好是寬度100%／left:0%，
      跟原本行為完全一樣，不會影響任何非共用格的卡片。 */
+  /* 使用者反應「有些角色立繪浮在半空中，沒站在地板上」：量測全部 _wide(2).png 發現角色腳底到
+     畫布下緣的透明留白比例每張都不一樣（001只有0.51%幾乎貼底，016卻有10.76%），object-fit:contain
+     配 object-position:50% 50%（置中）會把這段留白也一起置中處理，留白愈多，角色相對「地板」
+     （卡片下緣）就愈往上飄。這裡改成50% 100%（下緣對齊）：在.unit-art-img的高度被寬度限制、
+     垂直方向還有多餘空間（letterbox）時，圖片會貼齊容器下緣而不是置中，至少不會再往上飄；
+     但大多數情況下（角色立繪很窄很高，實測是被「高度」而不是「寬度」卡住比例，也就是高度
+     100%填滿容器、垂直方向根本沒有多餘空間可以移動)，這條CSS改動不會有效果——真正的修法是
+     把每張圖片腳底以下的透明留白裁掉（見 art-gen-tools/trim_wide_feet.py），這裡只是一個
+     零風險、有幫助時就多少有幫助的搭配措施，不是完整修法。 */
   .unit-art-img{position:absolute;top:0;height:100%;
     left:calc(50% - 5000% / var(--w-num, 100));width:calc(10000% / var(--w-num, 100));
-    object-fit:contain;object-position:50% 50%;display:block;}
+    object-fit:contain;object-position:50% 100%;display:block;}
   .unit-art-img.mirror{transform:scaleX(-1);}
 
   /* ---- hand/deck summary row ---- */
