@@ -2269,7 +2269,7 @@
 </head>
 <body>
 <!-- 發布版本唯一維護位置：每次正式同步／部署時更新日期與當日版次。 -->
-<div id="appVersionBadge" data-version="v2026.07.21-08" aria-label="目前版本">讀取版本…</div>
+<div id="appVersionBadge" data-version="v2026.07.21-09" aria-label="目前版本">讀取版本…</div>
 <script>
 (function showOnlineBuildVersion(){
   const badge=document.getElementById('appVersionBadge'),version=badge.dataset.version||'dev';
@@ -8956,7 +8956,7 @@ const DEFAULT_STORY_FLOW={
   },
   next:{'black:2':3,'black:3':4,'black:4':5,'black:8':14,'black:9':14,'black:11':14,'black:12':14,'black:13':14,'black:15':17,'black:16':17,'black:17':18,'black:19':21,'black:20':21,'white:23':24,'white:24':25,'white:25':26,'white:29':35,'white:30':35,'white:32':35,'white:33':35,'white:34':35,'white:36':38,'white:37':38,'white:38':39,'white:40':42,'white:41':42},
   conditions:[
-    {route:'black',from:14,flag:'joined',equals:true,to:15,otherwise:16},{route:'black',from:18,scoreMax:2,to:19,otherwise:20},
+    {route:'black',from:14,flag:'joined',equals:true,to:15,otherwise:16},{route:'black',from:18,flag:'joined',equals:true,to:20,otherwise:19},
     {route:'white',from:35,flag:'joined',equals:true,to:36,otherwise:37},{route:'white',from:39,scoreMin:1,to:40,otherwise:41}
   ]
 };
@@ -9128,6 +9128,18 @@ function storyRefreshFateConfig(){const fate=globalStoryModeConfig.fate&&typeof 
       if(typeof label==='string'&&/的台詞$/.test(label))STORY_OUTCOME_LABELS[block]=label.replace(/的台詞$/,'');
     });
   });
+  // 黑方結局的語意是「是否有同伴同行」，不是求生意志分數：有同伴固定進同伴結局，獨自應戰
+  // 固定進求生結局。D1 可能仍保存舊版 scoreMax 規則，因此不能只改 DEFAULT_STORY_FLOW；每次
+  // 載入後台設定時都把這一條遷移成 joined 規則。目的節點優先由後台標籤辨認，節點改號也能用。
+  const blackEndings=STORY_BRANCH_OUTCOMES.black&&STORY_BRANCH_OUTCOMES.black.ending||[];
+  const companionEnding=blackEndings.find(block=>/同伴結局/.test(STORY_OUTCOME_LABELS[block]||''));
+  const survivalEnding=blackEndings.find(block=>/求生結局/.test(STORY_OUTCOME_LABELS[block]||''));
+  const flow=globalStoryModeConfig.flow||DEFAULT_STORY_FLOW;
+  const endingRule=(flow.conditions||[]).find(rule=>rule&&rule.route==='black'&&blackEndings.includes(Number(rule.to))&&blackEndings.includes(Number(rule.otherwise)));
+  if(endingRule&&companionEnding!=null&&survivalEnding!=null){
+    endingRule.flag='joined';endingRule.equals=true;endingRule.to=Number(companionEnding);endingRule.otherwise=Number(survivalEnding);
+    delete endingRule.scoreMin;delete endingRule.scoreMax;
+  }
   if(!globalStoryModeConfig.fate)globalStoryModeConfig.fate=JSON.parse(JSON.stringify(DEFAULT_STORY_FATE_CONFIG));}
 function storyBranchOutcomeList(route,kind){return (STORY_BRANCH_OUTCOMES[route]&&STORY_BRANCH_OUTCOMES[route][kind])||[];}
 function storyFateChoiceDefs(route){return (STORY_FATE_CHOICES[route]&&STORY_FATE_CHOICES[route].branch)||[];}
@@ -9211,7 +9223,7 @@ function storyEndingBlockForState(route,state){
   const score=Number(state&&state.score)||0;
   return Number(score<=2?endingList[0]:(endingList[1]!=null?endingList[1]:endingList[0]));
 }
-function storyRememberEndingPath(route,state,sourceBranch,endingBlock){if(storyPreviewMode)return;const branch=Number(sourceBranch)||storyOutcomeBlockForState(route,state),endingList=storyBranchOutcomeList(route,'ending'),ending=(endingList.includes(Number(endingBlock))?Number(endingBlock):null)||storyEndingBlockForState(route,state);if(!branch||!ending)return;const data=loadStoryDiscovery(),r=data.routes[route],snapshot=storyRouteStateSnapshot(state),branchId=storyStableBlockId(route,branch),endingId=storyStableBlockId(route,ending);r.endingPaths[branchId]=ending;if(!r.branchStates[branchId])r.branchStates[branchId]=snapshot;if(!r.visitedBlocks.includes(branchId))r.visitedBlocks.push(branchId);if(!r.visitedBlocks.includes(endingId))r.visitedBlocks.push(endingId);if(!r.endings.includes(endingId))r.endings.push(endingId);storyMergeSnapshotDiscovery(route,snapshot,data);saveStoryDiscovery(data);}
+function storyRememberEndingPath(route,state,sourceBranch,endingBlock){if(storyPreviewMode)return;const branch=Number(sourceBranch)||storyOutcomeBlockForState(route,state),endingList=storyBranchOutcomeList(route,'ending'),computedEnding=storyEndingBlockForState(route,state),ending=computedEnding||(endingList.includes(Number(endingBlock))?Number(endingBlock):null);if(!branch||!ending)return;const data=loadStoryDiscovery(),r=data.routes[route],snapshot=storyRouteStateSnapshot(state),branchId=storyStableBlockId(route,branch),endingId=storyStableBlockId(route,ending);r.endingPaths[branchId]=ending;if(!r.branchStates[branchId])r.branchStates[branchId]=snapshot;if(!r.visitedBlocks.includes(branchId))r.visitedBlocks.push(branchId);if(!r.visitedBlocks.includes(endingId))r.visitedBlocks.push(endingId);if(!r.endings.includes(endingId))r.endings.push(endingId);storyMergeSnapshotDiscovery(route,snapshot,data);saveStoryDiscovery(data);}
 function storySavedTeamId(){try{return localStorage.getItem(STORY_TEAM_KEY)||'';}catch(e){return '';}}
 function storySetSavedTeamId(id){try{localStorage.setItem(STORY_TEAM_KEY,id||'');}catch(e){}}
 async function storyEnsureSource(){
