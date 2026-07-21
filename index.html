@@ -8583,10 +8583,17 @@ const GALLERY_TYPES = [
   {key:'magic', label:'✨ 法招', slot:'法'},
   {key:'wish', label:'💫 願招', slot:'願'}
 ];
+// 特定角色專屬的額外圖鑑縮圖：不是每個角色都有的變體立繪（例如004用願招進入魅影模式時換上
+// 的 004_wide2.png），只掛在對應角色的圖鑑上，不放進上面共用的 GALLERY_TYPES，不然其他20位
+// 角色的圖鑑都會多一格永遠缺圖的空縮圖。key 對到 images/<charId>_<key>.png，跟一般縮圖同一套
+// 渲染／onerror-missing 邏輯（見 openCharGallery()）。
+const GALLERY_EXTRA_TYPES = {
+  '004': [{key:'wide2', label:'👻 魅影形態'}]
+};
 function galleryItemsForChar(charId){
   const c=CHAR_BY_ID[charId];
   const moves=MOVES_BY_OWNER[charId]||[];
-  return GALLERY_TYPES.map(function(type){
+  const base = GALLERY_TYPES.map(function(type){
     const move=type.slot ? moves.find(function(m){return m.slot===type.slot;}) : null;
     let name='';
     if(type.key==='full') name=c ? stripParenAlias(c.name) : '';
@@ -8594,6 +8601,13 @@ function galleryItemsForChar(charId){
     else name=move ? stripParenAlias(move.name) : '尚未設定招式名稱';
     return {key:type.key,label:type.label,name:name};
   });
+  const extra = (GALLERY_EXTRA_TYPES[charId]||[]).map(function(type){
+    // 願招是「魅影(Maboroshi)」，wide2縮圖的說明文字直接借用那招的名字，跟劍/槍/法/願
+    // 招式縮圖標名字的邏輯一致。
+    const move=moves.find(function(m){return m.slot==='願';});
+    return {key:type.key,label:type.label,name:move?stripParenAlias(move.name):type.label};
+  });
+  return base.concat(extra);
 }
 function openCharGallery(charId){
   const c = CHAR_BY_ID[charId];
@@ -10528,7 +10542,12 @@ function renderUnitBlock(u, isActing, compact, displaySlot){
   // charAvatarHtml()）當作永遠存在的預設圖，這塊區域本來就佔了格子一大部分面積，沒有的話空著
   // 會很明顯；哪天角色真的有立繪了，圖片疊上去蓋住 SVG 就好。
   const unitArtFallbackSvg = charAvatarHtml(u.baseId, 'unitart-'+u.id).replace('class="char-avatar-svg"', 'class="unit-art-fallback-svg"');
-  const unitArtSrc = entityImageSrc(u.baseId,'wide');
+  // 004（緋村一郎）用願招「魅影(Maboroshi)」進入魅影模式後（見 hasStatus 判斷，跟傷害加倍用
+  // 的是同一個狀態鍵），戰鬥立繪換成 004_wide2.png，直到下一次命中消耗掉魅影模式、換回
+  // 004_wide.png。圖片本身還沒畫的話 imgLayerHtml 的 onerror 會自己把 <img> 拿掉，跟其他
+  // 角色缺圖時的行為一致，不會整個壞掉。
+  const phantomFormActive = u.baseId==='004' && hasStatus(u,'魅影模式');
+  const unitArtSrc = entityImageSrc(u.baseId, phantomFormActive?'wide2':'wide');
   const unitArtExtraOnload = " var av=this.closest('.unit').querySelector('.char-avatar.tiny'); if(av) av.style.display='none';";
   const unitArtHtml = '<div class="unit-art">'
     + imgLayerHtml(unitArtFallbackSvg, unitArtSrc, 'unit-art-img', unitArtExtraOnload)
