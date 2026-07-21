@@ -174,6 +174,7 @@
   .story-team-preview{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
   .story-team-face{position:relative;width:44px;height:56px;border-radius:8px;border:1px solid rgba(242,193,78,.42);background:#0c0f18;overflow:hidden;flex:none}
   .story-team-face img{width:100%;height:100%;object-fit:cover;object-position:center 12%;display:block}
+  .story-team-face[data-char-id="018"] img{object-position:center 100%;transform:scale(2.2);transform-origin:center bottom;}
   .story-team-face.empty{display:grid;place-items:center;border-style:dashed;border-color:#46506c;color:#5d6884;font-size:16px}
   .story-team-preview .story-team-more{color:#93a0bd;font-size:11px}
   /* 戰敗結算頁 */
@@ -2268,7 +2269,7 @@
 </head>
 <body>
 <!-- 發布版本唯一維護位置：每次正式同步／部署時更新日期與當日版次。 -->
-<div id="appVersionBadge" data-version="v2026.07.21-04" aria-label="目前版本">讀取版本…</div>
+<div id="appVersionBadge" data-version="v2026.07.21-05" aria-label="目前版本">讀取版本…</div>
 <script>
 (function showOnlineBuildVersion(){
   const badge=document.getElementById('appVersionBadge'),version=badge.dataset.version||'dev';
@@ -9256,7 +9257,7 @@ function storyTeamFacesHtml(team,limit){
   return ids.map(function(id){
     const c=CHAR_BY_ID[id];if(!c)return '';
     // 卡面不寫名字（使用者要求），改掛 title 讓滑鼠停留時仍看得到是誰。
-    return '<div class="story-team-face" title="'+escHtml(stripParenAlias(c.name))+'"><img src="'+charFullThumbSrc(id)+'" alt="'+escHtml(stripParenAlias(c.name))+'" onerror="'+charFullThumbOnErrorAttr(id)+'"></div>';
+    return '<div class="story-team-face" data-char-id="'+escHtml(id)+'" title="'+escHtml(stripParenAlias(c.name))+'"><img src="'+charFullThumbSrc(id)+'" alt="'+escHtml(stripParenAlias(c.name))+'" onerror="'+charFullThumbOnErrorAttr(id)+'"></div>';
   }).join('');
 }
 function storyRenderTeamPreview(){
