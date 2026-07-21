@@ -3768,7 +3768,20 @@ function imgLayerHtml(fallbackHtml, src, imgClass, extraOnloadJs){
   if(known===false) return '';
   const onload = "window.__imgExistCache['"+src+"']=true; this.style.visibility='visible';" + (extraOnloadJs||'');
   const onerror = "window.__imgExistCache['"+src+"']=false; this.remove();";
-  return '<img src="'+src+'" class="'+imgClass+'" alt="" style="visibility:hidden" onload="'+onload+'" onerror="'+onerror+'">';
+  // 使用者反應「移動動畫壞了」，實際錄影逐格看發現不只移動中的角色——整個棋盤所有角色立繪會
+  // 同時閃一下全部消失，才是真正的根源，移動動畫只是恰好在那個時間點被這個更大的問題蓋過去。
+  // 原因：renderBattle() 每次 render() 都整個重建棋盤DOM（board.innerHTML=''），這裡原本不管
+  // 這張圖之前是否已經確認讀取成功過（known===true），一律從 visibility:hidden 開始、等
+  // onload 才轉可見——但瀏覽器對「已經在快取裡的圖」設定 src 時，onload 還是非同步觸發（不是
+  // 當下那一幀就完成），移動時前後兩三次連續 render()（預選/出手/棋盤重排）疊在一起，全部角色
+  // 的 <img> 全部一起重新經歷一次「先藏起來→等onload→才現形」，看起來就是整個棋盤同時閃空白。
+  // 下面 bigArtKnownGood 那段其實就是為了處理這個情境而做的快取（見那裡的說明），但當初只套用
+  // 在小圓形頭像的初始顯示狀態上，沒有套用回這裡真正的大立繪本身——這裡才是真正要修的地方：
+  // 已經確認讀取成功過的圖，直接一開始就是可見的，不用再等一次onload，因為瀏覽器快取本來就會
+  // 立刻給圖，只是onload事件觸發的時間點不保證跟畫面重繪同步。第一次讀取（known還是undefined、
+  // 還沒確認過會不會404）才需要保留「先藏起來，讀到才現形」這個保險，避免破圖示閃一下。
+  const startHidden = known!==true;
+  return '<img src="'+src+'" class="'+imgClass+'" alt="" '+(startHidden?'style="visibility:hidden" ':'')+'onload="'+onload+'" onerror="'+onerror+'">';
 }
 // 角色頭像只使用正式美術圖；沒有圖時保持留白，不顯示醜陋的預設圖。
 function entityImageSrc(baseId, suffix){
