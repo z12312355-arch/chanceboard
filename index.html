@@ -2521,7 +2521,11 @@
   <div id="friendsBackdrop" class="hidden" style="position:fixed;inset:0;z-index:100000;background:rgba(0,0,0,.7);display:flex;align-items:center;justify-content:center;padding:16px">
     <div class="battlelog-panel" style="max-width:480px;width:100%;max-height:80vh;overflow:auto">
       <div class="bl-head"><div class="bl-title">👥 好友 <span id="friendsCount">0 / 50</span></div><button class="btn small" id="friendsCloseBtn">✕</button></div>
-      <div style="display:flex;gap:7px;margin:10px 0"><input id="friendNameInput" maxlength="16" placeholder="輸入玩家名字" style="flex:1;min-width:0;padding:8px;border-radius:6px;border:1px solid var(--line);background:var(--panel2);color:var(--text)"><button type="button" class="btn primary" id="friendAddBtn">新增</button></div>
+      <div style="display:flex;align-items:center;gap:7px;margin:10px 0;font-size:12px;color:var(--muted)">
+        <span>我的 UID：</span><code id="myUidText" style="flex:1;min-width:0;overflow:auto;white-space:nowrap;color:var(--text)"></code>
+        <button type="button" class="btn small" id="myUidCopyBtn">複製</button>
+      </div>
+      <div style="display:flex;gap:7px;margin:10px 0"><input id="friendUidInput" placeholder="輸入好友的 UID" style="flex:1;min-width:0;padding:8px;border-radius:6px;border:1px solid var(--line);background:var(--panel2);color:var(--text)"><button type="button" class="btn primary" id="friendAddBtn">新增</button></div>
       <div id="friendsMessage" style="font-size:12px;color:var(--muted);margin-bottom:8px"></div>
       <div id="friendsList"></div>
     </div>
@@ -9038,7 +9042,17 @@ function storyHidePresentation(){
   // 離開故事畫面時一定要一起收掉。漏掉的話（尤其是章節結束的落幕層）它會蓋在選單上、
   // 又因為整片 inset:0 攔截所有點擊，看起來就像整個畫面卡死、完全點不動。
   ['storyNarration','storyPlayerLine','storyChapterSplash','storyMotto','storyComplete'].forEach(id=>{const el=document.getElementById(id);if(!el)return;el.classList.add('hidden');if(id==='storyNarration'||id==='storyPlayerLine')el.innerHTML='';});
-  ['storyActorLeft','storyActorRight'].forEach(id=>{const el=document.getElementById(id);el.className='story-actor '+(id.endsWith('Left')?'left':'right');el.removeAttribute('src');el.dataset.actorSrc='';});
+  // 使用者問「除了選項，還有沒有別的地方會這樣」——這裡是另一個真實案例：離開故事畫面
+  // （返回大廳／開啟章節選擇等，見下方兩個呼叫點）時，若立繪正顯示著，這裡跟舊版的選項
+  // 退場同一個錯：拔 src 前只是重設 className，並沒有讓 opacity 立刻歸零——.story-actor
+  // 的 0.35s 淡出還沒跑完，畫面上還看得見，這時 <img> 沒了 src 就會被瀏覽器畫成破圖占位框。
+  // 比照 storyRenderStage／storySetCg 的修法：強制立刻隱形（reflow 生效）再拔 src。
+  ['storyActorLeft','storyActorRight'].forEach(id=>{
+    const el=document.getElementById(id);
+    el.style.transition='none';el.style.opacity='0';void el.offsetWidth;el.style.transition='';el.style.opacity='';
+    el.className='story-actor '+(id.endsWith('Left')?'left':'right');
+    el.removeAttribute('src');el.dataset.actorSrc='';
+  });
 }
 function storyUpdateChapterStatus(){
   const progress=loadStoryStageProgress(),black=progress.routes.black.cleared.length,white=progress.routes.white.cleared.length,total=black+white;
@@ -15119,15 +15133,22 @@ document.getElementById('admin1v1BattleBtn').onclick=function(){ closeAdminPanel
   openFriendsPanel=async function(){
     if(!accountReady){alert('請先登入帳號，才能使用好友功能。');return;}
     const backdrop=document.getElementById('friendsBackdrop'),message=document.getElementById('friendsMessage');
+    document.getElementById('myUidText').textContent=(currentUser&&currentUser.uid)||'';
     backdrop.classList.remove('hidden');message.textContent='載入中…';
     try{const d=await accountApi('friends');renderFriends(d.friends);message.textContent='';}catch(e){message.textContent=e.message;}
   };
   document.getElementById('friendsCloseBtn').onclick=function(){document.getElementById('friendsBackdrop').classList.add('hidden');};
   document.getElementById('friendsBackdrop').onclick=function(e){if(e.target===this)this.classList.add('hidden');};
+  document.getElementById('myUidCopyBtn').onclick=async function(){
+    const uid=document.getElementById('myUidText').textContent,message=document.getElementById('friendsMessage');
+    if(!uid)return;
+    try{await navigator.clipboard.writeText(uid);message.textContent='已複製我的 UID，傳給朋友讓他加你好友吧。';}
+    catch(e){message.textContent='複製失敗，請手動選取複製：'+uid;}
+  };
   document.getElementById('friendAddBtn').onclick=async function(){
-    const input=document.getElementById('friendNameInput'),message=document.getElementById('friendsMessage'),btn=this;
+    const input=document.getElementById('friendUidInput'),message=document.getElementById('friendsMessage'),btn=this;
     btn.disabled=true;message.textContent='新增中…';
-    try{const d=await accountApi('friend-add',{playerName:input.value});renderFriends(d.friends);input.value='';message.textContent='好友已新增。';}catch(e){message.textContent=e.message;}btn.disabled=false;
+    try{const d=await accountApi('friend-add',{uid:input.value.trim()});renderFriends(d.friends);input.value='';message.textContent='好友已新增。';}catch(e){message.textContent=e.message;}btn.disabled=false;
   };
   function queuePreferences(){
     if(!accountReady) return;

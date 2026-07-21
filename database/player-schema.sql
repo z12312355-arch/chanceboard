@@ -28,8 +28,9 @@ CREATE TABLE IF NOT EXISTS players (
   updated_at INTEGER NOT NULL
 );
 
-CREATE UNIQUE INDEX IF NOT EXISTS players_player_name_unique
-  ON players(player_name COLLATE NOCASE) WHERE player_name <> '';
+-- 2026-07：玩家名字改為可重複（不再要求唯一），加好友一律改用 UID。
+-- 舊資料庫如已建立過 players_player_name_unique，需另外執行
+-- migration-2026-07-drop-name-unique.sql 移除該索引。
 
 CREATE TABLE IF NOT EXISTS friendships (
   user_a TEXT NOT NULL,

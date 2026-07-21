@@ -523,19 +523,16 @@ export async function onRequest(context) {
       const nextStep = tutorialStepFromRow(row) === 'team' && teams.length ? 'ending' : tutorialStepFromRow(row);
       await db.prepare('UPDATE players SET teams=?2,tutorial_step=?3,updated_at=unixepoch() WHERE uid=?1').bind(user.uid, JSON.stringify(teams), nextStep).run();
     } else if (action === 'profile-name') {
+      // 2026-07：名字改為可重複，不再檢查唯一性；加好友一律改用 UID。
       const playerName = safePlayerName(body.playerName);
-      try {
-        const nextStep = tutorialStepFromRow(row) === 'intro' ? 'starter' : tutorialStepFromRow(row);
-        await db.prepare('UPDATE players SET player_name=?2,tutorial_step=?3,updated_at=unixepoch() WHERE uid=?1').bind(user.uid, playerName, nextStep).run();
-      } catch (error) {
-        if (/UNIQUE|constraint/i.test(String(error && error.message))) throw apiError('這個名字已被其他玩家使用。', 409);
-        throw error;
-      }
+      const nextStep = tutorialStepFromRow(row) === 'intro' ? 'starter' : tutorialStepFromRow(row);
+      await db.prepare('UPDATE players SET player_name=?2,tutorial_step=?3,updated_at=unixepoch() WHERE uid=?1').bind(user.uid, playerName, nextStep).run();
     } else if (action === 'friend-add') {
-      const targetName = safePlayerName(body.playerName);
-      const target = await db.prepare('SELECT uid FROM players WHERE player_name=?1 COLLATE NOCASE').bind(targetName).first();
-      if (!target) throw apiError('找不到這位玩家。', 404);
-      if (target.uid === user.uid) throw apiError('不能把自己加為好友。');
+      const targetUid = String(body.uid || '').trim();
+      if (!targetUid) throw apiError('請輸入好友的 UID。');
+      if (targetUid === user.uid) throw apiError('不能把自己加為好友。');
+      const target = await db.prepare('SELECT uid FROM players WHERE uid=?1').bind(targetUid).first();
+      if (!target) throw apiError('找不到這個 UID 的玩家，請確認 UID 是否正確。', 404);
       const ownCount = await db.prepare('SELECT COUNT(*) AS n FROM friendships WHERE user_a=?1 OR user_b=?1').bind(user.uid).first();
       const targetCount = await db.prepare('SELECT COUNT(*) AS n FROM friendships WHERE user_a=?1 OR user_b=?1').bind(target.uid).first();
       if ((ownCount && ownCount.n >= 50) || (targetCount && targetCount.n >= 50)) throw apiError('好友人數已達 50 人上限。');
