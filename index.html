@@ -1459,6 +1459,15 @@
   .cell.tap-expanded .occupantsRow{--step:var(--w, 16%); --front-left:var(--front-left-hover, 0%);}
   .cell .slotlabel{position:absolute;top:4px;right:8px;font-size:10px;color:var(--muted);z-index:10;}
   .cell.emptycell{align-items:center;justify-content:center;color:var(--muted);font-size:12px;opacity:.6;}
+  /* 招式命中預覽（見 renderBattle() 裡 targetPreviewSlots 的說明）：選好招式後，用一圈脈動的
+     外框＋內外glow標出「這招目前打哪一格」，顏色借用既有的 --bad（紅），跟傷害/危險語意一致，
+     跟新手教學站位引導的 --tutorial 系青色（.tutorial-suit-target）明確區分開，避免混淆兩種
+     不同用途的高亮。用 outline 而不是 border，才不會擠壓 .cell 既有的 padding／版面。 */
+  .cell.move-target-preview{outline:3px solid var(--bad);outline-offset:-3px;animation:moveTargetPulse 1s ease-in-out infinite;}
+  @keyframes moveTargetPulse{
+    0%,100%{box-shadow:0 0 12px 2px rgba(224,85,85,.6) inset, 0 0 12px 2px rgba(224,85,85,.5);}
+    50%{box-shadow:0 0 22px 5px rgba(224,85,85,.9) inset, 0 0 20px 4px rgba(224,85,85,.8);}
+  }
   /* 頂端色條從單純的實色border改成漸層＋微光，比較有「隊伍能量條」的質感，不只是一條裝飾線。 */
   .cell.side-A{border-top:3px solid var(--a);box-shadow:inset 0 3px 10px -6px var(--a), inset 0 1px 0 rgba(255,255,255,.05), inset 0 0 24px rgba(0,0,0,.25);}
   .cell.side-B{border-top:3px solid var(--b);box-shadow:inset 0 3px 10px -6px var(--b), inset 0 1px 0 rgba(255,255,255,.05), inset 0 0 24px rgba(0,0,0,.25);}
@@ -4445,6 +4454,11 @@ function newState(){
     handA:[], handB:[], handCustomA:[], handCustomB:[],
     lastDiscardedA:null, lastDiscardedB:null, // for 縫合-style "get back last discarded" passives
     actingUnitId:null, actPending:null, actMovePicked:null, actMoveTarget:null, turnDeadlineAt:0,
+    // 「連動」combo（2026-07改版：從「接下來2回合冷卻減半」改成「出招當下立刻再行動一次」，
+    // 見 confirmAct()／runLoop() 的說明）：非null時代表下一次 runLoop() 要直接指定這個角色
+    // 立刻再動一次，只在同一次 confirmAct()→runLoop() 呼叫鏈之間短暫存在，render()/連線同步
+    // 觀察到的時候一定已經是null，不需要額外處理。
+    comboForcedUnitId:null,
     log:[], winner:null, winnerReason:'',
     // autoBattleDelay 預設值改成讀「使用者上次存的速度設定」：AUTO_BATTLE_SPEEDS／autoBattleSpeedIdx
     // 宣告在檔案後面（下面的按鈕綁定那段），但 newState() 這個「函式本身」在這裡只是定義、還沒有
@@ -6958,7 +6972,9 @@ function scheduleNext(unit){
   tickExpire(unit);
   let cd = baseCooldownSeconds(effectiveSpd(unit));
   cd += sumStatus(unit,'BAT+','value') - sumStatus(unit,'BAT-','value');
-  if(hasStatus(unit,'連動')) cd = Math.max(1, cd/2);
+  // 「連動」2026-07改版：不再靠冷卻減半來達到「行動次數*2」，改成 confirmAct() 結尾直接讓
+  // 同一位角色立刻再動一次（見那裡的說明），這裡的正常排程不用再管連動——它的效果已經是
+  // 「這次多打一次」而不是「以後動得比較快」，兩者疊加會變成雙重加成，不是原本要的設計。
   cd = Math.max(1, Math.floor(cd));
   unit.nextActionAt = state.clock + cd;
 }
@@ -7467,24 +7483,39 @@ function runLoop(){
     if(aAlive.length===0 || bAlive.length===0){ finishByElimination(aAlive.length===0, bAlive.length===0); return; }
 
     const alive = aAlive.concat(bAlive);
-    const next = alive.reduce((a,b)=>{
-      const ra = effectiveReadyAt(a), rb = effectiveReadyAt(b);
-      if(ra !== rb) return ra < rb ? a : b;
-      return effectiveSpd(a) >= effectiveSpd(b) ? a : b;
-    });
+    // 「連動」combo（見 confirmAct() 尾端）：上一位角色出招時觸發了連動，這裡直接指定「同一位」
+    // 立刻再動一次，跳過下面正常的 effectiveReadyAt 排序、時鐘推進、回合發牌與時間上限判定——
+    // 這些全部只在「真的經過時間」時才需要做一次，連動的「立刻再動一次」不該讓時間跟著跑。
+    // 指定的角色萬一這時已經不在世了（理論上不會發生在這個時機點，之前已經檢查過
+    // unit.alive，但多一層防呆總比憑空生出一個死人的回合安全），就放棄這次連動、退回正常排序。
+    let next = null;
+    if(state.comboForcedUnitId!=null){
+      next = alive.find(u=>u.id===state.comboForcedUnitId) || null;
+      state.comboForcedUnitId = null;
+      // 標記「這一動是連動逼出來的第二動」，confirmAct() 尾端靠這個旗標判斷這次不能再觸發一次
+      // 連動（見那裡的說明），避免狀態還沒到期就無限連鎖動下去。
+      if(next) next._comboContinuation = true;
+    }
+    if(!next){
+      next = alive.reduce((a,b)=>{
+        const ra = effectiveReadyAt(a), rb = effectiveReadyAt(b);
+        if(ra !== rb) return ra < rb ? a : b;
+        return effectiveSpd(a) >= effectiveSpd(b) ? a : b;
+      });
 
-    // 故事戰鬥沒有 10 回合／100 秒限制；其他模式仍在相同時間點依原規則判定勝負。
-    if(!state.unlimitedTime && effectiveReadyAt(next) >= ROUND_SECONDS*ROUND_CAP){ finishByTimeCap(); return; }
+      // 故事戰鬥沒有 10 回合／100 秒限制；其他模式仍在相同時間點依原規則判定勝負。
+      if(!state.unlimitedTime && effectiveReadyAt(next) >= ROUND_SECONDS*ROUND_CAP){ finishByTimeCap(); return; }
 
-    const prevClock = state.clock;
-    state.clock = effectiveReadyAt(next);
-    advanceClockTicks(prevClock, state.clock);
+      const prevClock = state.clock;
+      state.clock = effectiveReadyAt(next);
+      advanceClockTicks(prevClock, state.clock);
 
-    // re-check death from ticks before proceeding
-    if(!next.alive) continue;
+      // re-check death from ticks before proceeding
+      if(!next.alive) continue;
 
-    const roundIdx = Math.floor(state.clock/ROUND_SECONDS);
-    if(roundIdx > state.dealtRound){ dealRoundCards(roundIdx); state.dealtRound = roundIdx; }
+      const roundIdx = Math.floor(state.clock/ROUND_SECONDS);
+      if(roundIdx > state.dealtRound){ dealRoundCards(roundIdx); state.dealtRound = roundIdx; }
+    }
 
     if(next.side==='B' && !twoPlayerMode){
       // 使用者反應「單人對戰打電腦AI，常常搞不清楚對方剛剛做了什麼，就輪到自己了」：原本這裡
@@ -8072,9 +8103,26 @@ function confirmAct(){
 
   roundEndPassiveCheck(unit);
   if(unit.alive) scheduleNext(unit);
+  // 「連動」2026-07再改版：使用者澄清真正要的效果是「狀態持續2回合，這段期間每次輪到他，
+  // 他都連續行動兩次」——不是只觸發一次的一次性combo。做法：狀態本身不再在觸發當下就被
+  // removeStatusKey 消耗掉，改成放著讓它照 durSec 自然到期（DB那邊 069 已經把 durSec 設成
+  // 20秒＝2回合，見 chanceboard_db.js）；只要狀態還在，「這一次輪到他」都會多動一次。
+  // 但「多動一次」本身也會跑到這個函式尾端——如果不特別擋，會被判定成「這次也有連動」再疊加
+  // 觸發第三次、第四次，無限連鎖下去。用 unit._comboContinuation 這個瞬時旗標分辨「這是不是
+  // 剛剛才被連動逼出來的那個『第二動』」：是的話這次一律不再觸發（wasContinuation),把旗標清掉，
+  // 確保「這一輪」精準只多動一次；等到下一次真的輪到他（正常排程，不是連動逼出來的），
+  // wasContinuation 又會是 false，只要狀態還沒過期，就會再次觸發，達到「每次輪到他都動兩次」
+  // 而不是狀態期間內無限連鎖動下去。
+  const wasContinuation = !!unit._comboContinuation;
+  unit._comboContinuation = false;
+  const comboTriggered = unit.alive && !wasContinuation && hasStatus(unit,'連動');
+  if(comboTriggered){
+    addLog('fx', sideTag(unit)+unitName(unit)+' 的「連動」觸發，緊接著再行動一次');
+  }
   state.actPending = null; state.actMovePicked=null; state.actMoveTarget=null;
   state.actingUnitId = null;
   actInfoRequest = null; // 這回合結束，收掉可能還開著的招式/花牌詳情彈窗
+  if(comboTriggered) state.comboForcedUnitId = unit.id;
   runLoop();
 }
 
@@ -8583,13 +8631,21 @@ const GALLERY_TYPES = [
   {key:'magic', label:'✨ 法招', slot:'法'},
   {key:'wish', label:'💫 願招', slot:'願'}
 ];
-// 特定角色專屬的額外圖鑑縮圖：不是每個角色都有的變體立繪（例如004用願招進入魅影模式時換上
-// 的 004_wide2.png），只掛在對應角色的圖鑑上，不放進上面共用的 GALLERY_TYPES，不然其他20位
-// 角色的圖鑑都會多一格永遠缺圖的空縮圖。key 對到 images/<charId>_<key>.png，跟一般縮圖同一套
-// 渲染／onerror-missing 邏輯（見 openCharGallery()）。
-const GALLERY_EXTRA_TYPES = {
-  '004': [{key:'wide2', label:'👻 魅影形態'}]
+// 「狀態變身立繪」：角色用大招進入特定狀態時，戰鬥立繪換成另一張圖（wide2），狀態解除後
+// 換回原本的 wide（見 renderUnitBlock() 裡的用法）。同一份設定也用來決定圖鑑要不要多一格
+// 額外縮圖（見下面 GALLERY_EXTRA_TYPES）。004是願招「魅影(Maboroshi)」進的魅影模式（一次性，
+// 命中後自動解除）；017武愛是願招「天龍樂舞」進的威能狀態（持續整場buff，攻擊力雙倍）。
+const STATUS_FORM_ART = {
+  '004': {status:'魅影模式', label:'👻 魅影形態'},
+  '017': {status:'威能', label:'🐉 威能形態'}
 };
+// 特定角色專屬的額外圖鑑縮圖：不是每個角色都有的變體立繪，只掛在對應角色的圖鑑上，不放進
+// 上面共用的 GALLERY_TYPES，不然其他角色的圖鑑都會多一格永遠缺圖的空縮圖。key 對到
+// images/<charId>_<key>.png，跟一般縮圖同一套渲染／onerror-missing 邏輯（見 openCharGallery()）。
+const GALLERY_EXTRA_TYPES = {};
+Object.keys(STATUS_FORM_ART).forEach(function(charId){
+  GALLERY_EXTRA_TYPES[charId] = [{key:'wide2', label: STATUS_FORM_ART[charId].label}];
+});
 function galleryItemsForChar(charId){
   const c=CHAR_BY_ID[charId];
   const moves=MOVES_BY_OWNER[charId]||[];
@@ -10542,12 +10598,12 @@ function renderUnitBlock(u, isActing, compact, displaySlot){
   // charAvatarHtml()）當作永遠存在的預設圖，這塊區域本來就佔了格子一大部分面積，沒有的話空著
   // 會很明顯；哪天角色真的有立繪了，圖片疊上去蓋住 SVG 就好。
   const unitArtFallbackSvg = charAvatarHtml(u.baseId, 'unitart-'+u.id).replace('class="char-avatar-svg"', 'class="unit-art-fallback-svg"');
-  // 004（緋村一郎）用願招「魅影(Maboroshi)」進入魅影模式後（見 hasStatus 判斷，跟傷害加倍用
-  // 的是同一個狀態鍵），戰鬥立繪換成 004_wide2.png，直到下一次命中消耗掉魅影模式、換回
-  // 004_wide.png。圖片本身還沒畫的話 imgLayerHtml 的 onerror 會自己把 <img> 拿掉，跟其他
-  // 角色缺圖時的行為一致，不會整個壞掉。
-  const phantomFormActive = u.baseId==='004' && hasStatus(u,'魅影模式');
-  const unitArtSrc = entityImageSrc(u.baseId, phantomFormActive?'wide2':'wide');
+  // 狀態變身立繪（見 STATUS_FORM_ART 的說明）：角色掛著對應狀態時，戰鬥立繪換成 <id>_wide2.png，
+  // 狀態解除後換回 <id>_wide.png。圖片本身還沒畫的話 imgLayerHtml 的 onerror 會自己把 <img>
+  // 拿掉，跟其他角色缺圖時的行為一致，不會整個壞掉。
+  const formArt = STATUS_FORM_ART[u.baseId];
+  const formArtActive = !!(formArt && hasStatus(u, formArt.status));
+  const unitArtSrc = entityImageSrc(u.baseId, formArtActive?'wide2':'wide');
   const unitArtExtraOnload = " var av=this.closest('.unit').querySelector('.char-avatar.tiny'); if(av) av.style.display='none';";
   const unitArtHtml = '<div class="unit-art">'
     + imgLayerHtml(unitArtFallbackSvg, unitArtSrc, 'unit-art-img', unitArtExtraOnload)
@@ -10764,18 +10820,30 @@ function renderBattle(){
   renderHandSummary();
 
   const currentActUnit = getActingUnit();
-  // 出手前的移動是「預選」（見 moveActingUnitTo()／confirmAct() 的說明，unit.slot 要到真的
-  // 出手那一刻才會改）。棋盤畫面原本會提前把預選格當成目前位置顯示（displaySlotOf()），讓玩家
-  // 選格子的當下就能立刻看到棋盤上搬過去的樣子；使用者後來要求「改成不會先預覽，等出手才真的
-  // 移動」——棋盤畫面改回永遠照 u.slot（真正的位置）顯示，跟內部資料一致，選格子只更新
-  // state.actMoveTarget（仍然可以在出手前任意重選/反悔，見 moveActingUnitTo()），畫面上要等
-  // confirmAct() 真正套用 unit.slot 之後、下一次 render() 才會看到角色真的搬過去。
-  const pendingMoveTarget = null;
+  // 出手前的移動是「預選」：選格子當下棋盤就會立刻顯示搬過去的樣子（含滑動動畫，見
+  // moveActingUnitTo() 裡的 queueMoveAnimation()），但 unit.slot 本身要到真的按出手
+  // （confirmAct()）才會改，選格子前都可以任意重選/反悔。
   function displaySlotOf(u){
-    // Slot buttons are previews only. The real unit.slot changes during
-    // confirmAct(); until then, render the acting unit at its pending target.
     if(state.actingUnitId===u.id && state.actMoveTarget!=null) return state.actMoveTarget;
     return u.slot;
+  }
+
+  // 招式命中預覽：選好招式後（state.actMovePicked），在棋盤上標出「這招目前打哪一格」，
+  // 直接借用 resolveTargets()——跟真正結算走同一套判定規則，不用另外維護一份重複的邏輯，
+  // 之後改射程/群體規則只要改那一處，這裡自動跟著對。差別只在「自己的位置」要用
+  // displaySlotOf() 而非 u.slot：使用者可能還在移動預覽階段（見上面 displaySlotOf 的說明），
+  // 這時招式打得到誰要跟著預覽位置走，不能還停在移動前的舊位置。用 Object.assign 複製一份
+  // 帶著預覽位置的假 unit 丟給 resolveTargets()，不直接改 currentActUnit.slot 本身（那是真正
+  // 的行動狀態，只有 confirmAct() 才該動它）。
+  let targetPreviewSlots = [];
+  if(currentActUnit && state.actMovePicked && currentActUnit.alive){
+    const pickedMove = currentActUnit.moves && currentActUnit.moves[state.actMovePicked];
+    if(pickedMove && pickedMove.rangeType){
+      const enemyTeam = currentActUnit.side==='A' ? state.teamB : state.teamA;
+      const previewSelf = Object.assign({}, currentActUnit, {slot: displaySlotOf(currentActUnit)});
+      const resolved = resolveTargets(previewSelf, pickedMove, enemyTeam);
+      targetPreviewSlots = resolved.group.map(t=>({side:t.side, slot:t.slot}));
+    }
   }
 
   const board = document.getElementById('board');
@@ -10821,7 +10889,8 @@ function renderBattle(){
       if(rankDiff !== 0) return rankDiff;
       return a.hp-b.hp; // 血量多的排愈後面／疊愈上面，兩邊side統一方向，不反過來
     });
-    cell.className = 'cell side-'+side + (occupants.length===0?' emptycell':'') + (occupants.length>1?' shared':'');
+    const isTargetPreview = targetPreviewSlots.some(t=>t.side===side && t.slot===slot);
+    cell.className = 'cell side-'+side + (occupants.length===0?' emptycell':'') + (occupants.length>1?' shared':'') + (isTargetPreview?' move-target-preview':'');
     const label = document.createElement('div');
     label.className='slotlabel'; label.textContent = slotDistLabel(side,slot)+(occupants.length>1?(' ×'+occupants.length):'');
     if(occupants.length>1){

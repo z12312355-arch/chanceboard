@@ -2617,7 +2617,7 @@ window.CHANCEBOARD_DB = {
       "critRate": null,
       "cooldown": null,
       "coefficient": 1,
-      "description": "出招後自己進入連動狀態(2回合)，行動次數*2",
+      "description": "出招後自己進入連動狀態(2回合)，狀態中每次輪到他都連續行動兩次",
       "expectedValue": 0,
       "strength": 1,
       "ownerName": "法蘭克．雷(Frank Thunder)",
@@ -2653,7 +2653,7 @@ window.CHANCEBOARD_DB = {
         "cooldown": 3,
         "effectChance": 1,
         "effectTrigger": "postAction",
-        "description": "出招後自己進入連動狀態(2回合)，行動次數*2"
+        "description": "出招後自己進入連動狀態(2回合)，狀態中每次輪到他都連續行動兩次"
       }
     },
     {
