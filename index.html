@@ -2782,6 +2782,7 @@
     <div id="rosterGridOuter"><div id="roster-grid"></div></div>
     <div id="confirm-row">
       <button type="button" class="btn small" id="selectBackToListBtn">◂ 返回隊伍列表</button>
+      <button class="btn small" id="selectResetBtn">清空重選</button>
       <span id="confirm-hint">已選 0 / 3</span>
       <button class="btn primary" id="confirmBtn" disabled>下一步：組自訂卡組 ▸</button>
     </div>
@@ -4535,6 +4536,14 @@ function randomFillDeckDraft(){
   render();
 }
 function resetDeckDraft(){ const draft = currentDeckDraft(); DECKBUILD_CARD_IDS.forEach(id=> draft[id]=0); render(); }
+
+// 使用者要求「組隊選角色的地方，底下新增清空重選的按鈕」，比照上面卡組畫面的 resetDeckDraft()
+// 同一種手感：直接清空、不跳確認框。故意用 selectedIds.length=0 而不是 state.selectedIds=[]——
+// renderSelect() 靠陣列「參照」是否還是同一個（grid.__builtForIds !== selectedIds）判斷要不要
+// 整個 innerHTML 砍掉重建，見那邊的說明；換成新陣列會誤觸發整批 <img> 重新讀取造成的閃爍，
+// 原地清空(length=0)才能維持「陣列還是同一個，只是內容變空」，跟平常點擊選/取消單一角色
+// 是同一套機制。
+function resetSelectDraft(){ state.selectedIds.length = 0; render(); }
 
 // 把 draft 物件（cardId -> 張數）展開成卡牌陣列，隊伍編輯（confirmDeckBuild）跟開戰時把選好的
 // 隊伍套進 state.customDeck/state.customDeckB（confirmTeamPick）都要用同一份轉換邏輯，抽出來共用。
@@ -11478,6 +11487,7 @@ document.getElementById('battleLogBackdrop').onclick = function(e){ if(e.target=
 /* ============ WIRING ============ */
 /* ============================================================ */
 document.getElementById('confirmBtn').onclick = goToDeckBuild;
+document.getElementById('selectResetBtn').onclick = resetSelectDraft;
 document.getElementById('deckBackToSelectBtn').onclick = goBackToSelectFromDeck;
 document.getElementById('deckConfirmBtn').onclick = confirmDeckBuild;
 document.getElementById('deckRandomBtn').onclick = randomFillDeckDraft;
