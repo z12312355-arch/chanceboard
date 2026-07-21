@@ -1510,8 +1510,8 @@
      畫布高度的51.6%（頭頂約在47.9%處，腳底貼齊畫布底部），寬度已經是整張畫布滿版（是被裁到
      畫布邊緣，不是留白）。原本用 scale 1.938 撐滿角色本體；依使用者要求再放大為畫面現況的
      兩倍，因此改成 3.876，並繼續以角色腳底（畫布98.95%處）為縮放原點，向上與左右超出格子。 */
-  .unit[data-base-id="m002"] .unit-art-img{transform:scale(3.876);transform-origin:50% 98.95%;}
-  .unit[data-base-id="m002"] .unit-art-img.mirror{transform:scale(-3.876,3.876);}
+  .unit[data-base-id="m002"] .unit-art-img{transform:scale(2);transform-origin:50% 98.95%;}
+  .unit[data-base-id="m002"] .unit-art-img.mirror{transform:scale(-2,2);}
   .cell .slotlabel{position:absolute;top:4px;right:8px;font-size:10px;color:var(--muted);z-index:10;}
   .cell.emptycell{align-items:center;justify-content:center;color:var(--muted);font-size:12px;opacity:.6;}
   /* 招式命中預覽（見 renderBattle() 裡 targetPreviewSlots 的說明）：選好招式後，用一圈脈動的
@@ -1585,7 +1585,7 @@
   /* The image loader sets visibility:visible directly on loaded artwork. Hiding
      only the parent with visibility therefore allowed that child image to show
      through before a move ended. Parent opacity cannot be overridden by a child. */
-  .unit.mid-move-hidden{opacity:0 !important;visibility:hidden !important;pointer-events:none !important;}
+  .unit.mid-move-hidden{display:none !important;opacity:0 !important;visibility:hidden !important;pointer-events:none !important;}
   /* 移動中的分身會掛在 body 上方，不受棋盤格 overflow:hidden 裁切；角色穿越格子縫隙時不會消失。 */
 .move-ghost{position:fixed !important;z-index:1000 !important;display:block !important;margin:0 !important;pointer-events:none !important;will-change:transform,width,height;overflow:visible !important;}
 /* 分身離開棋盤格後不再受格子的響應式尺寸限制：移動途中沿用起點量到的立繪尺寸，
@@ -2271,7 +2271,7 @@
 </head>
 <body>
 <!-- 發布版本唯一維護位置：每次正式同步／部署時更新日期與當日版次。 -->
-<div id="appVersionBadge" data-version="v2026.07.21-01" aria-label="目前版本">讀取版本…</div>
+<div id="appVersionBadge" data-version="v2026.07.21-02" aria-label="目前版本">讀取版本…</div>
 <script>
 (function showOnlineBuildVersion(){
   const badge=document.getElementById('appVersionBadge'),version=badge.dataset.version||'dev';
@@ -6854,6 +6854,7 @@ function playPendingEffects(){
     ghost.style.transition = 'transform '+ghostMs+'ms cubic-bezier(.22,.78,.24,1), width '+ghostMs+'ms ease, height '+ghostMs+'ms ease';
     document.body.appendChild(ghost);
     el.style.visibility = 'hidden';
+    el.style.display = 'none';
     // 分身飛行期間把這個單位記進「動畫進行中」名單：中途的 render() 會整個重建棋盤DOM，
     // 上面那行藏的是「舊的」元素，新建出來的元素要靠這份名單在建立當下就藏好（見
     // renderBattle() 裡 unit-<id> 建立處的說明），否則會看到目的地的圖跟半路的分身同時存在。
@@ -6876,9 +6877,11 @@ function playPendingEffects(){
       delete window.__unitsMidMoveAnim[m.unitId];
       const current = document.getElementById('unit-'+m.unitId);
       if(current) {
+        current.style.display = '';
         current.style.visibility = '';
         current.classList.remove('mid-move-hidden');
       }
+      el.style.display = '';
       el.style.visibility = '';
       el.classList.remove('mid-move-hidden');
     };
@@ -10764,6 +10767,7 @@ function renderUnitBlock(u, isActing, compact, displaySlot){
   // 「移動動畫進行中的單位」名單（window.__unitsMidMoveAnim，playPendingEffects() 維護），
   // 重建DOM時查名單，還在飛的單位一律先藏起來，等分身抵達的 cleanup 再統一現形。
   if(window.__unitsMidMoveAnim && window.__unitsMidMoveAnim[u.id]) {
+    div.style.display='none';
     div.style.visibility='hidden';
     div.classList.add('mid-move-hidden');
   }
@@ -10780,8 +10784,15 @@ function renderUnitBlock(u, isActing, compact, displaySlot){
   const formArtActive = !!(formArt && hasStatus(u, formArt.status));
   const unitArtSrc = entityImageSrc(u.baseId, formArtActive?'wide2':'wide');
   const unitArtExtraOnload = " var av=this.closest('.unit').querySelector('.char-avatar.tiny'); if(av) av.style.display='none';";
+  // Apply facing before playPendingEffects() clones this element. The online
+  // after-render hook runs too late for move ghosts, which made story enemies
+  // travel using the unmirrored artwork even though the final card was mirrored.
+  const boardForArt = document.getElementById('board');
+  const perspectiveBForArt = !!(boardForArt && boardForArt.classList.contains('online-perspective-b'));
+  const rightSideForArt = perspectiveBForArt ? 'A' : 'B';
+  const unitArtClass = 'unit-art-img'+(u.side===rightSideForArt?' mirror':'');
   const unitArtHtml = '<div class="unit-art">'
-    + imgLayerHtml(unitArtFallbackSvg, unitArtSrc, 'unit-art-img', unitArtExtraOnload)
+    + imgLayerHtml(unitArtFallbackSvg, unitArtSrc, unitArtClass, unitArtExtraOnload)
     + '</div>';
   // 大立繪已經確定讀得到的話，頭像列那顆小圓形頭像本來就會被上面的 onload 隱藏掉（避免同一個
   // 角色同時露出兩張臉），但那是等大立繪的 <img> 真的 onload 之後才會發生（非同步）——這裡直接
