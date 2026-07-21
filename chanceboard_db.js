@@ -4943,7 +4943,7 @@ window.CHANCEBOARD_DB = {
       "id": "019",
       "name": "自由(Freedom)",
       "color": "花牌",
-      "description": "角色解放(20秒)，招式條件固定為1",
+      "description": "選取時所有招式費用立即變為1，取消選取即恢復；打出後角色解放(20秒)，招式條件固定為1",
       "isSuitCard": false,
       "effectOps": [
         {

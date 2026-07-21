@@ -2268,7 +2268,7 @@
 </head>
 <body>
 <!-- 發布版本唯一維護位置：每次正式同步／部署時更新日期與當日版次。 -->
-<div id="appVersionBadge" data-version="v2026.07.21-03" aria-label="目前版本">讀取版本…</div>
+<div id="appVersionBadge" data-version="v2026.07.21-04" aria-label="目前版本">讀取版本…</div>
 <script>
 (function showOnlineBuildVersion(){
   const badge=document.getElementById('appVersionBadge'),version=badge.dataset.version||'dev';
@@ -5035,8 +5035,19 @@ function effectiveReadyAt(unit){
   // accounts for 結冰 (freeze pauses countdown) already folded into nextActionAt at apply-time
   return unit.nextActionAt;
 }
+function pendingFlowerGrantsStatus(unit, statusKey){
+  if(!unit || state.phase!=='act' || state.actingUnitId!==unit.id || state.actPending==null) return false;
+  const entry = combinedFlowerHand(unit)[state.actPending];
+  const ops = entry && entry.card && entry.card.effectOps;
+  return Array.isArray(ops) && ops.some(function(op){
+    return op && op.op==='status' && op.key===statusKey && (op.target==='chosen' || op.target==='self');
+  });
+}
 function conditionForUnit(unit, move){
-  if(hasStatus(unit,'解放')) return 1;
+  // 「自由」在玩家選中卡片的當下就先預覽解放效果，讓四個招式的費用立即顯示為1；這只是
+  // 尚未結算的選擇，不會真的寫入角色狀態。取消卡片後此條件立刻失效，而 confirmAct() 仍會在
+  // 花牌真正打出、解放狀態實際生效後才用 moveIsAffordable() 再驗證一次，不能偷用取消前的價格。
+  if(hasStatus(unit,'解放') || pendingFlowerGrantsStatus(unit,'解放')) return 1;
   return move.condition;
 }
 
@@ -8099,6 +8110,11 @@ function pickActCard(idx){
   const next = (state.actPending===idx) ? null : idx;
   if(state.actPending===next) return;
   state.actPending = next;
+  // 如果玩家先用「自由」的預覽減費選了一招，之後又取消自由（或改選其他花牌），原本付不起的
+  // 招式不能繼續維持選取。這裡立即恢復原費用並清掉非法選擇；confirmAct() 還會再做一次結算驗證。
+  const unit = getActingUnit();
+  const pickedMove = unit && state.actMovePicked ? unit.moves[state.actMovePicked] : null;
+  if(pickedMove && !moveIsAffordable(unit, pickedMove)) state.actMovePicked = null;
   render();
   if(state.phase==='act' && state.actingUnitId===actingId) state.actMoveTarget=moveTarget;
 }
