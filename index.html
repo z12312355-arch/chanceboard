@@ -1431,9 +1431,16 @@
   .hs-chip .n.warn{color:var(--warn);}
 
   /* ---- battle board ---- */
-  /* minmax(0,1fr) 而不是單純 1fr：避免棋盤在較窄的容器（例如新版兩欄戰鬥畫面的左欄）裡，因為格子
-     內容本身的最小寬度超過均分後的寬度，導致格線不縮反而整排橫向溢出、把最後一兩張卡片擠出畫面。 */
-  #board{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:8px;margin-bottom:10px;}
+  /* 使用者要求「棋盤格子固定成9:16的比例」：原本欄寬是 minmax(0,1fr) 均分容器寬度、格高則是
+     fitBattleLayout() 依剩餘直向空間單獨算出來——寬跟高互不相干，比例完全看當下視窗形狀，
+     角色立繪(_wide.png，本身接近9:16的直式比例)在各種螢幕上跟格子的貼合程度都不一樣。改成
+     grid-template-columns:repeat(6,auto)，欄寬不再均分容器，改成「跟著格子本身的內容尺寸走」；
+     格子(.cell)靠aspect-ratio:9/16讓寬度直接由高度反推，高度依然是fitBattleLayout()算出來的
+     --board-cell-h——這樣格子永遠精準是9:16，不會因為螢幕形狀跑掉。欄寬不再保證撐滿容器寬度，
+     用justify-content:center讓整排格子在容器裡置中，兩側留白對稱。fitBattleLayout()那邊也
+     要跟著補一個「用可用寬度反推格高上限」的檢查（見那裡的說明），否則格高只顧著吃滿直向空間，
+     6格9:16寬度可能會超出容器寬度、橫向溢出。 */
+  #board{display:grid;grid-template-columns:repeat(6,auto);justify-content:center;gap:8px;margin-bottom:10px;}
   /* 格子高度固定（跟單一角色卡的實際高度一致），不用 min-height 讓內容決定高度——共用同一格的
      多人改成重疊顯示塞進同一個高度（見 .occupantsRow），而不是直向疊起來把格子撐高，這樣
      不管角色怎麼移動、共用格子，整排格子大小從頭到尾都不會變。
@@ -1445,7 +1452,7 @@
   /* 使用者要求「戰鬥介面提高美術」（純CSS視覺打磨，優先棋盤格子/角色卡片、出手面板、戰鬥紀錄/
      狀態列、整體背景四塊）：格子背景從單一平面色改成淡淡的斜向漸層＋一圈內陰影，增加立體感，
      跟選角卡片（.rcard-art 那組）用的手法一致，不是全新風格。 */
-  .cell{background:linear-gradient(160deg,#282c40 0%,var(--panel2) 55%,#1e2130 100%);border:1px solid var(--line);border-radius:10px;height:var(--board-cell-h, 330px);padding:8px;position:relative;display:flex;flex-direction:column;gap:6px;overflow:hidden;
+  .cell{background:linear-gradient(160deg,#282c40 0%,var(--panel2) 55%,#1e2130 100%);border:1px solid var(--line);border-radius:10px;height:var(--board-cell-h, 330px);aspect-ratio:9/16;padding:8px;position:relative;display:flex;flex-direction:column;gap:6px;overflow:hidden;
     box-shadow:inset 0 1px 0 rgba(255,255,255,.05), inset 0 0 24px rgba(0,0,0,.25);}
   /* 真正的「角色卡背後透明」修正點：戰鬥棋盤格 .cell 本身是實色斜向漸層，跟下面 .unit 一起
      把整格從頭到尾蓋滿，戰鬥背景插畫完全透不上來。改成跟其他面板同等級的低不透明度
@@ -6137,7 +6144,20 @@ function fitBattleLayout(){
   const minBoardH = totalH * BOARD_RATIO_MIN;
   const maxBoardH = totalH - overheadH - ACT_ROW_MIN_H;
   const targetBoardH = Math.max(minBoardH, Math.min(maxBoardH, idealBoardH));
-  const cellH = Math.max(100, Math.round(targetBoardH) - hintH - boardMarginBottom);
+  let cellH = Math.max(100, Math.round(targetBoardH) - hintH - boardMarginBottom);
+  // 格子固定9:16（見上面 .cell／#board 那組CSS的說明）：上面算出來的cellH只顧著吃滿「直向」
+  // 剩餘空間，沒有考慮6格×9:16寬度加起來會不會超出容器「橫向」寬度——螢幕又高又窄（例如直式
+  // 手機）時很容易發生，cellH照直向空間算出一個很大的值，換算成寬度×6欄+5個gap後遠遠超出
+  // mainGrid的實際寬度，格子就會整排橫向溢出。這裡補上「用可用寬度反推格高上限」的檢查，
+  // 跟上面的直向限制取min，確保9:16格子不管在多窄的螢幕都不會撐爆版面。5個gap的8px要跟
+  // #board那條CSS的gap:8px保持一致，這裡沒辦法直接讀CSS變數，兩處改動時要記得一起改。
+  const boardGapPx = 8, boardGapsTotal = boardGapPx * 5;
+  const availW = mainGrid.clientWidth;
+  if(availW > 0){
+    const maxCellWFromWidth = (availW - boardGapsTotal) / 6;
+    const maxCellHFromWidth = maxCellWFromWidth * (16/9);
+    cellH = Math.max(100, Math.min(cellH, Math.round(maxCellHFromWidth)));
+  }
   document.documentElement.style.setProperty('--board-cell-h', cellH+'px');
 
   // 出手面板／戰鬥紀錄那排可以用的高度＝總高度扣掉狀態列（含跟主要區域的間距）、扣掉棋盤
