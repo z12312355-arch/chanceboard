@@ -9981,9 +9981,17 @@ function storyCompleteStage(stageNumber){
     // 且明確只要這張顯示卡跟著換、不影響正式的關卡解鎖進度——所以這裡只補回分支關本身的
     // checkpoints寫入，不去動 routeData.cleared／routeData.state（那兩個才是真正決定「下一關
     // 能不能玩」的正式進度，維持原本「回溯不影響正式進度」的設計不變）。
-    if(isBranch){
+    // 後續使用者實測回報：剛回溯完分支關、回到關卡選擇時，卡片還是顯示舊命運，要等打完Boss才
+    // 變成新選的那個——原本只在 isBranch（剛好完成的是分支關本身）才寫入，範圍太窄。改成只要
+    // 這次完成的關卡「在分支關（含）之後」（跟上面 replayState 那段同一個判斷式）就一律回寫，
+    // 用 storyOutcomeBlockForState() 依當下 snapshot.choices 重新推導出來的命運本來就跟分支關
+    // 完成當下算出來的完全一樣（choices 是整個回溯過程累積帶著走的，不會因為往後推進而改變），
+    // 所以在Boss／結局關完成時再寫一次是安全的、純粹補強：不管分支關那次完成當下卡片有沒有
+    // 正確反映出來，只要玩家後面又走完一關，這裡都會再校正一次，不會一路卡在舊命運。
+    if(branchStage&&Number(stageNumber)>=Number(branchStage.number)){
+      const branchNumber=Number(branchStage.number);
       routeData.checkpoints=routeData.checkpoints||{};
-      routeData.checkpoints[stageNumber]=snapshot;
+      routeData.checkpoints[branchNumber]=snapshot;
       saveStoryStageProgress(progress);
     }
     saveStoryDiscovery(discovery);storyRun.active=false;storyRun.stageCompleted=stageNumber;saveStoryProgress();storyDialogueLog=[];storyShowMenu('stages',route);storyFlash(isBranch?(branchWasKnown?'回溯完成：「'+completedBranchLabel+'」已探索過，沒有新增命運分支':'回溯完成：已解鎖新的命運分支「'+completedBranchLabel+'」'):((isFinal||isEndingHost)?'回溯完成，新的結局已收入命運棋譜':'回溯完成，可沿回溯結果挑戰下一關'),isBranch?6000:2600);return;
