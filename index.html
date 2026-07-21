@@ -9955,6 +9955,19 @@ function storyCompleteStage(stageNumber){
       if(isFinal||isEndingHost)discovery.routes[route].replayState=null;
       else discovery.routes[route].replayState=Object.assign({fromStage:Number(stageNumber)},snapshot);
     }
+    // 使用者反應「不論用哪個節點出發，Boss卡片『本次挑戰沿用』都顯示同一個結局」：根源是這裡
+    // 回溯完成會提早return，從來不會走到下面那行 routeData.checkpoints[stageNumber]=snapshot——
+    // 而 storyRenderStageMap() 的Boss卡片就是專門讀 checkpoints[分支關卡編號] 來決定顯示哪條
+    // 命運，導致卡片永遠卡在「第一次、非回溯」破關分支關當下選的那個結局，回溯重玩再多次都
+    // 不會反映最新選擇。使用者確認要的行為是「回溯／用命運棋譜選了命運之後，卡片要跟著換」，
+    // 且明確只要這張顯示卡跟著換、不影響正式的關卡解鎖進度——所以這裡只補回分支關本身的
+    // checkpoints寫入，不去動 routeData.cleared／routeData.state（那兩個才是真正決定「下一關
+    // 能不能玩」的正式進度，維持原本「回溯不影響正式進度」的設計不變）。
+    if(isBranch){
+      routeData.checkpoints=routeData.checkpoints||{};
+      routeData.checkpoints[stageNumber]=snapshot;
+      saveStoryStageProgress(progress);
+    }
     saveStoryDiscovery(discovery);storyRun.active=false;storyRun.stageCompleted=stageNumber;saveStoryProgress();storyDialogueLog=[];storyShowMenu('stages',route);storyFlash(isBranch?(branchWasKnown?'回溯完成：「'+completedBranchLabel+'」已探索過，沒有新增命運分支':'回溯完成：已解鎖新的命運分支「'+completedBranchLabel+'」'):((isFinal||isEndingHost)?'回溯完成，新的結局已收入命運棋譜':'回溯完成，可沿回溯結果挑戰下一關'),isBranch?6000:2600);return;
   }
   if(!routeData.cleared.includes(stageNumber))routeData.cleared.push(stageNumber);routeData.cleared.sort((a,b)=>a-b);routeData.state=snapshot;routeData.checkpoints=routeData.checkpoints||{};routeData.checkpoints[stageNumber]=snapshot;saveStoryStageProgress(progress);
@@ -10002,7 +10015,13 @@ function storyStartReplay(route,stageNumber,startBlock){const progress=loadStory
 function storyContinueReplayTimeline(route){const discovery=loadStoryDiscovery(),carry=discovery.routes[route].replayState;if(!carry)return;const stage=storyStageDef(route,Number(carry.fromStage)+1)||storyFinalStage(route);if(!stage)return;storyLaunchStage(route,stage,{replayMode:true,carry});}
 // targetStage 省略時＝從 storyFinalStage（Boss關）沿這條命運重打；命運棋譜的「直接看尾聲1」
 // 會傳入結局關卡，讓玩家不必重打Boss也能看某條命運對應的結局。
-function storyStartFourthFromBranch(route,branchBlock,targetStage){const progress=loadStoryStageProgress(),routeData=progress.routes[route],stage=targetStage||storyFinalStage(route),branchStage=storyBranchStage(route),branches=storySavedBranchStates(route),carry=branches[storyStableBlockId(route,branchBlock)];if(!stage||!branchStage||!carry){storyFlash('請先完成這條命運分支');return;}if(!routeData.cleared.includes(Number(branchStage.number))){storyFlash('請先完成「'+branchStage.title+'」');return;}storyLaunchStage(route,stage,{replayMode:routeData.cleared.includes(Number(stage.number)),carry,sourceBranch:branchBlock});}
+function storyStartFourthFromBranch(route,branchBlock,targetStage){const progress=loadStoryStageProgress(),routeData=progress.routes[route],stage=targetStage||storyFinalStage(route),branchStage=storyBranchStage(route),branches=storySavedBranchStates(route),carry=branches[storyStableBlockId(route,branchBlock)];if(!stage||!branchStage||!carry){storyFlash('請先完成這條命運分支');return;}if(!routeData.cleared.includes(Number(branchStage.number))){storyFlash('請先完成「'+branchStage.title+'」');return;}
+  // 同一個「本次挑戰沿用」修正（見 storyCompleteStage() 裡的說明）：玩家用命運棋譜挑了某條
+  // 命運節點出征，代表這是他現在明確要沿用的命運，把它也寫回 checkpoints[分支關卡編號]，
+  // Boss卡片才會跟著換成這條命運，不會又卡在最初那次的結局。一樣只動checkpoints，不碰
+  // cleared／state，正式解鎖進度不受影響。
+  routeData.checkpoints=routeData.checkpoints||{};routeData.checkpoints[Number(branchStage.number)]=storyRouteStateSnapshot(carry);saveStoryStageProgress(progress);
+  storyLaunchStage(route,stage,{replayMode:routeData.cleared.includes(Number(stage.number)),carry,sourceBranch:branchBlock});}
 // 保留舊函式名稱供既有後台／舊書籤呼叫，但新流程只會進入路線的關卡地圖。
 function storyStartRoute(route){storyShowMenu('stages',route);}
 function storyResumeSaved(){const saved=loadStoryProgress();if(!saved||!saved.active)return;storyRun=saved;storyRun.flags=storyRun.flags||{};storyRun.choices=storyRun.choices||{};storyRun.applied=storyRun.applied||{};storyRun.stageNumber=storyCurrentStageNumber(storyRun);document.getElementById('storyMenu').classList.add('hidden');storyRenderCurrent();}
