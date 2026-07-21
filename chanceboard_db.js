@@ -390,7 +390,8 @@ window.CHANCEBOARD_DB = {
       "def": 100,
       "spd": 90,
       "statStrength": 0.4875,
-      "moveStrength": 0.506979166666666
+      "moveStrength": 0.506979166666666,
+      "battleArtScale": 1.318
     },
     {
       "id": "017",
@@ -5434,7 +5435,8 @@ window.CHANCEBOARD_DB = {
       "def": 130,
       "spd": 70,
       "assetDir": "monster",
-      "description": "回應無名戰士誓約而現身的重裝長槍衛士，負責承受攻勢與牽制敵人。"
+      "description": "回應無名戰士誓約而現身的重裝長槍衛士，負責承受攻勢與牽制敵人。",
+      "battleArtScale": 2
     },
     {
       "id": "m003",

@@ -1419,8 +1419,9 @@
      零風險、有幫助時就多少有幫助的搭配措施，不是完整修法。 */
   .unit-art-img{position:absolute;top:0;height:100%;
     left:calc(50% - 5000% / var(--w-num, 100));width:calc(10000% / var(--w-num, 100));
-    object-fit:contain;object-position:50% 100%;display:block;}
-  .unit-art-img.mirror{transform:scaleX(-1);}
+    object-fit:contain;object-position:50% 100%;display:block;
+    transform:scale(var(--battle-art-scale,1));transform-origin:50% var(--battle-art-origin-y,100%);}
+  .unit-art-img.mirror{transform:scale(calc(-1 * var(--battle-art-scale,1)),var(--battle-art-scale,1));}
 
   /* ---- hand/deck summary row ---- */
   #handSummaryRow{display:flex;gap:14px;flex-wrap:wrap;flex:0 0 auto;}
@@ -1504,14 +1505,10 @@
      （畫布99.49%處，剛好對齊格子下緣，跟其他角色的腳底對齊邏輯一致）附近，讓放大後腳底位置
      不變、只往上（頭頂方向）撐滿，寬度也跟著等比放大，所以會左右超出格子——這正是使用者要的
      效果。 */
-  .unit[data-base-id="016"] .unit-art-img{transform:scale(1.318);transform-origin:50% 97.9%;}
-  .unit[data-base-id="016"] .unit-art-img.mirror{transform:scale(-1.318,1.318);}
   /* 怪物「守關戰士」(m002) 立繪同樣是寬、矮的構圖，量測結果甚至比016更誇張：角色本體只佔
      畫布高度的51.6%（頭頂約在47.9%處，腳底貼齊畫布底部），寬度已經是整張畫布滿版（是被裁到
      畫布邊緣，不是留白）。原本用 scale 1.938 撐滿角色本體；依使用者要求再放大為畫面現況的
      兩倍，因此改成 3.876，並繼續以角色腳底（畫布98.95%處）為縮放原點，向上與左右超出格子。 */
-  .unit[data-base-id="m002"] .unit-art-img{transform:scale(2);transform-origin:50% 98.95%;}
-  .unit[data-base-id="m002"] .unit-art-img.mirror{transform:scale(-2,2);}
   .cell .slotlabel{position:absolute;top:4px;right:8px;font-size:10px;color:var(--muted);z-index:10;}
   .cell.emptycell{align-items:center;justify-content:center;color:var(--muted);font-size:12px;opacity:.6;}
   /* 招式命中預覽（見 renderBattle() 裡 targetPreviewSlots 的說明）：選好招式後，用一圈脈動的
@@ -2271,7 +2268,7 @@
 </head>
 <body>
 <!-- 發布版本唯一維護位置：每次正式同步／部署時更新日期與當日版次。 -->
-<div id="appVersionBadge" data-version="v2026.07.21-02" aria-label="目前版本">讀取版本…</div>
+<div id="appVersionBadge" data-version="v2026.07.21-03" aria-label="目前版本">讀取版本…</div>
 <script>
 (function showOnlineBuildVersion(){
   const badge=document.getElementById('appVersionBadge'),version=badge.dataset.version||'dev';
@@ -3836,6 +3833,16 @@ function imgLayerHtml(fallbackHtml, src, imgClass, extraOnloadJs){
 // 角色頭像只使用正式美術圖；沒有圖時保持留白，不顯示醜陋的預設圖。
 function entityImageSrc(baseId, suffix){
   return (MONSTER_BY_ID[baseId] ? 'monster/' : 'images/')+baseId+'_'+suffix+'.png';
+}
+function battleArtScaleFor(entity){
+  const legacyDefault = entity && entity.id==='016' ? 1.318 : entity && entity.id==='m002' ? 2 : 1;
+  const raw = entity && entity.battleArtScale!=null ? Number(entity.battleArtScale) : legacyDefault;
+  return isFinite(raw) && raw>=0.25 && raw<=4 ? raw : legacyDefault;
+}
+function battleArtOriginYFor(entity){
+  if(entity && entity.id==='016') return '97.9%';
+  if(entity && entity.id==='m002') return '98.95%';
+  return '100%';
 }
 function charAvatarInnerHtml(baseId, domKey){
   if(baseId==null) return '';
@@ -10831,6 +10838,12 @@ function renderUnitBlock(u, isActing, compact, displaySlot){
       miniStatsHtml+
       '<div class="tags">'+classTagsForUnit(u, isActing, compact)+'</div>'+
     '</div>';
+  const battleArtEntity = CHAR_BY_ID[u.baseId] || MONSTER_BY_ID[u.baseId] || null;
+  const battleArtImage = div.querySelector('.unit-art-img');
+  if(battleArtImage){
+    battleArtImage.style.setProperty('--battle-art-scale', String(battleArtScaleFor(battleArtEntity)));
+    battleArtImage.style.setProperty('--battle-art-origin-y', battleArtOriginYFor(battleArtEntity));
+  }
   // 名字／分類太長被裁掉的話，滑鼠移上去(title)或點擊都能看到完整資訊——不是真的把資料丟掉，只是
   // 畫面上暫時擠不下。
   div.title = u.name+'（'+u.element+'系／'+slotDistLabel(u.side,shownSlot)+(shownSlot!==u.slot?'・預覽位置，出手才會定案':'')+'）\n點擊查看完整招式';
@@ -11082,7 +11095,10 @@ function renderBattle(){
     // 裁切——那組CSS需要格子本身 overflow:visible 才有效，這裡先標記「這一格有沒有016」，
     // 只有真的有他在的格子才拿掉裁切，其餘格子完全不受影響。後來使用者要求怪物「守關戰士」
     // (m002) 也用一樣的處理方式（見 .unit[data-base-id="m002"] 那組CSS），一併加進這裡的判斷。
-    const hasOverflowArtUnit = occupants.some(u=>u.baseId==='016'||u.baseId==='m002');
+    const hasOverflowArtUnit = occupants.some(function(unit){
+      const entity = CHAR_BY_ID[unit.baseId] || MONSTER_BY_ID[unit.baseId] || null;
+      return battleArtScaleFor(entity)>1;
+    });
     cell.className = 'cell side-'+side + (occupants.length===0?' emptycell':'') + (occupants.length>1?' shared':'') + (isTargetPreview?' move-target-preview':'') + (hasOverflowArtUnit?' overflow-art':'');
     const label = document.createElement('div');
     label.className='slotlabel'; label.textContent = slotDistLabel(side,slot)+(occupants.length>1?(' ×'+occupants.length):'');
@@ -12132,6 +12148,7 @@ function renderAdminForm(){
       adminNumField('char-atk','ATK',c.atk)+
       adminNumField('char-def','DEF',c.def)+
       adminNumField('char-spd','SPD',c.spd)+
+      adminNumField('char-battleArtScale','戰鬥立繪倍率（0.25～4，預設1）',battleArtScaleFor(c))+
       '<div class="admin-field"><label>屬性 element</label><select id="admin-char-element">'+
         ['劍','槍','法'].map(e=>'<option value="'+e+'"'+(c.element===e?' selected':'')+'>'+e+'</option>').join('')+
       '</select></div>'+
@@ -12176,7 +12193,7 @@ function renderAdminMonsterForm(){
   const moves=(MOVES_BY_OWNER[monster.id]||[]).slice().sort(function(a,b){const order={'劍':0,'槍':1,'法':2,'願':3,'被':4};return (order[a.slot]??9)-(order[b.slot]??9);});
   let html='<div class="admin-section"><div class="as-title" id="admin-monster-title-display">👹 '+escHtml(monster.name)+'　怪物數值</div>'
     +'<p style="font-size:11px;color:var(--muted);line-height:1.6">怪物不會進入召喚卡池，也不套用玩家星級或技能等級。圖片固定讀取 <code>monster/'+escHtml(monster.id)+'_full／wide／sword／gun／magic／wish.png</code>。</p>'
-    +'<div class="admin-grid">'+adminTextField('monster-id','怪物 ID（圖片檔名前綴）',monster.id)+adminTextField('monster-name','怪物名稱',monster.name)+adminTextField('monster-title','稱號',monster.title)+adminNumField('monster-hp','HP',monster.hp)+adminNumField('monster-atk','ATK',monster.atk)+adminNumField('monster-def','DEF',monster.def)+adminNumField('monster-spd','SPD',monster.spd)
+    +'<div class="admin-grid">'+adminTextField('monster-id','怪物 ID（圖片檔名前綴）',monster.id)+adminTextField('monster-name','怪物名稱',monster.name)+adminTextField('monster-title','稱號',monster.title)+adminNumField('monster-hp','HP',monster.hp)+adminNumField('monster-atk','ATK',monster.atk)+adminNumField('monster-def','DEF',monster.def)+adminNumField('monster-spd','SPD',monster.spd)+adminNumField('monster-battleArtScale','戰鬥立繪倍率（0.25～4，預設1）',battleArtScaleFor(monster))
     +'<div class="admin-field"><label>屬性 element</label><select id="admin-monster-element">'+['劍','槍','法'].map(function(element){return '<option value="'+element+'"'+(monster.element===element?' selected':'')+'>'+element+'</option>';}).join('')+'</select></div></div>'
     +'<div class="admin-field"><label>怪物設計說明 description</label><textarea id="admin-monster-description" rows="4">'+escHtml(monster.description||'')+'</textarea></div>'
     +'<div class="admin-move-actions"><button type="button" class="btn small primary" id="admin-apply-monster">儲存怪物資料</button><button type="button" class="btn small" id="admin-reset-monster">還原怪物資料</button><span class="admin-msg" id="admin-monster-msg"></span></div></div>';
@@ -12190,9 +12207,10 @@ function renderAdminMonsterForm(){
 
 async function applyAdminMonster(monsterId){
   const monster=MONSTER_BY_ID[monsterId],msg=document.getElementById('admin-monster-msg');
-  const hp=readNum('monster-hp'),atk=readNum('monster-atk'),def=readNum('monster-def'),spd=readNum('monster-spd'),name=readText('monster-name');
+  const hp=readNum('monster-hp'),atk=readNum('monster-atk'),def=readNum('monster-def'),spd=readNum('monster-spd'),battleArtScale=readNum('monster-battleArtScale'),name=readText('monster-name');
   if(!name||!name.trim()||[hp,atk,def,spd].some(function(value){return value==null||value===undefined||value<=0;})){msg.textContent='❌ 名稱不能留白，四項能力值必須是大於0的數字。';msg.className='admin-msg err';return;}
-  Object.assign(monster,{name:name.trim(),title:(readText('monster-title')||'').trim(),hp:hp,atk:atk,def:def,spd:spd,element:document.getElementById('admin-monster-element').value,description:(readText('monster-description')||'').trim()});
+  if(battleArtScale==null||battleArtScale===undefined||battleArtScale<0.25||battleArtScale>4){msg.textContent='❌ 戰鬥立繪倍率必須介於 0.25～4。';msg.className='admin-msg err';return;}
+  Object.assign(monster,{name:name.trim(),title:(readText('monster-title')||'').trim(),hp:hp,atk:atk,def:def,spd:spd,battleArtScale:battleArtScale,element:document.getElementById('admin-monster-element').value,description:(readText('monster-description')||'').trim()});
   (MOVES_BY_OWNER[monster.id]||[]).forEach(function(move){move.ownerName=monster.name;});
   msg.textContent='⏳ 儲存中…';msg.className='admin-msg';
   try{await saveGlobalAdminConfig();msg.textContent='✅ 怪物資料已儲存至 D1。';msg.className='admin-msg';renderAdminMonsterList();const title=document.getElementById('admin-monster-title-display');if(title)title.textContent='👹 '+monster.name+'　怪物數值';}
@@ -12882,10 +12900,15 @@ async function applyAdminChar(charId){
   if(gachaWeight===undefined || gachaWeight===null || gachaWeight<0){
     msg.textContent = '❌ 召喚權重不能是空白、非數字，或負數（可以是0）'; msg.className = 'admin-msg err'; return;
   }
+  const battleArtScale = readNum('char-battleArtScale');
+  if(battleArtScale===undefined || battleArtScale===null || battleArtScale<0.25 || battleArtScale>4){
+    msg.textContent = '❌ 戰鬥立繪倍率必須介於 0.25～4。'; msg.className = 'admin-msg err'; return;
+  }
   c.name = name; c.title = title || '';
   c.hp = hp; c.atk = atk; c.def = def; c.spd = spd;
   c.element = document.getElementById('admin-char-element').value;
   c.gachaWeight = gachaWeight;
+  c.battleArtScale = battleArtScale;
   c.wish = (readText('char-wish')||'').trim();
   c.outer = (readText('char-outer')||'').trim();
   c.inner = (readText('char-inner')||'').trim();
