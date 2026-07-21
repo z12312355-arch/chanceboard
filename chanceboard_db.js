@@ -2618,7 +2618,7 @@ window.CHANCEBOARD_DB = {
       "critRate": null,
       "cooldown": null,
       "coefficient": 1,
-      "description": "出招後自己進入連動狀態(2回合)，狀態中每次輪到他都連續行動兩次",
+      "description": "出招後自己進入連動狀態(2回合)，行動次數*2",
       "expectedValue": 0,
       "strength": 1,
       "ownerName": "法蘭克．雷(Frank Thunder)",
@@ -2654,7 +2654,7 @@ window.CHANCEBOARD_DB = {
         "cooldown": 3,
         "effectChance": 1,
         "effectTrigger": "postAction",
-        "description": "出招後自己進入連動狀態(2回合)，狀態中每次輪到他都連續行動兩次"
+        "description": "出招後自己進入連動狀態(2回合)，行動次數*2"
       }
     },
     {
@@ -4943,7 +4943,7 @@ window.CHANCEBOARD_DB = {
       "id": "019",
       "name": "自由(Freedom)",
       "color": "花牌",
-      "description": "選取時所有招式費用立即變為1，取消選取即恢復；打出後角色解放(20秒)，招式條件固定為1",
+      "description": "角色解放(20秒)，招式條件固定為1",
       "isSuitCard": false,
       "effectOps": [
         {
@@ -5436,7 +5436,7 @@ window.CHANCEBOARD_DB = {
       "spd": 70,
       "assetDir": "monster",
       "description": "回應無名戰士誓約而現身的重裝長槍衛士，負責承受攻勢與牽制敵人。",
-      "battleArtScale": 2
+      "battleArtScale": 1.5
     },
     {
       "id": "m003",
