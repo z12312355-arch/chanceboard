@@ -1481,6 +1481,24 @@
      「點一下」。 */
   .cell.tap-expanded{overflow:visible;z-index:20;}
   .cell.tap-expanded .occupantsRow{--step:var(--w, 16%); --front-left:var(--front-left-hover, 0%);}
+  /* 016（傑．阿爾薩斯，騎馬立繪）的角色本體很寬、相對矮：塞進9:16直式格子時，contain模式下
+     高度還沒填滿就先被寬度卡住，看起來比其他角色矮一截。使用者確認要真的讓立繪超出格子邊界
+     （非縮放裁切），所以只有真的站著他的格子才拿掉overflow:hidden（見 renderBattle() 裡
+     hasOverflowArtUnit 那段），其餘格子完全不受影響、正常裁切。z-index給15：比預設(0/2)高，
+     蓋得過左右沒有016的鄰格；比hover展開的20低，滑鼠真的要看鄰格詳細內容時hover仍然優先。
+     .unit / .unit-art 兩層也要各自拿掉overflow:hidden，因為裁切是逐層生效的，只鬆開最外層
+     .cell不夠。 */
+  .cell.overflow-art{overflow:visible;z-index:15;}
+  .cell.overflow-art .unit{overflow:visible;}
+  .cell.overflow-art .unit-art{overflow:visible;}
+  /* 016專用的立繪縮放：量測 016_wide.png 實際內容（去掉透明留白）大約落在畫布的23.62%~99.49%
+     高度（頭頂到腳底），也就是塞進格子時，object-fit:contain已經把「整張畫布」對齊格子高度，
+     但角色本體只佔中間75.87%，看起來偏小。這裡另外疊一層 transform:scale，把「角色本體」而
+     不是「整張畫布」撐滿格子高度：scale = 1/0.7587 ≈ 1.318。transform-origin抓在角色腳底
+     （畫布99.49%處，剛好對齊格子下緣，跟其他角色的腳底對齊邏輯一致）附近，讓放大後腳底位置
+     不變、只往上（頭頂方向）撐滿，寬度也跟著等比放大，所以會左右超出格子——這正是使用者要的
+     效果。 */
+  .unit[data-base-id="016"] .unit-art-img{transform:scale(1.318);transform-origin:50% 97.9%;}
   .cell .slotlabel{position:absolute;top:4px;right:8px;font-size:10px;color:var(--muted);z-index:10;}
   .cell.emptycell{align-items:center;justify-content:center;color:var(--muted);font-size:12px;opacity:.6;}
   /* 招式命中預覽（見 renderBattle() 裡 targetPreviewSlots 的說明）：選好招式後，用一圈脈動的
@@ -10674,6 +10692,9 @@ function renderUnitBlock(u, isActing, compact, displaySlot){
   const div = document.createElement('div');
   div.id = 'unit-'+u.id; // stable anchor so playPendingEffects() can find this unit's fresh DOM node after each render()
   div.className = 'unit'+(u.alive?'':' dead')+(isActing?' current-turn':'')+(!isVisible(u)?' stealth':'');
+  // 給 data-base-id，讓CSS可以針對「某個特定角色」單獨覆寫立繪呈現方式（見下面
+  // .unit[data-base-id="016"] 那組規則的說明），不用為了一位角色去改全體共用的規則。
+  div.dataset.baseId = u.baseId;
   // 使用者反應「移動動畫還沒結束，移動後的圖就先出來了」：移動分身（.move-ghost）飛行期間，
   // 原本只把「當下那顆」目的地元素設成 visibility:hidden，但 render() 每次都整個重建棋盤DOM，
   // 分身還在飛的途中只要再發生一次 render()（下一位的回合幾乎立刻接上來），重建出來的新元素
@@ -10979,7 +11000,13 @@ function renderBattle(){
       return a.hp-b.hp; // 血量多的排愈後面／疊愈上面，兩邊side統一方向，不反過來
     });
     const isTargetPreview = targetPreviewSlots.some(t=>t.side===side && t.slot===slot);
-    cell.className = 'cell side-'+side + (occupants.length===0?' emptycell':'') + (occupants.length>1?' shared':'') + (isTargetPreview?' move-target-preview':'');
+    // 使用者要求「傑．阿爾薩斯(016，騎馬立繪)超出格子」：他的立繪本體很寬、相對矮，塞進9:16
+    // 直式格子時高度還沒填滿就先被寬度卡住，看起來比其他角色小一截。使用者確認要真的讓立繪
+    // 超出格子邊界（見下面 .cell.overflow-art／.unit[data-base-id="016"] 那組CSS），不是縮放
+    // 裁切——那組CSS需要格子本身 overflow:visible 才有效，這裡先標記「這一格有沒有016」，
+    // 只有真的有他在的格子才拿掉裁切，其餘格子完全不受影響。
+    const hasOverflowArtUnit = occupants.some(u=>u.baseId==='016');
+    cell.className = 'cell side-'+side + (occupants.length===0?' emptycell':'') + (occupants.length>1?' shared':'') + (isTargetPreview?' move-target-preview':'') + (hasOverflowArtUnit?' overflow-art':'');
     const label = document.createElement('div');
     label.className='slotlabel'; label.textContent = slotDistLabel(side,slot)+(occupants.length>1?(' ×'+occupants.length):'');
     if(occupants.length>1){
