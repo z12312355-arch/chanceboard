@@ -3147,7 +3147,6 @@ function applyProtectCardBalance(){
   if(shield){shield.value=200;shield.durSec=10;}
 }
 applyProtectCardBalance();
-const USING_EXTERNAL_DB = !!window.CHANCEBOARD_DB;
 
 // 保留 Git 內建資料快照，供 D1 同步與單項還原使用。
 const ORIGINAL_DB_SNAPSHOT = JSON.parse(JSON.stringify(DB));
@@ -3340,7 +3339,6 @@ function cardShopPrice(c){
   const p = Number(c.shopPrice);
   return (isFinite(p) && p>=0) ? p : DEFAULT_CARD_SHOP_PRICE;
 }
-const SUIT_NAME_TO_SLOT = {'刀劍(Sword)':'劍','槍炮(Gun)':'槍','魔法(Magic)':'法','心願(Wish)':'願'};
 const SLOT_TO_SUIT_CARDID = {'劍':'001','槍':'002','法':'003','願':'004'};
 const CARD_ID_TO_SUIT_KEY = {'001':'劍','002':'槍','003':'法','004':'願'}; // others fall back to 'flower'
 const CARD_ICON = {
@@ -4155,8 +4153,6 @@ function refreshCurrencyDisplays(){
   ['gachaDiamondAmt','lobbyDiamondAmt','shopDiamondAmt'].forEach(id=>{ const el=document.getElementById(id); if(el) el.textContent = diamondAmount; });
   updateGachaCostDisplay();
 }
-const GACHA_GOLD_COST_1 = 100, GACHA_GOLD_COST_10 = 1000;
-const GACHA_DIAMOND_COST_1 = 10, GACHA_DIAMOND_COST_10 = 100;
 // 鑽石池專屬角色：劍／槍／法三個屬性各挑2位（21位角色剛好每屬性7位，見設計時的統計），
 // 湊成6位「鑽石限定」角色，金幣池抽不到，藉此讓鑽石召喚除了機率之外還有實質的內容誘因。
 const DIAMOND_EXCLUSIVE_IDS = ['016','014','003','021','018','020'];
@@ -7888,7 +7884,6 @@ function autoDiscardStuckSuitCard(unit){
 // 移動/出招特效/命中數字這條鏈（不含招式插畫本身——那張圖是掛在document.body、獨立於棋盤重繪
 // 之外的1.3秒計時器，見showMoveSplash()，不受這裡影響，本來就不會被腰斬，只是1X/2X下一步棋
 // 開始得比較快，可能會跟下一次的插畫短暫重疊，這是另一個問題，不在這次調整範圍內）。
-const AUTO_BATTLE_FX_EXTRA_MS = 900;
 
 /* ---- 戰鬥速度＝真正的「時間縮放」 ----
    舊做法只縮短「兩次出手之間的空檔」（autoBattleDelay），而動畫時長與這裡的 900ms 都是固定的，
@@ -9654,11 +9649,6 @@ function storyFateVisualHtml(route,data){
   const rectsOverlap=function(ax,ay,ahw,ahh,bx,by,bhw,bhh){
     return Math.abs(ax-bx)<(ahw+bhw)&&Math.abs(ay-by)<(ahh+bhh);
   };
-  const hitsAnyCard=function(x,y,hw){
-    return cardRects.some(function(rc){
-      return rectsOverlap(x,y,hw,labelHalfH, rc.x+rc.w/2, rc.y+rc.h/2, rc.w/2+PAD, rc.h/2+PAD);
-    });
-  };
   const hitsOtherLabel=function(x,y,hw){
     return labelBoxes.some(b=>rectsOverlap(x,y,hw,labelHalfH,b.x,b.y,b.hw,labelHalfH+2));
   };
@@ -11363,7 +11353,6 @@ function renderBattle(){
     // confirmAct() 上面的說明，所以這裡永遠拿 state.actMoveTarget（沒選過就等於原本那格）來畫面上
     // 顯示「目前選到哪一格」，不是拿 currentActUnit.slot（那個要到出手那一刻才會真的改變）。
     const moveTarget = (state.actMoveTarget!=null) ? state.actMoveTarget : currentActUnit.slot;
-    const willMove = moveTarget!==currentActUnit.slot;
     // 使用者要求進一步精簡：移除「出手了。」跟「（已預覽移動到 X）」這段文字——後者跟下面
     // 「移動到：」那排按鈕本身的選取狀態重複（選到哪格,按鈕自己看得出來，不需要文字再說一次），
     // 只留「輪到 XX」告訴你現在輪到誰；禁足中這個警告是別的按鈕/格子看不出來的資訊，繼續保留。
