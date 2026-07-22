@@ -4261,7 +4261,7 @@ document.getElementById('lobbyHeroPickGrid').addEventListener('click', function(
 // ============ 抽卡／召喚（使用者要求「加入抽卡的機制，必須要有這個角色才能使用」＋
 // 「新增召喚按鈕」）============
 // 使用者透過AskUserQuestion確認的規格：(1) 一開始免費無限抽，之後使用者又要求「召喚分成
-// 金幣召喚、鑽石召喚」，實際花費見上面GACHA_GOLD_COST_1等常數；(2) 遊戲一開始一個角色
+// 金幣召喚、鑽石召喚」，實際花費見召喚邏輯中的費用設定；(2) 遊戲一開始一個角色
 // 都沒有，全部都要抽；(3) 21位角色機率均等，不分稀有度（金幣池/鑽石池角色範圍不同，但同一
 // 個池子內部還是均等機率，見gachaPoolFor()）。
 // 存取方式完全比照上面 TEAMS_KEY／teams 那組（同一份 localStorage 容錯邏輯：存取失敗就
@@ -7691,7 +7691,7 @@ function runLoop(){
         scheduleNext(next);
         continue;
       }
-      // 改成比照「自動戰鬥」開關同一套節奏（AUTO_BATTLE_SPEEDS + AUTO_BATTLE_FX_EXTRA_MS，
+      // 改成比照「自動戰鬥」開關同一套節奏（AUTO_BATTLE_SPEEDS，
       // 見 scheduleAutoLoop()），設定內容跟下面人類/雙人回合那段完全一樣（state.phase 一定
       // 要設成'act'——render()最上層是照state.phase分派要畫哪個畫面，沒設的話render()會
       // 誤判還在選角/組卡階段，整個戰鬥畫面連棋盤都不會畫出來）。出手面板（actPanel）這時
@@ -7926,7 +7926,7 @@ function scheduleAutoLoop(){
 }
 
 // 單人對戰、電腦對手（非「自動戰鬥」開關那種）回合的停頓排程，節奏設定跟上面
-// scheduleAutoLoop() 共用同一份（AUTO_BATTLE_SPEEDS + AUTO_BATTLE_FX_EXTRA_MS，玩家在戰鬥
+// scheduleAutoLoop() 共用同一份（AUTO_BATTLE_SPEEDS，玩家在戰鬥
 // 畫面調的「戰鬥速度」1X/2X/3X 也會一併套用在電腦對手的節奏上，不是另外寫死一個速度）。
 // 跟 scheduleAutoLoop() 的差別只在時間到了之後呼叫 aiHandleTurn()（電腦對手固定的AI決策
 // 邏輯，本來就不經過 confirmAct() 那一套UI專用暫存欄位）而不是 autoDecideCurrentTurn()。
