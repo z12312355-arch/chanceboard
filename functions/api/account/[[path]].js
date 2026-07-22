@@ -364,7 +364,6 @@ async function friendList(db, uid) {
     WHERE f.user_a=?1 OR f.user_b=?1 ORDER BY p.player_name COLLATE NOCASE`).bind(uid).all();
   return (result.results || []).map(row => ({ uid: row.uid, playerName: row.player_name || '未命名玩家', friendCode: row.friend_code || '' }));
 }
-function randomPick(items) { return items[crypto.getRandomValues(new Uint32Array(1))[0] % items.length]; }
 // 2026-07：加好友碼——原始 Firebase UID 太長不適合手動輸入/分享，改用 8 位數字短碼，
 // 畫面上顯示成 XXXX-XXXX。normalizeFriendCode() 負責把使用者貼上來的字串（可能含 - 或空白）
 // 清成純數字比對用；generateFriendCode() 產生候選碼；ensureFriendCode() 在帳號還沒有

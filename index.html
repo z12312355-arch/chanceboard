@@ -3331,7 +3331,6 @@ function cardOwnedCount(id){
   if(SUIT_CARD_IDS.includes(id)) return MAX_CARD_COPIES;
   return ownedCardCounts[id] || 0;
 }
-function isCardOwned(id){ return cardOwnedCount(id) > 0; }
 // 卡片商店售價：跟角色的gachaWeight同一套「沒設定就用預設值」邏輯，後臺可以改
 // c.shopPrice（見renderAdminForm()的商店定價彈窗），沒改過的卡一律用DEFAULT_CARD_SHOP_PRICE。
 const DEFAULT_CARD_SHOP_PRICE = 150;
@@ -4035,7 +4034,6 @@ function getActingUnit(){
 
 // Display-only labels: internally sides stay 'A'/'B' and slots stay 1/2/3 (all game logic
 // keys off these), but the UI shows 黑/白 for side and 前/中/後 (distance-from-enemy) for slot.
-function sideLabel(side){ return side==='A' ? '黑' : '白'; }
 function slotDistLabel(side, slot){
   if(slot===2) return '中';
   return slot===frontSlot(side) ? '前' : '後';
@@ -4947,12 +4945,6 @@ function sumStatus(unit, key, mode){
   tickExpire(unit);
   return unit.statuses.filter(s=>s.key===key && (!mode||s.mode===mode)).reduce((s,e)=>s+(e.value||0),0);
 }
-function maxStatusValue(unit, key){
-  tickExpire(unit);
-  const list = unit.statuses.filter(s=>s.key===key);
-  if(!list.length) return 0;
-  return Math.max(...list.map(s=>s.value||0));
-}
 function consumeShield(unit, amount){
   let remaining=Math.max(0,amount||0);
   if(!remaining) return 0;
@@ -5175,11 +5167,6 @@ function resolveTargets(unit, move, enemyTeam){
   return {single:null, group:[]};
 }
 
-function sameSlotHealTarget(unit, ownTeam){
-  const cands = ownTeam.filter(u=>u.alive && u.slot===unit.slot);
-  if(cands.length===0) return null;
-  return cands.reduce((a,b)=> (a.hp/a.maxHp <= b.hp/b.maxHp ? a : b));
-}
 function lowestHpAlly(ownTeam){
   const alive = ownTeam.filter(u=>u.alive);
   if(!alive.length) return null;
@@ -9052,7 +9039,6 @@ function storyStageLabel(route,stageNumber){
   const hasPrologue=(STORY_STAGE_DEFS[route]||[]).some(s=>s.role==='prologue'&&Number(s.number)<Number(stageNumber));
   return '第 '+(hasPrologue?Number(stageNumber):Number(stageNumber)+1)+' 關';
 }
-function storyIsOpeningBlock(blockIndex){if(!storyBlocks)return false;const first=String(storyBlocks[blockIndex]||'').split(/\r?\n/).map(s=>s.trim()).find(Boolean)||'';return first==='【開場CG】';}
 // CG 場景指令：把原本寫死的「【開場CG】＝顯示 openingCg、隱藏立繪、第一段旁白跑馬燈」
 // 一般化成任何段落都能用的標記，讓後續的 Boss 擊破 CG／尾聲 CG 共用同一套演出：
 //   【開場CG】             → 沿用後台設定的路線開場 CG（維持原本行為，舊文本不用改）
@@ -9095,7 +9081,6 @@ function storyBlockCgDirective(blockIndex){
   // 文本裡沒有指令時，退回這一段所屬關卡的 CG（尾聲1／尾聲2 就是靠這個，不依賴逐段標記）。
   return storyStageCgFor(blockIndex);
 }
-function storyIsCgBlock(blockIndex){return !!storyBlockCgDirective(blockIndex);}
 function storyMaxStageNumber(route){const defs=STORY_STAGE_DEFS[route]||[];return defs.length?Number(defs[defs.length-1].number):4;}
 function storyFirstUnclearedStage(route,cleared){const defs=STORY_STAGE_DEFS[route]||[];for(const stage of defs){if(!cleared.includes(Number(stage.number)))return Number(stage.number);}return storyMaxStageNumber(route);}
 function storyCurrentStageNumber(run){const n=Number(run&&run.stageNumber);if(run&&run.stageNumber!=null&&Number.isFinite(n))return n;const stage=run?storyStageForBlock(run.route,run.block):null;return stage?Number(stage.number):1;}
@@ -15095,12 +15080,6 @@ document.getElementById('admin1v1BattleBtn').onclick=function(){ closeAdminPanel
       onlinePrevController='A'; startGame();
       onlineMetaRef.update({status:'playing',startedAt:Date.now()});
     }
-    function copyOnlineLink(){
-      const link=location.origin+location.pathname+'?room='+onlineRoomId;
-      if(navigator.clipboard) navigator.clipboard.writeText(link);
-      alert('邀請連結已複製：\n'+link);
-    }
-
     function onlineUpdateLock(){
       if(!onlineOverlay) return;
       // 戰鬥資源尚在下載時，保留進度層，不要被一般的回合鎖定更新蓋掉。
