@@ -2296,7 +2296,7 @@
 </head>
 <body>
 <!-- 發布版本唯一維護位置：每次正式同步／部署時更新日期與當日版次。 -->
-<div id="appVersionBadge" data-version="v2026.07.23-22" aria-label="目前版本">讀取版本…</div>
+<div id="appVersionBadge" data-version="v2026.07.23-23" aria-label="目前版本">讀取版本…</div>
 <script>
 (function showOnlineBuildVersion(){
   const badge=document.getElementById('appVersionBadge'),version=badge.dataset.version||'dev';
@@ -4906,14 +4906,16 @@ function startGame(onScreenReady){
   // 黑幕、再呼叫 startGame() 的短暫空檔會露出底下的大廳。一般對戰不傳 callback，流程完全不變。
   if(typeof onScreenReady==='function') onScreenReady();
   addLog('info', '本局棋子類型：'+sharedPiece+'（雙方共用同一副公牌牌庫）');
-  // Deferred to a macrotask: balance-test-tools' harness calls startGame() (via UI clicks)
-  // and THEN window.__runFastBattle() synchronously within the very same script, so
-  // __fastBattleMode isn't `true` yet at this exact line — only after this deferred callback
-  // actually runs (i.e. after that whole synchronous script, __runFastBattle() included, has
-  // finished) will __fastBattleEverUsed correctly reflect whether this was a batch-sim page.
-  setTimeout(function(){
-    if(!window.__fastBattleEverUsed) startBgm(sharedPiece);
-  }, 0);
+  // 故事戰鬥是從玩家點擊劇情直接進場，音樂必須留在同一個點擊事件裡立即 play；若延到
+  // setTimeout，瀏覽器可能視為自動播放而拒絕，直到玩家重新開關音樂才恢復。
+  // 一般對戰仍延後一個 task，保留 balance-test-tools 在 startGame() 後同步開啟高速模式的判斷。
+  if(window.__storyBattleKind && !window.__fastBattleEverUsed){
+    startBgm(sharedPiece);
+  } else {
+    setTimeout(function(){
+      if(!window.__fastBattleEverUsed) startBgm(sharedPiece);
+    }, 0);
+  }
   runLoop();
 }
 
