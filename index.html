@@ -388,7 +388,7 @@
   #screen-login #lobbyAdminBtn:hover,#screen-login #loginSettingsBtn:hover{opacity:1;background:rgba(20,22,30,.85);color:var(--text);}
   #screen-login #lobbyAdminBtn .lobby-btn-icon,#screen-login #loginSettingsBtn .lobby-btn-icon{font-size:16px;}
   /* 所有非戰鬥畫面共用同一顆右上角設定鈕；戰鬥畫面沿用自己的齒輪與即時設定面板。 */
-  #globalSettingsBtn{position:fixed;top:14px;right:16px;z-index:145;width:42px;height:42px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+  #globalSettingsBtn{position:fixed;top:14px;right:16px;z-index:149;width:42px;height:42px;border-radius:50%;display:flex;align-items:center;justify-content:center;
     background:rgba(20,22,30,.72);border:1px solid var(--line);color:var(--text);cursor:pointer;font-size:18px;box-shadow:0 4px 16px rgba(0,0,0,.3);}
   #globalSettingsBtn:hover{background:rgba(42,47,65,.92);}
   #globalSettingsBtn.hidden{display:none;}
@@ -2288,7 +2288,7 @@
 </head>
 <body>
 <!-- 發布版本唯一維護位置：每次正式同步／部署時更新日期與當日版次。 -->
-<div id="appVersionBadge" data-version="v2026.07.23-12" aria-label="目前版本">讀取版本…</div>
+<div id="appVersionBadge" data-version="v2026.07.23-13" aria-label="目前版本">讀取版本…</div>
 <script>
 (function showOnlineBuildVersion(){
   const badge=document.getElementById('appVersionBadge'),version=badge.dataset.version||'dev';
@@ -12161,6 +12161,7 @@ document.getElementById('musicToggle').onchange = function(){
   btn.onclick = function(e){
     e.stopPropagation();
     const opening = panel.classList.contains('hidden');
+    if(opening) syncAudioSettingControls();
     panel.classList.toggle('hidden', !opening);
     btn.classList.toggle('open', opening);
   };
