@@ -128,6 +128,11 @@ async function runBatch(file, n, concurrency, teamPool, idxOf) {
       try {
         localStorage.setItem('chanceboard_teams_v1', JSON.stringify(teamsData));
         localStorage.setItem('chanceboard_tutorial_done_v1', '1');
+        // 平衡測試不需要播放音樂或音效。停用媒體除了減少大量並行分頁的負擔，也避免登入／
+        // 大廳切換時的淡出動畫被瀏覽器當成與戰鬥無關的 pageerror 記進測試結果。
+        localStorage.setItem('chanceboard_settings_v1', JSON.stringify({
+          sound:false, music:false, soundVolume:0, musicVolume:0
+        }));
       } catch(e) { /* 存取失敗就算了，等等在畫面上會很明顯看得出來（沒有隊伍可選） */ }
     }, teamPool);
     await page.goto('file://' + path.resolve(file));

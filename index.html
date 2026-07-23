@@ -2328,7 +2328,7 @@
 </head>
 <body>
 <!-- 發布版本唯一維護位置：每次正式同步／部署時更新日期與當日版次。 -->
-<div id="appVersionBadge" data-version="v2026.07.23-32" aria-label="目前版本">讀取版本…</div>
+<div id="appVersionBadge" data-version="v2026.07.23-33" aria-label="目前版本">讀取版本…</div>
 <script>
 (function showOnlineBuildVersion(){
   const badge=document.getElementById('appVersionBadge'),version=badge.dataset.version||'dev';
@@ -6588,15 +6588,18 @@ function preloadSfx(){ Object.keys(SFX_ASSETS).forEach(getSfxTemplate); }
 function cancelLoginBgmFade(){
   if(loginBgmFadeFrame){ cancelAnimationFrame(loginBgmFadeFrame); loginBgmFadeFrame=0; }
 }
+// requestAnimationFrame 的 timestamp 在少數 Chromium／多分頁情境可能比剛取得的
+// performance.now() 略早，插值會短暫低於 0；HTMLMediaElement.volume 不接受界外值。
+function safeMediaVolume(value){ return Math.max(0,Math.min(1,Number(value)||0)); }
 function fadeLoginBgm(audio, targetVolume, durationSec, onDone){
   cancelLoginBgmFade();
-  const from=Math.max(0,Math.min(1,audio.volume)), to=Math.max(0,Math.min(1,targetVolume));
+  const from=safeMediaVolume(audio.volume), to=safeMediaVolume(targetVolume);
   const duration=Math.max(0,(durationSec||0)*1000);
   if(!duration || from===to){ audio.volume=to; if(onDone) onDone(); return; }
   const started=performance.now();
   const tick=now=>{
-    const progress=Math.min(1,(now-started)/duration);
-    audio.volume=from+(to-from)*progress;
+    const progress=Math.max(0,Math.min(1,(now-started)/duration));
+    audio.volume=safeMediaVolume(from+(to-from)*progress);
     if(progress<1){ loginBgmFadeFrame=requestAnimationFrame(tick); }
     else { loginBgmFadeFrame=0; if(onDone) onDone(); }
   };
@@ -6635,9 +6638,9 @@ function cancelCollectionBgmFade(){
 }
 function fadeCollectionBgm(audio,targetVolume,durationSec,onDone){
   cancelCollectionBgmFade();
-  const from=Math.max(0,Math.min(1,audio.volume)),to=Math.max(0,Math.min(1,targetVolume)),duration=Math.max(0,(durationSec||0)*1000);
+  const from=safeMediaVolume(audio.volume),to=safeMediaVolume(targetVolume),duration=Math.max(0,(durationSec||0)*1000);
   if(!duration||from===to){audio.volume=to;if(onDone)onDone();return;}
-  const started=performance.now(),tick=now=>{const p=Math.min(1,(now-started)/duration);audio.volume=from+(to-from)*p;if(p<1)collectionBgmFadeFrame=requestAnimationFrame(tick);else{collectionBgmFadeFrame=0;if(onDone)onDone();}};
+  const started=performance.now(),tick=now=>{const p=Math.max(0,Math.min(1,(now-started)/duration));audio.volume=safeMediaVolume(from+(to-from)*p);if(p<1)collectionBgmFadeFrame=requestAnimationFrame(tick);else{collectionBgmFadeFrame=0;if(onDone)onDone();}};
   collectionBgmFadeFrame=requestAnimationFrame(tick);
 }
 function startCollectionBgm(){
@@ -6659,9 +6662,9 @@ function cancelCharacterBgmFade(){
 }
 function fadeCharacterBgm(audio,targetVolume,durationSec,onDone){
   cancelCharacterBgmFade();
-  const from=Math.max(0,Math.min(1,audio.volume)),to=Math.max(0,Math.min(1,targetVolume)),duration=Math.max(0,(durationSec||0)*1000);
+  const from=safeMediaVolume(audio.volume),to=safeMediaVolume(targetVolume),duration=Math.max(0,(durationSec||0)*1000);
   if(!duration||from===to){audio.volume=to;if(onDone)onDone();return;}
-  const started=performance.now(),tick=now=>{const p=Math.min(1,(now-started)/duration);audio.volume=from+(to-from)*p;if(p<1)characterBgmFadeFrame=requestAnimationFrame(tick);else{characterBgmFadeFrame=0;if(onDone)onDone();}};
+  const started=performance.now(),tick=now=>{const p=Math.max(0,Math.min(1,(now-started)/duration));audio.volume=safeMediaVolume(from+(to-from)*p);if(p<1)characterBgmFadeFrame=requestAnimationFrame(tick);else{characterBgmFadeFrame=0;if(onDone)onDone();}};
   characterBgmFadeFrame=requestAnimationFrame(tick);
 }
 function startCharacterBgm(heroId){
@@ -6692,13 +6695,13 @@ function cancelStoryBgmFade(){
 }
 function fadeStoryBgm(audio, targetVolume, durationSec, onDone){
   cancelStoryBgmFade();
-  const from=Math.max(0,Math.min(1,audio.volume)), to=Math.max(0,Math.min(1,targetVolume));
+  const from=safeMediaVolume(audio.volume), to=safeMediaVolume(targetVolume);
   const duration=Math.max(0,(durationSec||0)*1000);
   if(!duration || from===to){ audio.volume=to; if(onDone) onDone(); return; }
   const started=performance.now();
   const tick=now=>{
-    const progress=Math.min(1,(now-started)/duration);
-    audio.volume=from+(to-from)*progress;
+    const progress=Math.max(0,Math.min(1,(now-started)/duration));
+    audio.volume=safeMediaVolume(from+(to-from)*progress);
     if(progress<1){ storyBgmFadeFrame=requestAnimationFrame(tick); }
     else { storyBgmFadeFrame=0; if(onDone) onDone(); }
   };
@@ -7195,13 +7198,13 @@ function cancelBattleBgmFade(){
 }
 function fadeBattleBgm(audio, targetVolume, durationSec, onDone){
   cancelBattleBgmFade();
-  const from=Math.max(0,Math.min(1,audio.volume)), to=Math.max(0,Math.min(1,targetVolume));
+  const from=safeMediaVolume(audio.volume), to=safeMediaVolume(targetVolume);
   const duration=Math.max(0,(durationSec||0)*1000);
   if(!duration || from===to){ audio.volume=to; if(onDone) onDone(); return; }
   const started=performance.now();
   const tick=now=>{
-    const progress=Math.min(1,(now-started)/duration);
-    audio.volume=from+(to-from)*progress;
+    const progress=Math.max(0,Math.min(1,(now-started)/duration));
+    audio.volume=safeMediaVolume(from+(to-from)*progress);
     if(progress<1){ battleBgmFadeFrame=requestAnimationFrame(tick); }
     else { battleBgmFadeFrame=0; if(onDone) onDone(); }
   };
