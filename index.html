@@ -2296,7 +2296,7 @@
 </head>
 <body>
 <!-- 發布版本唯一維護位置：每次正式同步／部署時更新日期與當日版次。 -->
-<div id="appVersionBadge" data-version="v2026.07.23-20" aria-label="目前版本">讀取版本…</div>
+<div id="appVersionBadge" data-version="v2026.07.23-21" aria-label="目前版本">讀取版本…</div>
 <script>
 (function showOnlineBuildVersion(){
   const badge=document.getElementById('appVersionBadge'),version=badge.dataset.version||'dev';
@@ -3295,6 +3295,8 @@ function applyGlobalGameConfig(config){
     if(source.music&&typeof source.music==='object'){
       next.music=next.music&&typeof next.music==='object'?next.music:{};
       MUSIC_PATH_KEYS.forEach(function(key){if(typeof source.music[key]==='string')next.music[key]=source.music[key].trim();});
+      // 第一章第 1～3 節改用 Eternal Gambit；把舊預設路徑自動遷移，已自行指定其他路徑的後台設定仍保留。
+      if(next.music.pawnStory==='music/story/s001/01pawn story/En Passant Fantasy.mp3')next.music.pawnStory=STORY_BGM_ASSETS.pawnStory;
       // 同一路徑的音檔被管理者覆寫時，瀏覽器可能仍使用舊快取；每次讀到新的故事音樂設定都更新媒體版本。
       storyMusicAssetRevision=Date.now();
     }
@@ -6378,7 +6380,8 @@ const CHARACTER_BGM_VOLUME = 0.3;
 const STORY_BGM_ASSETS = Object.freeze({
   openingBlack: 'music/story/s001/00/black/The Smiling Arbiter.mp3',
   openingWhite: 'music/story/s001/00/white/The Guardian\'s Welcome.mp3',
-  pawnStory: 'music/story/s001/01pawn story/En Passant Fantasy.mp3',
+  // 第一章第 1～3 節的主要劇情曲。
+  pawnStory: 'music/character story/Eternal Gambit.mp3',
   bossBefore: 'music/story/s001/02pawn boss Before/Fate\'s Cold Blade.mp3',
   bossBattle: 'music/story/s001/03pawn boss/Echoes of the Totem Spirit.mp3',
   bossAfter: 'music/story/s001/04pawn boss After/End of the Ninety-Nine.mp3',
@@ -6528,7 +6531,8 @@ function stopCharacterBgm(fadeSec){
   fadeCharacterBgm(audio,0,fadeSec!=null?fadeSec:BGM_FADE_OUT_SEC,()=>{if(characterBgmAudio!==audio)return;audio.pause();audio.currentTime=0;characterBgmAudio=null;});
 }
 function screenUsesCharacterBgm(screenId){
-  return !['screen-login','screen-story','screen-collection','screen-character-story','screen-battle','screen-end'].includes(screenId);
+  // 故事的章節／關卡選單沒有專屬曲，延續大廳角色歌；進入正文時由 startStoryBgm() 接手。
+  return !['screen-login','screen-collection','screen-character-story','screen-battle','screen-end'].includes(screenId);
 }
 function syncCharacterBgmForScreen(screenId){
   if(screenUsesCharacterBgm(screenId))startCharacterBgm(currentLobbyHeroId());
@@ -6553,6 +6557,8 @@ function fadeStoryBgm(audio, targetVolume, durationSec, onDone){
 }
 function startStoryBgm(key){
   if(!musicEnabled) return;
+  // 故事章節／關卡選單會保留大廳角色歌；真正開始劇情時才淡出，避免點進故事瞬間靜音。
+  stopCharacterBgm(0.35);
   const configuredSrc=configuredMusicPath(key, STORY_BGM_ASSETS[key]);
   if(!configuredSrc) return;
   const src=storyMusicPlaybackSrc(configuredSrc);
