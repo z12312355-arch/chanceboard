@@ -2269,7 +2269,7 @@
 </head>
 <body>
 <!-- 發布版本唯一維護位置：每次正式同步／部署時更新日期與當日版次。 -->
-<div id="appVersionBadge" data-version="v2026.07.21-10" aria-label="目前版本">讀取版本…</div>
+<div id="appVersionBadge" data-version="v2026.07.23-1" aria-label="目前版本">讀取版本…</div>
 <script>
 (function showOnlineBuildVersion(){
   const badge=document.getElementById('appVersionBadge'),version=badge.dataset.version||'dev';
@@ -6261,12 +6261,50 @@ window.addEventListener('resize', ()=>{
 });
 
 /* ============================================================ */
-/* ============ SOUND (Web Audio synthesis) ============ */
+/* ============ SOUND ============ */
 /* ============================================================ */
-// No external audio files (keeps this a single self-contained HTML file, same constraint as
-// the visual effects above) — every sound is synthesized on the fly with OscillatorNode /
-// AudioBufferSourceNode. Lazily created because browsers refuse to start an AudioContext
-// before a user gesture; getAudioCtx() also doubles as the mute check (`soundEnabled`).
+// Battle/UI sound effects use compact OGG assets. Background music continues to use Web Audio
+// synthesis below, so the existing music setting and its per-piece themes remain unchanged.
+const SFX_ASSETS = Object.freeze({
+  attackSword: 'SFX/Battle/sfx_attack_sword.ogg',
+  attackGun: 'SFX/Battle/sfx_attack_gun.ogg',
+  attackMagic: 'SFX/Battle/sfx_attack_magic.ogg',
+  attackWish: 'SFX/Battle/sfx_attack_wish.ogg',
+  hit: 'SFX/Battle/sfx_hit.ogg',
+  criticalHit: 'SFX/Battle/sfx_critical_hit.ogg',
+  dodge: 'SFX/Battle/sfx_dodge.ogg',
+  heal: 'SFX/Battle/sfx_heal.ogg',
+  kill: 'SFX/Battle/sfx_kill.ogg',
+  victory: 'SFX/Battle/sfx_victory.ogg',
+  defeat: 'SFX/Battle/sfx_defeat.ogg',
+  uiClick: 'SFX/UI/sfx_ui_click.ogg',
+});
+const __sfxTemplates = new Map();
+
+function getSfxTemplate(name){
+  const src = SFX_ASSETS[name];
+  if(!src) return null;
+  let audio = __sfxTemplates.get(name);
+  if(!audio){
+    audio = new Audio(src);
+    audio.preload = 'auto';
+    __sfxTemplates.set(name, audio);
+  }
+  return audio;
+}
+function playSfx(name, volume){
+  if(!soundEnabled) return;
+  const template = getSfxTemplate(name);
+  if(!template) return;
+  // Cloning lets rapid hits/casts overlap instead of cutting off the previous sound.
+  const audio = template.cloneNode();
+  audio.volume = Math.max(0, Math.min(1, volume == null ? 0.72 : volume));
+  audio.play().catch(()=>{}); // Browser autoplay policy: safely wait for the next user gesture.
+}
+function preloadSfx(){ Object.keys(SFX_ASSETS).forEach(getSfxTemplate); }
+
+// Lazily created because browsers refuse to start an AudioContext before a user gesture;
+// getAudioCtx() also doubles as the mute check (`soundEnabled`) for synthesized BGM.
 function getAudioCtx(){
   if(!soundEnabled) return null;
   if(!window.__audioCtx){
@@ -6281,12 +6319,22 @@ function getAudioCtx(){
 (function(){
   function unlockAudio(){
     getAudioCtx();
+    preloadSfx();
     document.removeEventListener('pointerdown', unlockAudio);
     document.removeEventListener('keydown', unlockAudio);
   }
   document.addEventListener('pointerdown', unlockAudio);
   document.addEventListener('keydown', unlockAudio);
 })();
+
+// A light feedback cue for ordinary buttons. Battle outcomes and actions also trigger their
+// own dedicated effects, which are allowed to overlap with this quiet UI click.
+document.addEventListener('click', event=>{
+  if(event.defaultPrevented) return;
+  const control = event.target.closest('button, input[type="button"], input[type="submit"]');
+  if(!control || control.disabled || control.dataset.silentSfx != null) return;
+  playSfx('uiClick', 0.3);
+});
 
 // ---- Shared synthetic reverb send ----
 // 使用者要求音樂／音效整體要更「磅礡與黑暗」：單靠震盪器直接接到 destination，聲音會很乾、很小
@@ -6421,43 +6469,22 @@ function playChime(notes, type, vol, pan){
 // （sword/gun 各加一顆很短的低頻 sine thump），讓聲音有重量感而不只是薄薄一層高頻噪音；劍/槍
 // 的金屬尾音也整體調低一點、拉長一點，質感從「輕快清脆」偏向「厚重陰沉」。
 const MOVE_SLOT_CAST_SOUND = {
-  '劍': (pan)=>{ // whoosh + a lower, more menacing metallic "clang" tail + a low body thump underneath
-    playNoiseBurst(0.15, jitter(2100,0.08), 0.15, pan);
-    setTimeout(()=>{ playTone(jitter(1500,0.05), 0.11, 'triangle', 0.08, null, pan); }, 70);
-    playTone(jitter(110,0.08), 0.1, 'sine', 0.05, null, pan);
-  },
-  '槍': (pan)=>{ // trigger click + a deeper bang + a bright shell-casing "tink" tail + sub thump
-    playTone(jitter(130,0.1), 0.06, 'square', 0.2, null, pan);
-    playNoiseBurst(0.12, jitter(850,0.1), 0.19, pan);
-    playTone(jitter(65,0.1), 0.09, 'sine', 0.09, null, pan);
-    setTimeout(()=>{ playTone(jitter(2600,0.08), 0.05, 'triangle', 0.05, null, pan); }, 90);
-  },
-  '法': (pan)=>{
-    playChime([                                                                    // ascending 3-note chime, richer than before
-      {freq:523,delay:0,dur:0.12},{freq:659,delay:70,dur:0.14},{freq:784,delay:150,dur:0.22}
-    ], 'sine', 0.1, pan);
-    playTone(jitter(130,0.05), 0.3, 'sine', 0.035, null, pan); // faint low undertone — a bit more weight/mystery under the bright chime
-  },
-  '願': (pan)=>playChime([                                                                    // soft bell swell, now with a shimmering high overtone
-    {freq:660,delay:0,dur:0.3},{freq:990,delay:60,dur:0.35},{freq:1320,delay:140,dur:0.4}
-  ], 'triangle', 0.075, pan),
+  '劍': ()=>playSfx('attackSword', 0.72),
+  '槍': ()=>playSfx('attackGun', 0.72),
+  '法': ()=>playSfx('attackMagic', 0.72),
+  '願': ()=>playSfx('attackWish', 0.72),
 };
 function playHitSound(isCrit, pan){
-  playNoiseBurst(0.09, jitter(340,0.1), isCrit?0.24:0.17, pan); // lower filter freq than before = heavier, less "tinny" thud
-  if(isCrit){
-    playTone(1000, 0.11, 'triangle', 0.13, null, pan); setTimeout(()=>playTone(1300,0.09,'triangle',0.09, null, pan), 40);
-    playTone(150, 0.15, 'sine', 0.08, null, pan); // low-end punch under crit hits, for extra impact
-  }
+  playSfx(isCrit ? 'criticalHit' : 'hit', isCrit ? 0.82 : 0.72);
 }
-function playMissSound(pan){ playTone(jitter(1400,0.05), 0.12, 'sine', 0.05, 2000, pan); }
+function playMissSound(pan){ playSfx('dodge', 0.7); }
 // 擊殺音效：拉長、降低、加一層次八度的低音墊底，從原本一聲「咻」的下滑音，變成更有份量、更不祥
 // 的「墜落」感——搭配共用殘響送出（connectWithReverb 不方便套在 playTone 上，這裡直接手刻一顆
 // 低頻正弦波尾巴模擬空間感延伸）。
 function playKillSound(pan){
-  playTone(420, 0.55, 'sawtooth', 0.13, 42, pan);
-  playTone(210, 0.65, 'sine', 0.09, 24, pan);
+  playSfx('kill', 0.78);
 }
-function playHealSound(pan){ playChime([{freq:600,delay:0,dur:0.15},{freq:900,delay:70,dur:0.2}], 'sine', 0.09, pan); }
+function playHealSound(pan){ playSfx('heal', 0.72); }
 // 同時播放一組頻率（和弦），而不是像 playChime 那樣一次只有一個音——用真正疊起來的和聲（根音＋
 // 三度／五度／八度）取代單音旋律線，聽起來才會有「管弦樂齊奏」的磅礡感，不是單薄的合成器旋律。
 // 額外接上共用殘響（connectWithReverb）拉出尾音的空間感，勝負音效這種「一局定生死」的重要時刻
@@ -6489,22 +6516,13 @@ function playChordChime(steps, type, vol){
 // the BGM's fade-out. Now a rising major chord progression (not just a single melodic line) with
 // an octave-doubled final hit, for a genuinely "orchestral swell" triumphant finish.
 function playVictoryStinger(){
-  playChordChime([
-    {freqs:[523.25,659.25,784.00], delay:0, dur:0.22},
-    {freqs:[587.33,739.99,880.00], delay:130, dur:0.22},
-    {freqs:[659.25,830.61,987.77], delay:260, dur:0.28},
-    {freqs:[523.25,659.25,784.00,1046.50], delay:420, dur:0.85},
-  ], 'triangle', 0.13);
+  playSfx('victory', 0.8);
 }
 // 落敗音效：全面改成低沉、不和諧、往下墜的小調和弦進行（含一個增四度/減五度的「不祥音程」），
 // 拉得比以前更長，尾音留在很低的音域——這是整份音效裡「黑暗」感最強烈的一處，符合落敗這個
 // 情境本身。
 function playDefeatStinger(){
-  playChordChime([
-    {freqs:[392.00,466.16,587.33], delay:0, dur:0.42},
-    {freqs:[349.23,415.30,523.25], delay:280, dur:0.42},
-    {freqs:[261.63,311.13,369.99,493.88], delay:600, dur:1.2},
-  ], 'sawtooth', 0.1);
+  playSfx('defeat', 0.8);
 }
 
 /* ============================================================ */
