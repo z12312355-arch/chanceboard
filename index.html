@@ -395,8 +395,8 @@
   .screen-settings-slot{min-height:42px;display:flex;justify-content:flex-end;align-items:center;margin:0 0 10px;}
   #screen-login #globalSettingsBtn{position:absolute;top:16px;right:18px;z-index:3;}
   #screen-character-story #globalSettingsBtn{position:fixed;top:16px;right:18px;z-index:151;}
-  #storyTopbar #globalSettingsBtn{width:34px;height:34px;font-size:16px;flex:0 0 auto;}
-  #screen-lobby .lobby-top-icons #globalSettingsBtn{width:38px;height:38px;font-size:16px;box-shadow:none;}
+  #screen-story #globalSettingsBtn{position:fixed;top:16px;right:18px;z-index:150;width:38px;height:38px;font-size:16px;}
+  #screen-lobby #lobbyTopIcons #globalSettingsBtn{width:38px;height:38px;font-size:16px;box-shadow:none;}
   #screen-online .online-head #globalSettingsBtn{width:34px;height:34px;font-size:16px;box-shadow:none;}
   /* 入口統一後，登入／大廳舊入口不再重複顯示。 */
   #screen-login #loginSettingsBtn,#screen-lobby #lobbySettingsBtn{display:none;}
@@ -2296,7 +2296,7 @@
 </head>
 <body>
 <!-- 發布版本唯一維護位置：每次正式同步／部署時更新日期與當日版次。 -->
-<div id="appVersionBadge" data-version="v2026.07.23-18" aria-label="目前版本">讀取版本…</div>
+<div id="appVersionBadge" data-version="v2026.07.23-19" aria-label="目前版本">讀取版本…</div>
 <script>
 (function showOnlineBuildVersion(){
   const badge=document.getElementById('appVersionBadge'),version=badge.dataset.version||'dev';
@@ -4118,13 +4118,17 @@ function applyMusicPreference(enabled){
   musicEnabled=!!enabled;
   syncAudioSettingControls();
   saveSettings();
-  if(!musicEnabled){stopBgm(0.4);stopLoginBgm(0.4);stopCollectionBgm(0.4);stopStoryBgm(0.4);return;}
+  if(!musicEnabled){stopBgm(0.4);stopLoginBgm(0.4);stopCollectionBgm(0.4);stopCharacterBgm(0.4);stopStoryBgm(0.4);return;}
   const story=document.getElementById('screen-story'),login=document.getElementById('screen-login'),collection=document.getElementById('screen-collection'),characterStory=document.getElementById('screen-character-story');
   if(story&&!story.classList.contains('hidden')&&storyRun&&storyRun.active){
     if(!storyRun.showChapterTitle&&!storyRun.pendingSplash)syncStoryBgm();
   }else if(collection&&!collection.classList.contains('hidden')||characterStory&&!characterStory.classList.contains('hidden'))startCollectionBgm();
   else if(login&&!login.classList.contains('hidden'))startLoginBgm();
   else if(state&&state.phase!=='select'&&state.phase!=='deckbuild'&&state.selectedPiece)startBgm(state.selectedPiece);
+  else {
+    const activeScreen=typeof TOP_SCREEN_IDS!=='undefined'&&TOP_SCREEN_IDS.find(id=>{const el=document.getElementById(id);return el&&!el.classList.contains('hidden');});
+    if(activeScreen)syncCharacterBgmForScreen(activeScreen);
+  }
 }
 
 /* ============================================================ */
@@ -4284,6 +4288,9 @@ function openLobbyHeroPicker(){
 function pickLobbyHero(id){
   saveLobbyHeroChoice(id);
   refreshLobbyHeroArt();
+  // 大廳與一般功能頁沒有專屬 BGM 時，立繪切換也立刻換成該角色的歌。
+  const activeScreen=TOP_SCREEN_IDS.find(function(screenId){const screen=document.getElementById(screenId);return screen&&!screen.classList.contains('hidden');});
+  if(activeScreen&&screenUsesCharacterBgm(activeScreen))startCharacterBgm(id);
   closeLobbyHeroPicker();
 }
 function closeLobbyHeroPicker(){
@@ -6340,6 +6347,34 @@ const LOGIN_BGM_ASSET = 'music/login/Gambit of the Grandmaster - Eternal Gambit 
 const LOGIN_BGM_VOLUME = 0.3;
 const COLLECTION_BGM_ASSET = 'music/character story/Eternal Gambit.mp3';
 const COLLECTION_BGM_VOLUME = 0.3;
+// 大廳立繪與沒有專屬配樂的介面，沿用目前展示角色的主題曲。資料夾以角色 id 命名，
+// 小黑／小白則對應大廳預設的 demon_01／demon_02。
+const CHARACTER_BGM_ASSETS = Object.freeze({
+  '001':'music/character/001/Elegance in Motion.mp3',
+  '002':'music/character/002/Obsession of the Porcelain Mind.mp3',
+  '003':'music/character/003/The Girl with the Glass Destiny.mp3',
+  '004':'music/character/004/Echoes of the Infinite Square.mp3',
+  '005':'music/character/005/Echoes of Humanity.mp3',
+  '006':'music/character/006/Silent Waltz of the Automaton.mp3',
+  '007':'music/character/007/The Seer\'s Smile.mp3',
+  '008':'music/character/008/The Courtesan\'s Blade.mp3',
+  '009':'music/character/009/Shield of the Sovereign.mp3',
+  '010':'music/character/010/Forbidden Midnight Glow.mp3',
+  '011':'music/character/011/Veil of Fate.mp3',
+  '012':'music/character/012/Petals in the Sunbeams.mp3',
+  '013':'music/character/013/Salt & Spice Marina.mp3',
+  '014':'music/character/014/Deduction in Shadows.mp3',
+  '015':'music/character/015/Frosty Frolics.mp3',
+  '016':'music/character/016/The Prince of Whispering Pines.mp3',
+  '017':'music/character/017/Dragon Guardian Ritual.mp3',
+  '018':'music/character/018/Catnip Celebration.mp3',
+  '019':'music/character/019/Unit-Zero Residual.mp3',
+  '020':'music/character/020/The Grandmaster\'s Gambit.mp3',
+  '021':'music/character/021/Neon Precision.mp3',
+  demon_01:'music/character/black/The Grand Hall of Kings.mp3',
+  demon_02:'music/character/white/Heavenly Gambit.mp3',
+});
+const CHARACTER_BGM_VOLUME = 0.3;
 const STORY_BGM_ASSETS = Object.freeze({
   openingBlack: 'music/story/s001/00/black/The Smiling Arbiter.mp3',
   openingWhite: 'music/story/s001/00/white/The Guardian\'s Welcome.mp3',
@@ -6358,6 +6393,8 @@ let loginBgmAudio = null;
 let loginBgmFadeFrame = 0;
 let collectionBgmAudio = null;
 let collectionBgmFadeFrame = 0;
+let characterBgmAudio = null;
+let characterBgmFadeFrame = 0;
 let storyBgmAudio = null;
 let storyBgmFadeFrame = 0;
 let storyMusicAssetRevision = Date.now();
@@ -6464,6 +6501,38 @@ function startCollectionBgm(){
 function stopCollectionBgm(fadeSec){
   const audio=collectionBgmAudio;if(!audio)return;
   fadeCollectionBgm(audio,0,fadeSec!=null?fadeSec:BGM_FADE_OUT_SEC,()=>{if(collectionBgmAudio!==audio)return;audio.pause();audio.currentTime=0;collectionBgmAudio=null;});
+}
+function cancelCharacterBgmFade(){
+  if(characterBgmFadeFrame){cancelAnimationFrame(characterBgmFadeFrame);characterBgmFadeFrame=0;}
+}
+function fadeCharacterBgm(audio,targetVolume,durationSec,onDone){
+  cancelCharacterBgmFade();
+  const from=Math.max(0,Math.min(1,audio.volume)),to=Math.max(0,Math.min(1,targetVolume)),duration=Math.max(0,(durationSec||0)*1000);
+  if(!duration||from===to){audio.volume=to;if(onDone)onDone();return;}
+  const started=performance.now(),tick=now=>{const p=Math.min(1,(now-started)/duration);audio.volume=from+(to-from)*p;if(p<1)characterBgmFadeFrame=requestAnimationFrame(tick);else{characterBgmFadeFrame=0;if(onDone)onDone();}};
+  characterBgmFadeFrame=requestAnimationFrame(tick);
+}
+function startCharacterBgm(heroId){
+  if(!musicEnabled)return;
+  const src=CHARACTER_BGM_ASSETS[heroId];
+  if(!src)return;
+  if(!characterBgmAudio||characterBgmAudio.__chanceboardSrc!==src){
+    cancelCharacterBgmFade();if(characterBgmAudio){characterBgmAudio.pause();characterBgmAudio.currentTime=0;}
+    characterBgmAudio=new Audio(src);characterBgmAudio.__chanceboardSrc=src;characterBgmAudio.loop=true;characterBgmAudio.preload='auto';characterBgmAudio.volume=0;
+  }
+  characterBgmAudio.play().catch(()=>{});
+  fadeCharacterBgm(characterBgmAudio,CHARACTER_BGM_VOLUME,BGM_FADE_IN_SEC);
+}
+function stopCharacterBgm(fadeSec){
+  const audio=characterBgmAudio;if(!audio)return;
+  fadeCharacterBgm(audio,0,fadeSec!=null?fadeSec:BGM_FADE_OUT_SEC,()=>{if(characterBgmAudio!==audio)return;audio.pause();audio.currentTime=0;characterBgmAudio=null;});
+}
+function screenUsesCharacterBgm(screenId){
+  return !['screen-login','screen-story','screen-collection','screen-character-story','screen-battle','screen-end'].includes(screenId);
+}
+function syncCharacterBgmForScreen(screenId){
+  if(screenUsesCharacterBgm(screenId))startCharacterBgm(currentLobbyHeroId());
+  else stopCharacterBgm(0.35);
 }
 function cancelStoryBgmFade(){
   if(storyBgmFadeFrame){ cancelAnimationFrame(storyBgmFadeFrame); storyBgmFadeFrame=0; }
@@ -8567,8 +8636,10 @@ function placeSettingsButton(screenId){
   if(screenId==='screen-battle'||screenId==='screen-end'){button.classList.add('hidden');return;}
   const screen=document.getElementById(screenId);if(!screen)return;
   let target=null;
-  if(screenId==='screen-lobby')target=screen.querySelector('.lobby-top-icons');
-  else if(screenId==='screen-story')target=document.getElementById('storyTopbar');
+  // 大廳實際使用的是 #lobbyTopIcons（不是舊的 class 名），先前因此找不到掛載點而整個消失。
+  if(screenId==='screen-lobby')target=screen.querySelector('#lobbyTopIcons');
+  // 故事的頂部列會隨劇情／章節選單切換而隱藏；直接掛在故事畫面，固定維持右上角可用。
+  else if(screenId==='screen-story')target=screen;
   else if(screenId==='screen-online')target=screen.querySelector('.online-head');
   else if(screenId==='screen-login'||screenId==='screen-character-story')target=screen;
   else{
@@ -8592,6 +8663,7 @@ function showTopScreen(id){
   if(id==='screen-collection'||id==='screen-character-story')startCollectionBgm();
   else stopCollectionBgm(0.35);
   if(id!=='screen-story') stopStoryBgm(0.35);
+  syncCharacterBgmForScreen(id);
   document.body.classList.toggle('lobby-mode', id==='screen-lobby');
   document.body.classList.toggle('story-mode', id==='screen-story');
   // 使用者接著要求「隊伍介面也改成手遊的風格」：同一套滿版沉浸式背景手法（沿用大廳同一張
@@ -14143,6 +14215,9 @@ async function tutorialChooseFaction(faction){
   catch(e){ factionButtons.forEach(function(button){button.disabled=false;});alert('嚮導尚未同步成功：'+e.message+'\n請確認網路後再選一次。'); return; }
   document.getElementById('tutorialCenterCard').style.display = 'none';
   tutorialSetSceneArt(faction);
+  // 玩家選定小黑／小白的瞬間即可聽見對應角色歌，不必等新手教學結束。
+  stopLoginBgm(0.25);
+  startCharacterBgm(faction==='black'?'demon_01':'demon_02');
   tutorialSayGreeting();
 }
 
