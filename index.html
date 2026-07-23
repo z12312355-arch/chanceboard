@@ -2269,7 +2269,7 @@
 </head>
 <body>
 <!-- 發布版本唯一維護位置：每次正式同步／部署時更新日期與當日版次。 -->
-<div id="appVersionBadge" data-version="v2026.07.23-2" aria-label="目前版本">讀取版本…</div>
+<div id="appVersionBadge" data-version="v2026.07.23-3" aria-label="目前版本">讀取版本…</div>
 <script>
 (function showOnlineBuildVersion(){
   const badge=document.getElementById('appVersionBadge'),version=badge.dataset.version||'dev';
@@ -6291,9 +6291,13 @@ const BATTLE_BGM_ASSETS = Object.freeze({
   '王(King)': 'music/battle/king/The Final Judgment.mp3',
 });
 const BATTLE_BGM_VOLUME = 0.38;
+const LOGIN_BGM_ASSET = 'music/login/Gambit of the Grandmaster - Eternal Gambit - Treblo.mp3';
+const LOGIN_BGM_VOLUME = 0.3;
 const __sfxTemplates = new Map();
 let battleBgmAudio = null;
 let battleBgmFadeFrame = 0;
+let loginBgmAudio = null;
+let loginBgmFadeFrame = 0;
 
 function getSfxTemplate(name){
   const src = SFX_ASSETS[name];
@@ -6317,6 +6321,43 @@ function playSfx(name, volume){
 }
 function preloadSfx(){ Object.keys(SFX_ASSETS).forEach(getSfxTemplate); }
 
+function cancelLoginBgmFade(){
+  if(loginBgmFadeFrame){ cancelAnimationFrame(loginBgmFadeFrame); loginBgmFadeFrame=0; }
+}
+function fadeLoginBgm(audio, targetVolume, durationSec, onDone){
+  cancelLoginBgmFade();
+  const from=Math.max(0,Math.min(1,audio.volume)), to=Math.max(0,Math.min(1,targetVolume));
+  const duration=Math.max(0,(durationSec||0)*1000);
+  if(!duration || from===to){ audio.volume=to; if(onDone) onDone(); return; }
+  const started=performance.now();
+  const tick=now=>{
+    const progress=Math.min(1,(now-started)/duration);
+    audio.volume=from+(to-from)*progress;
+    if(progress<1){ loginBgmFadeFrame=requestAnimationFrame(tick); }
+    else { loginBgmFadeFrame=0; if(onDone) onDone(); }
+  };
+  loginBgmFadeFrame=requestAnimationFrame(tick);
+}
+function startLoginBgm(){
+  if(!musicEnabled) return;
+  if(!loginBgmAudio){
+    loginBgmAudio=new Audio(LOGIN_BGM_ASSET);
+    loginBgmAudio.loop=true;
+    loginBgmAudio.preload='auto';
+    loginBgmAudio.volume=0;
+  }
+  loginBgmAudio.play().catch(()=>{}); // The first audible play waits for a browser-approved interaction.
+  fadeLoginBgm(loginBgmAudio, LOGIN_BGM_VOLUME, BGM_FADE_IN_SEC);
+}
+function stopLoginBgm(fadeSec){
+  const audio=loginBgmAudio;
+  if(!audio) return;
+  fadeLoginBgm(audio, 0, fadeSec!=null ? fadeSec : BGM_FADE_OUT_SEC, ()=>{
+    if(loginBgmAudio!==audio) return;
+    audio.pause(); audio.currentTime=0; loginBgmAudio=null;
+  });
+}
+
 // Lazily created because browsers refuse to start an AudioContext before a user gesture;
 // getAudioCtx() also doubles as the mute check (`soundEnabled`) for synthesized BGM.
 function getAudioCtx(){
@@ -6334,6 +6375,8 @@ function getAudioCtx(){
   function unlockAudio(){
     getAudioCtx();
     preloadSfx();
+    const login=document.getElementById('screen-login');
+    if(login && !login.classList.contains('hidden')) startLoginBgm();
     document.removeEventListener('pointerdown', unlockAudio);
     document.removeEventListener('keydown', unlockAudio);
   }
@@ -8359,6 +8402,8 @@ function showTopScreen(id){
   // 「LOGO文字＋按鈕」全部塞在同一個100vh裡，矮視窗會擠到有捲軸/被裁到。獨立出login-mode
   // 這個開場畫面專門放LOGO/標語，大廳騰出空間只放按鈕本身，兩個畫面各自都寬鬆很多。
   document.body.classList.toggle('login-mode', id==='screen-login');
+  if(id==='screen-login') startLoginBgm();
+  else stopLoginBgm(0.35);
   document.body.classList.toggle('lobby-mode', id==='screen-lobby');
   document.body.classList.toggle('story-mode', id==='screen-story');
   // 使用者接著要求「隊伍介面也改成手遊的風格」：同一套滿版沉浸式背景手法（沿用大廳同一張
@@ -11860,11 +11905,15 @@ document.getElementById('teampickConfirmBtn').onclick = confirmTeamPick;
     musicEnabled = this.checked;
     saveSettings();
     if(musicEnabled){
-      if(state && state.phase!=='select' && state.phase!=='deckbuild' && state.selectedPiece){
+      const login=document.getElementById('screen-login');
+      if(login && !login.classList.contains('hidden')){
+        startLoginBgm();
+      } else if(state && state.phase!=='select' && state.phase!=='deckbuild' && state.selectedPiece){
         startBgm(state.selectedPiece);
       }
     } else {
       stopBgm(0.4);
+      stopLoginBgm(0.4);
     }
   };
 })();
@@ -11929,11 +11978,15 @@ document.getElementById('musicToggle').onchange = function(){
   musicEnabled = this.checked;
   saveSettings();
   if(musicEnabled){
-    if(state && state.phase!=='select' && state.phase!=='deckbuild' && state.selectedPiece){
+    const login=document.getElementById('screen-login');
+    if(login && !login.classList.contains('hidden')){
+      startLoginBgm();
+    } else if(state && state.phase!=='select' && state.phase!=='deckbuild' && state.selectedPiece){
       startBgm(state.selectedPiece);
     }
   } else {
     stopBgm(0.4);
+    stopLoginBgm(0.4);
   }
 };
 // 設定齒輪鈕：點擊切換面板開/關；點面板本身不關（要能點裡面的 checkbox），點面板以外的任何地方
@@ -13216,6 +13269,7 @@ preloadEssentialAssets();
 // 這裡只是防呆，避免萬一某個環節真的卡住，玩家被讀取畫面永遠卡住進不去。
 document.getElementById('loginEnterBtn').onclick = function(){
   showBootLoadingOverlay();
+  stopLoginBgm(0.5);
   let settled = false;
   const proceed = function(){
     if(settled) return;
