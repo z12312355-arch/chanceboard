@@ -116,7 +116,7 @@ function normalizeGlobalConfig(input) {
     });
     const music = {};
     const musicSource = storyModeSource.music && typeof storyModeSource.music === 'object' ? storyModeSource.music : {};
-    ['login', 'battlePawn', 'battleKnight', 'battleRook', 'battleBishop', 'battleQueen', 'battleKing', 'openingBlack', 'openingWhite', 'pawnStory', 'bossBefore', 'bossBattle', 'bossAfter', 'epilogueOne', 'epilogueTwo'].forEach(key => {
+    ['login', 'collection', 'battlePawn', 'battleKnight', 'battleRook', 'battleBishop', 'battleQueen', 'battleKing', 'openingBlack', 'openingWhite', 'pawnStory', 'bossBefore', 'bossBattle', 'bossAfter', 'epilogueOne', 'epilogueTwo'].forEach(key => {
       music[key] = text(musicSource[key]);
     });
     // Structured story data (stage defs, flow rules, fate map config, battle configs)

@@ -501,6 +501,16 @@
     url("background/lobby.png") center/cover no-repeat,
     var(--bg);
     background-attachment:fixed;}
+  body.character-story-mode{overflow:hidden;height:100vh;background:#070911;}
+  #screen-character-story{position:fixed;inset:0;z-index:20;overflow-y:auto;background:linear-gradient(90deg,rgba(4,6,12,.96) 0%,rgba(4,6,12,.78) 48%,rgba(4,6,12,.92) 100%);}
+  .character-story-page{min-height:100%;max-width:1120px;margin:0 auto;padding:clamp(74px,9vh,112px) clamp(22px,7vw,100px) 80px;position:relative;}
+  .character-story-art{position:fixed;inset:0;z-index:-1;background-position:right center;background-repeat:no-repeat;background-size:auto 100%;opacity:.4;filter:saturate(.82);mask-image:linear-gradient(90deg,transparent 0%,#000 40%,#000 100%);}
+  .character-story-kicker{color:var(--gold);font-size:12px;letter-spacing:3px;font-weight:bold;}
+  .character-story-title{font-size:clamp(32px,6vw,66px);margin:10px 0 4px;line-height:1.05;text-shadow:0 4px 20px #000;}
+  .character-story-sub{color:var(--muted);font-size:16px;margin-bottom:30px;}
+  .character-story-copy{max-width:680px;white-space:pre-line;font-size:clamp(15px,1.5vw,18px);line-height:2;color:#edf0ff;text-shadow:0 2px 5px #000;}
+  .character-story-copy:empty:before{content:'尚未收錄角色故事。';color:var(--muted);}
+  #characterStoryBackBtn{position:fixed;top:16px;left:18px;z-index:151;}
   body.teamlist-mode #app, body.teampick-mode #app, body.gacha-mode #app, body.collection-mode #app, body.shop-mode #app{max-width:1100px;}
   /* 使用者反應召喚結果「左右的空間都浪費掉了」：視窗較寬時，其他hub畫面（隊伍列表等內容
      本來就是直向清單，1100px頂寬夠用）跟召喚結果（多達10張角色卡橫向排開）情況不同，
@@ -2278,7 +2288,7 @@
 </head>
 <body>
 <!-- 發布版本唯一維護位置：每次正式同步／部署時更新日期與當日版次。 -->
-<div id="appVersionBadge" data-version="v2026.07.23-11" aria-label="目前版本">讀取版本…</div>
+<div id="appVersionBadge" data-version="v2026.07.23-12" aria-label="目前版本">讀取版本…</div>
 <script>
 (function showOnlineBuildVersion(){
   const badge=document.getElementById('appVersionBadge'),version=badge.dataset.version||'dev';
@@ -2790,6 +2800,18 @@
     </div>
   </div>
 
+  <!-- 角色故事改由圖鑑角色卡開啟；獨立成全版面，避免長文被招式資訊彈窗擠在底部。 -->
+  <div id="screen-character-story" class="hidden">
+    <button type="button" class="btn small" id="characterStoryBackBtn">◂ 返回圖鑑</button>
+    <div id="characterStoryArt" class="character-story-art"></div>
+    <article class="character-story-page">
+      <div class="character-story-kicker">CHARACTER STORY</div>
+      <h1 class="character-story-title" id="characterStoryTitle"></h1>
+      <div class="character-story-sub" id="characterStorySubtitle"></div>
+      <div class="character-story-copy" id="characterStoryContent"></div>
+    </article>
+  </div>
+
   <!-- 棋子培養：能力值、技能等級、升星與碎片強化集中於此。 -->
   <div id="screen-pieces" class="hidden panel">
     <h2 style="margin-top:0;font-size:22px;">🧩 棋子</h2>
@@ -3014,12 +3036,10 @@
            變成同一個 flex 項目，配合下面 .mi-head{flex-wrap:wrap} 那條規則，螢幕不夠寬時整組按鈕
            會自然換到第二排、不會跟頭像卡在一起。 -->
       <div class="mi-head-btns">
-        <button class="btn small" id="mi-story-btn">📖 角色故事</button>
         <button class="btn small" id="mi-close">✕</button>
       </div>
     </div>
     <div id="mi-body"></div>
-    <div id="mi-story" class="hidden"></div>
   </div>
 </div>
 
@@ -3192,7 +3212,7 @@ let globalStoryModeConfig = {
   portraits:Object.assign({},DEFAULT_STORY_PORTRAITS),typewriterMs:24,cinematicIntervalMs:850,
   stageDefs:null,flow:null,fate:null,battles:{},music:{}
 };
-const MUSIC_PATH_KEYS = ['login','battlePawn','battleKnight','battleRook','battleBishop','battleQueen','battleKing','openingBlack','openingWhite','pawnStory','bossBefore','bossBattle','bossAfter','epilogueOne','epilogueTwo'];
+const MUSIC_PATH_KEYS = ['login','collection','battlePawn','battleKnight','battleRook','battleBishop','battleQueen','battleKing','openingBlack','openingWhite','pawnStory','bossBefore','bossBattle','bossAfter','epilogueOne','epilogueTwo'];
 const TUTORIAL_SIDE_TEXT_KEYS = ['pickIntro','afterPick','goldIntro','goldOffer','afterGold','diamondIntro','diamondOffer','afterDiamond','teamIntro','teamPick3','teamDeck','afterTeam','battleIntro','suitGuide','battlePickTeam','afterBattleWin','afterBattleLose','returnLobby','ending'];
 function applyStoryModePresentationConfig(){
   const cfg=globalStoryModeConfig;
@@ -3973,43 +3993,9 @@ function openMoveInfo(name, title, element, moves, charId){
   document.getElementById('mi-stats').innerHTML = charBase
     ? 'HP <b>'+charBase.hp+'</b> ／ ATK <b>'+charBase.atk+'</b> ／ DEF <b>'+charBase.def+'</b> ／ SPD <b>'+charBase.spd+'</b>'+starNote
     : '';
-  const story = charBase ? (charBase.story||'') : '';
-  const storyEl = document.getElementById('mi-story');
-  const storyBtn = document.getElementById('mi-story-btn');
-  storyEl.textContent = story;
-  storyEl.classList.add('hidden');
-  storyBtn.textContent = '📖 角色故事';
-  storyBtn.style.display = story ? '' : 'none';
   document.getElementById('moveInfoBackdrop').classList.remove('hidden');
 }
 function closeMoveInfo(){ document.getElementById('moveInfoBackdrop').classList.add('hidden'); }
-function toggleMiStory(){
-  const storyEl = document.getElementById('mi-story');
-  const storyBtn = document.getElementById('mi-story-btn');
-  const nowHidden = storyEl.classList.toggle('hidden');
-  storyBtn.textContent = nowHidden ? '📖 角色故事' : '🔽 收起故事';
-  // 使用者反應「點角色故事，不會發現角色故事，因為角色故事在底下，還得滑下去」：#mi-story
-  // 排在招式列表（#mi-body，通常內容很長：劍/槍/法/願＋被動共5段）後面，點按鈕當下畫面
-  // 捲動位置通常還停在最上面（頭像/名稱那一區），故事區塊雖然變成可見了，但完全在視窗
-  // 外面看不到，使用者會以為「按了沒反應」。
-  // 第一版用 scrollIntoView({block:'nearest'})，使用者反應「故事內容太多，定位似乎不是很
-  // 精準」——原因是 .mi-head 是 position:sticky 貼在捲動容器頂端，故事一長，
-  // scrollIntoView 的「nearest」判斷邏輯會把整個故事元素盡量塞進可視範圍，但沒考慮到
-  // sticky header 會一直佔掉頂端一截高度，導致故事開頭那幾行實際上被 sticky header
-  // 蓋住／算進可視範圍的方式跟預期不同，捲動位置常常對不準「故事剛好從header下緣開始」
-  // 這個理想位置。改成自己算精確位移量：量出sticky header真正的高度，直接把故事元素的
-  // 頂端捲到「header高度＋一點呼吸空間」的位置，不管故事多長、目前捲到哪裡，都會精準捲到
-  // 同一個相對位置（故事第一行緊接在header下面），不再依賴瀏覽器自己判斷「夠近了沒」。
-  if(!nowHidden){
-    const panel = document.querySelector('.moveinfo-panel');
-    const head = panel.querySelector('.mi-head');
-    const headH = head ? head.getBoundingClientRect().height : 0;
-    const panelRect = panel.getBoundingClientRect();
-    const storyRect = storyEl.getBoundingClientRect();
-    const delta = storyRect.top - panelRect.top - headH - 8;
-    panel.scrollBy({top: delta, behavior:'smooth'});
-  }
-}
 
 /* ============================================================ */
 /* ============ TIME / BOARD CONSTANTS ============ */
@@ -4121,11 +4107,12 @@ function applyMusicPreference(enabled){
   musicEnabled=!!enabled;
   syncAudioSettingControls();
   saveSettings();
-  if(!musicEnabled){stopBgm(0.4);stopLoginBgm(0.4);stopStoryBgm(0.4);return;}
-  const story=document.getElementById('screen-story'),login=document.getElementById('screen-login');
+  if(!musicEnabled){stopBgm(0.4);stopLoginBgm(0.4);stopCollectionBgm(0.4);stopStoryBgm(0.4);return;}
+  const story=document.getElementById('screen-story'),login=document.getElementById('screen-login'),collection=document.getElementById('screen-collection'),characterStory=document.getElementById('screen-character-story');
   if(story&&!story.classList.contains('hidden')&&storyRun&&storyRun.active){
     if(!storyRun.showChapterTitle&&!storyRun.pendingSplash)syncStoryBgm();
-  }else if(login&&!login.classList.contains('hidden'))startLoginBgm();
+  }else if(collection&&!collection.classList.contains('hidden')||characterStory&&!characterStory.classList.contains('hidden'))startCollectionBgm();
+  else if(login&&!login.classList.contains('hidden'))startLoginBgm();
   else if(state&&state.phase!=='select'&&state.phase!=='deckbuild'&&state.selectedPiece)startBgm(state.selectedPiece);
 }
 
@@ -6340,6 +6327,8 @@ const BATTLE_BGM_CONFIG_KEYS = Object.freeze({
 const BATTLE_BGM_VOLUME = 0.38;
 const LOGIN_BGM_ASSET = 'music/login/Gambit of the Grandmaster - Eternal Gambit - Treblo.mp3';
 const LOGIN_BGM_VOLUME = 0.3;
+const COLLECTION_BGM_ASSET = 'music/character story/Eternal Gambit.mp3';
+const COLLECTION_BGM_VOLUME = 0.3;
 const STORY_BGM_ASSETS = Object.freeze({
   openingBlack: 'music/story/s001/00/black/The Smiling Arbiter.mp3',
   openingWhite: 'music/story/s001/00/white/The Guardian\'s Welcome.mp3',
@@ -6356,6 +6345,8 @@ let battleBgmAudio = null;
 let battleBgmFadeFrame = 0;
 let loginBgmAudio = null;
 let loginBgmFadeFrame = 0;
+let collectionBgmAudio = null;
+let collectionBgmFadeFrame = 0;
 let storyBgmAudio = null;
 let storyBgmFadeFrame = 0;
 let mediaAudioUnlocked = false;
@@ -6433,6 +6424,30 @@ function stopLoginBgm(fadeSec){
     if(loginBgmAudio!==audio) return;
     audio.pause(); audio.currentTime=0; loginBgmAudio=null;
   });
+}
+function cancelCollectionBgmFade(){
+  if(collectionBgmFadeFrame){cancelAnimationFrame(collectionBgmFadeFrame);collectionBgmFadeFrame=0;}
+}
+function fadeCollectionBgm(audio,targetVolume,durationSec,onDone){
+  cancelCollectionBgmFade();
+  const from=Math.max(0,Math.min(1,audio.volume)),to=Math.max(0,Math.min(1,targetVolume)),duration=Math.max(0,(durationSec||0)*1000);
+  if(!duration||from===to){audio.volume=to;if(onDone)onDone();return;}
+  const started=performance.now(),tick=now=>{const p=Math.min(1,(now-started)/duration);audio.volume=from+(to-from)*p;if(p<1)collectionBgmFadeFrame=requestAnimationFrame(tick);else{collectionBgmFadeFrame=0;if(onDone)onDone();}};
+  collectionBgmFadeFrame=requestAnimationFrame(tick);
+}
+function startCollectionBgm(){
+  if(!musicEnabled)return;
+  const src=configuredMusicPath('collection',COLLECTION_BGM_ASSET);
+  if(!collectionBgmAudio||collectionBgmAudio.__chanceboardSrc!==src){
+    cancelCollectionBgmFade();if(collectionBgmAudio){collectionBgmAudio.pause();collectionBgmAudio.currentTime=0;}
+    collectionBgmAudio=new Audio(src);collectionBgmAudio.__chanceboardSrc=src;collectionBgmAudio.loop=true;collectionBgmAudio.preload='auto';collectionBgmAudio.volume=0;
+  }
+  collectionBgmAudio.play().catch(()=>{});
+  fadeCollectionBgm(collectionBgmAudio,COLLECTION_BGM_VOLUME,BGM_FADE_IN_SEC);
+}
+function stopCollectionBgm(fadeSec){
+  const audio=collectionBgmAudio;if(!audio)return;
+  fadeCollectionBgm(audio,0,fadeSec!=null?fadeSec:BGM_FADE_OUT_SEC,()=>{if(collectionBgmAudio!==audio)return;audio.pause();audio.currentTime=0;collectionBgmAudio=null;});
 }
 function cancelStoryBgmFade(){
   if(storyBgmFadeFrame){ cancelAnimationFrame(storyBgmFadeFrame); storyBgmFadeFrame=0; }
@@ -8523,7 +8538,7 @@ function finishByTimeCap(){
 // 平行的頂層畫面（大廳／隊伍列表／隊伍挑選），統一用這組 helper 切換，不用每個切換的地方都重複寫
 // 一長串 classList.add('hidden')／remove('hidden')，以後再新增畫面也只要把 id 加進
 // TOP_SCREEN_IDS，不用改任何切換邏輯。
-const TOP_SCREEN_IDS = ['screen-login','screen-lobby','screen-story','screen-teamlist','screen-teampick','screen-gacha','screen-collection','screen-pieces','screen-hunt','screen-shop','screen-select','screen-deckbuild','screen-battle','screen-end'];
+const TOP_SCREEN_IDS = ['screen-login','screen-lobby','screen-story','screen-teamlist','screen-teampick','screen-gacha','screen-collection','screen-character-story','screen-pieces','screen-hunt','screen-shop','screen-select','screen-deckbuild','screen-battle','screen-end'];
 function hideAllTopScreens(){
   TOP_SCREEN_IDS.forEach(id=>{ const el=document.getElementById(id); if(el) el.classList.add('hidden'); });
 }
@@ -8539,6 +8554,8 @@ function showTopScreen(id){
   document.body.classList.toggle('login-mode', id==='screen-login');
   if(id==='screen-login') startLoginBgm();
   else stopLoginBgm(0.35);
+  if(id==='screen-collection'||id==='screen-character-story')startCollectionBgm();
+  else stopCollectionBgm(0.35);
   if(id!=='screen-story') stopStoryBgm(0.35);
   document.body.classList.toggle('lobby-mode', id==='screen-lobby');
   document.body.classList.toggle('story-mode', id==='screen-story');
@@ -8559,6 +8576,7 @@ function showTopScreen(id){
   document.body.classList.toggle('gacha-mode', id==='screen-gacha');
   // 使用者要求「把我的收藏改成在大廳獨立的按鈕」：收藏畫面拆出來後一樣走同一套hub視覺。
   document.body.classList.toggle('collection-mode', id==='screen-collection');
+  document.body.classList.toggle('character-story-mode', id==='screen-character-story');
   document.body.classList.toggle('pieces-mode', id==='screen-pieces');
   document.body.classList.toggle('hunt-mode', id==='screen-hunt');
   // 使用者要求「新增商店：可以課金或用金幣購買卡片」：商店畫面一樣走同一套hub視覺。
@@ -8960,7 +8978,7 @@ function renderGachaCollectionGrid(){
     const owned = isCharOwned(c.id);
     const stars = charStarLevel(c.id);
     return '<div class="gacha-card'+(owned?' owned':' locked')+'"'
-      +   (owned ? ' onclick="openCharGallery(\''+c.id+'\')"' : '')
+      +   (owned ? ' onclick="openCharacterStory(\''+c.id+'\')"' : '')
       +   '>'
       +   '<div class="gacha-card-art">'
       +     (owned
@@ -8984,6 +9002,18 @@ function renderGachaCollectionGrid(){
   refreshCrystalDisplays(); // 收藏標題列的💠願望結晶餘額跟著收藏格一起更新
   fitGachaCardNames();
 }
+// 圖鑑角色卡直接開啟全版角色故事；原本的招式資訊不再承載長篇故事內容。
+function openCharacterStory(charId){
+  const c=CHAR_BY_ID[charId];if(!c||!isCharOwned(charId))return;
+  document.getElementById('characterStoryTitle').textContent=stripParenAlias(c.name);
+  document.getElementById('characterStorySubtitle').textContent=c.title||'';
+  document.getElementById('characterStoryContent').textContent=c.story||'';
+  const art=document.getElementById('characterStoryArt');
+  art.style.backgroundImage='url("images/'+c.id+'_full.png")';
+  showTopScreen('screen-character-story');
+}
+function closeCharacterStory(){goToCollection();}
+window.openCharacterStory=openCharacterStory;
 // 使用者要求「角色名子如果太長，要縮小讓他能顯示」：原本太長的名字（例如「法斯特．伊艾克斯．
 // 卡薩巴」）靠overflow:hidden+ellipsis截斷成「法斯特．伊艾…」，看不到完整名字。改成用JS量
 // 實際渲染寬度，太長就一路把font-size縮小，縮到能完整塞進一行為止（縮到7px還塞不下才退回
@@ -10053,7 +10083,7 @@ function storyParseBlock(blockIndex){
     if(/^【進入戰鬥/.test(line)||line==='【Boss戰】'){
       const key=String(blockIndex)+':'+battleOrdinal++,configured=(globalStoryModeConfig.battles||{})[key]||{},isBoss=line==='【Boss戰】';
       // Boss 身分只能由劇本文字決定。後台的戰鬥設定只可調整隊伍、敵人與難度，不能把一般戰鬥誤標成 Boss。
-      push(Object.assign({type:'battle',battleKey:key,text:line.slice(1,-1)},configured,{boss:isBoss,kind:isBoss?'boss':'normal'}));i++;continue;
+      push(Object.assign({type:'battle',battleKey:key,text:line.slice(1,-1)},configured,{boss:isBoss}));i++;continue;
     }
     if(/^【獲得角色：/.test(line)){push({type:'reward',name:(line.match(/^【獲得角色：(.+)】$/)||[])[1]||'新角色'});i++;continue;}
     const score=line.match(/^【(求生意志|守護之心)(＋|－)(\d+)】$/);if(score){push({type:'score',label:score[1],amount:(score[2]==='－'?-1:1)*Number(score[3])});i++;continue;}
@@ -10476,7 +10506,7 @@ function storyStartFourthFromBranch(route,branchBlock,targetStage){const progres
 function storyStartRoute(route){storyShowMenu('stages',route);}
 function storyResumeSaved(){const saved=loadStoryProgress();if(!saved||!saved.active)return;storyRun=saved;storyRun.flags=storyRun.flags||{};storyRun.choices=storyRun.choices||{};storyRun.applied=storyRun.applied||{};storyRun.stageNumber=storyCurrentStageNumber(storyRun);document.getElementById('storyMenu').classList.add('hidden');storyRenderCurrent();}
 function storySelectedTeam(){const id=document.getElementById('storyTeamSelect').value||storySavedTeamId();return teams.find(t=>t.id===id)||teams[0]||null;}
-function storyStartBattle(beat){const config=beat&&typeof beat==='object'?beat:{boss:!!beat},isBoss=config.boss===true,team=storySelectedTeam();if(!team){alert('故事戰鬥需要一支隊伍。請先到大廳的「隊伍」建立隊伍，再回故事繼續。');storyExit();goToTeamList();return;}stopStoryBgm(0.35);storyHidePresentation();storyCancelAuto();storySetSavedTeamId(team.id);storyRun.battlePending={block:storyRun.block,beat:storyRun.beat,boss:isBoss,battleKey:config.battleKey||''};saveStoryProgress();state=newState();const requestedSize=Number(config.teamSize)||team.characterIds.length;currentMatchSize=Math.max(1,Math.min(3,requestedSize,team.characterIds.length));twoPlayerMode=false;pendingMode='story';state.selectedIds=team.characterIds.slice(0,currentMatchSize);state.customDeck=expandDeckDraft(team.deck);state.customDeckOrder=shuffle(state.customDeck.map((_,i)=>i));state.selectedIdsB=[];window.__storyBossMonsterId=isBoss?(config.bossMonsterId||'m001'):null;window.__storyFixedOpponentIds=isBoss?null:(Array.isArray(config.opponentIds)&&config.opponentIds.length?config.opponentIds:['020','018','008']).slice(0,currentMatchSize);window.__storyBattleKind=isBoss?'boss':'normal';window.__storyBattleIsBoss=isBoss;window.__storyPieceType=config.pieceType||'兵(Pawn)';window.__storyUnlimitedTime=config.unlimitedTime!==false;document.body.classList.add('story-battle-mode');startGame();storyWatchBattle();}
+function storyStartBattle(beat){const config=beat&&typeof beat==='object'?beat:{boss:!!beat},isBoss=config.boss===true,usesMonster=isBoss||config.kind==='boss'||!!config.bossMonsterId,team=storySelectedTeam();if(!team){alert('故事戰鬥需要一支隊伍。請先到大廳的「隊伍」建立隊伍，再回故事繼續。');storyExit();goToTeamList();return;}stopStoryBgm(0.35);storyHidePresentation();storyCancelAuto();storySetSavedTeamId(team.id);storyRun.battlePending={block:storyRun.block,beat:storyRun.beat,boss:isBoss,battleKey:config.battleKey||''};saveStoryProgress();state=newState();const requestedSize=Number(config.teamSize)||team.characterIds.length;currentMatchSize=Math.max(1,Math.min(3,requestedSize,team.characterIds.length));twoPlayerMode=false;pendingMode='story';state.selectedIds=team.characterIds.slice(0,currentMatchSize);state.customDeck=expandDeckDraft(team.deck);state.customDeckOrder=shuffle(state.customDeck.map((_,i)=>i));state.selectedIdsB=[];window.__storyBossMonsterId=usesMonster?(config.bossMonsterId||(isBoss?'m001':'m003')):null;window.__storyFixedOpponentIds=usesMonster?null:(Array.isArray(config.opponentIds)&&config.opponentIds.length?config.opponentIds:['020','018','008']).slice(0,currentMatchSize);window.__storyBattleKind=isBoss?'boss':'normal';window.__storyBattleIsBoss=isBoss;window.__storyPieceType=config.pieceType||'兵(Pawn)';window.__storyUnlimitedTime=config.unlimitedTime!==false;document.body.classList.add('story-battle-mode');startGame();storyWatchBattle();}
 function storyWatchBattle(){if(storyBattleTimer)clearInterval(storyBattleTimer);storyBattleTimer=setInterval(function(){if(state.phase!=='end')return;clearInterval(storyBattleTimer);storyBattleTimer=null;const won=state.winner==='A';setTimeout(()=>storyReturnFromBattle(won),650);},250);}
 function storyReturnFromBattle(won){
   // 戰敗結算需要的戰況摘要必須在 state 被重置「之前」先取出來。
@@ -11989,6 +12019,7 @@ document.getElementById('gachaPoolInfoBtn').onclick = openGachaPoolInfo;
 document.getElementById('gachaPoolInfoCloseBtn').onclick = closeGachaPoolInfo;
 document.getElementById('gachaPoolInfoBackdrop').onclick = function(e){ if(e.target===this) closeGachaPoolInfo(); };
 document.getElementById('lobbyCollectionBtn').onclick = goToCollection;
+document.getElementById('characterStoryBackBtn').onclick = closeCharacterStory;
 document.getElementById('lobbyPiecesBtn').onclick = goToPieces;
 document.getElementById('lobbyHuntBtn').onclick = goToHunt;
 [
@@ -12166,7 +12197,6 @@ document.addEventListener('click', function(e){
   sel.onchange = function(){ piecePreference = this.value; };
 })();
 document.getElementById('mi-close').onclick = closeMoveInfo;
-document.getElementById('mi-story-btn').onclick = toggleMiStory;
 document.getElementById('moveInfoBackdrop').onclick = function(e){ if(e.target===this) closeMoveInfo(); };
 
 /* ============================================================ */
@@ -12654,7 +12684,7 @@ function adminStoryTextarea(label,id,value,rows){
   return '<label style="display:block;font-size:12px;color:var(--muted)">'+label+'<textarea id="'+id+'" rows="'+(rows||2)+'" style="display:block;width:100%;margin:4px 0 9px;resize:vertical">'+escHtml(value||'')+'</textarea></label>';
 }
 const ADMIN_MUSIC_PATH_FIELDS = [
-  ['login','登入介面音樂',LOGIN_BGM_ASSET],
+  ['login','登入介面音樂',LOGIN_BGM_ASSET],['collection','圖鑑／角色故事音樂',COLLECTION_BGM_ASSET],
   ['battlePawn','戰鬥：兵',BATTLE_BGM_ASSETS['兵(Pawn)']],['battleKnight','戰鬥：騎士',BATTLE_BGM_ASSETS['騎士(Knight)']],['battleRook','戰鬥：城堡',BATTLE_BGM_ASSETS['城堡(Rook)']],['battleBishop','戰鬥：主教',BATTLE_BGM_ASSETS['主教(Bishop)']],['battleQueen','戰鬥：后',BATTLE_BGM_ASSETS['后(Queen)']],['battleKing','戰鬥：王',BATTLE_BGM_ASSETS['王(King)']],
   ['openingBlack','第一章：執黑開場',STORY_BGM_ASSETS.openingBlack],['openingWhite','第一章：執白開場',STORY_BGM_ASSETS.openingWhite],['pawnStory','第一章：預設劇情',STORY_BGM_ASSETS.pawnStory],['bossBefore','第一章：Boss 戰前',STORY_BGM_ASSETS.bossBefore],['bossBattle','第一章：Boss 戰鬥',STORY_BGM_ASSETS.bossBattle],['bossAfter','第一章：Boss 戰後',STORY_BGM_ASSETS.bossAfter],['epilogueOne','第一章：尾聲 1',STORY_BGM_ASSETS.epilogueOne],['epilogueTwo','第一章：尾聲 2',STORY_BGM_ASSETS.epilogueTwo]
 ];
