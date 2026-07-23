@@ -2296,7 +2296,7 @@
 </head>
 <body>
 <!-- 發布版本唯一維護位置：每次正式同步／部署時更新日期與當日版次。 -->
-<div id="appVersionBadge" data-version="v2026.07.23-21" aria-label="目前版本">讀取版本…</div>
+<div id="appVersionBadge" data-version="v2026.07.23-22" aria-label="目前版本">讀取版本…</div>
 <script>
 (function showOnlineBuildVersion(){
   const badge=document.getElementById('appVersionBadge'),version=badge.dataset.version||'dev';
@@ -10174,16 +10174,25 @@ function storyBlockHeader(blockIndex){
 function storyMusicKey(){
   if(!storyRun || !storyRun.active || storyRun.chapterId!=='chapter1') return null;
   const stage=storyStageForBlock(storyRun.route,storyRun.block);
-  // Boss 音樂不能只靠後台的關卡 role 判斷：舊存檔的 stageDefs 可能沒有 role='boss'，
-  // 但劇本中的【Boss戰】才是實際戰鬥的權威。戰後另外保留剛完成的 Boss 記錄，確保回到
-  // 劇情時一定會進入戰後曲，而不會被一般劇情曲覆蓋。
-  const beats=storyParseBlock(storyRun.block);
-  const bossBeat=beats.findIndex(beat=>beat.type==='battle' && beat.boss===true);
+  // Boss 關跨越多個 block，必須先從「整個關卡」找出【Boss戰】所在位置。先前只檢查目前
+  // block，導致 Boss 前面的 block 找不到戰鬥節點，反而被誤判成戰後。
+  const stageBlocks=stage&&Array.isArray(stage.blocks)&&stage.blocks.length?stage.blocks.map(Number):[Number(storyRun.block)];
+  let bossBlock=null,bossBeat=-1;
+  for(const block of stageBlocks){
+    const found=storyParseBlock(block).findIndex(beat=>beat.type==='battle'&&beat.boss===true);
+    if(found>=0){bossBlock=block;bossBeat=found;break;}
+  }
   const completedBoss=storyRun.lastCompletedBossBattle;
-  const isBossSegment=(stage&&stage.role==='boss')||bossBeat>=0||!!(completedBoss&&Number(completedBoss.block)===Number(storyRun.block));
+  const completedInStage=!!(completedBoss&&stageBlocks.includes(Number(completedBoss.block)));
+  const isBossSegment=(stage&&stage.role==='boss')||bossBlock!==null||completedInStage;
   if(isBossSegment){
-    const beforeBoss=bossBeat>=0&&Number(storyRun.beat)<=bossBeat;
-    return beforeBoss?'bossBefore':'bossAfter';
+    if(bossBlock!==null){
+      const currentBlockPos=stageBlocks.indexOf(Number(storyRun.block)),bossBlockPos=stageBlocks.indexOf(Number(bossBlock));
+      if(currentBlockPos<bossBlockPos)return 'bossBefore';
+      if(currentBlockPos>bossBlockPos)return 'bossAfter';
+      if(Number(storyRun.block)===Number(bossBlock))return Number(storyRun.beat)<=bossBeat?'bossBefore':'bossAfter';
+    }
+    return completedInStage?'bossAfter':'bossBefore';
   }
   if(!stage) return 'pawnStory';
   if(stage.role==='prologue') return storyRun.route==='white' ? 'openingWhite' : 'openingBlack';
