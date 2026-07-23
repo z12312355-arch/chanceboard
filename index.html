@@ -2294,7 +2294,7 @@
 </head>
 <body>
 <!-- 發布版本唯一維護位置：每次正式同步／部署時更新日期與當日版次。 -->
-<div id="appVersionBadge" data-version="v2026.07.23-14" aria-label="目前版本">讀取版本…</div>
+<div id="appVersionBadge" data-version="v2026.07.23-15" aria-label="目前版本">讀取版本…</div>
 <script>
 (function showOnlineBuildVersion(){
   const badge=document.getElementById('appVersionBadge'),version=badge.dataset.version||'dev';
@@ -6476,11 +6476,13 @@ function startStoryBgm(key){
   if(!musicEnabled) return;
   const src=configuredMusicPath(key, STORY_BGM_ASSETS[key]);
   if(!src) return;
-  if(!storyBgmAudio || storyBgmAudio.__chanceboardKey!==key){
+  // 後台可在不換段落名稱的情況下修改路徑；必須連同來源比對，否則同一 key 會一直沿用舊音檔。
+  if(!storyBgmAudio || storyBgmAudio.__chanceboardKey!==key || storyBgmAudio.__chanceboardSrc!==src){
     cancelStoryBgmFade();
     if(storyBgmAudio){ storyBgmAudio.pause(); storyBgmAudio.currentTime=0; }
     storyBgmAudio=new Audio(src);
     storyBgmAudio.__chanceboardKey=key;
+    storyBgmAudio.__chanceboardSrc=src;
     storyBgmAudio.loop=true;
     storyBgmAudio.preload='auto';
     storyBgmAudio.volume=0;
@@ -12602,6 +12604,9 @@ async function saveGlobalAdminConfig(){
   if(typeof window.__adminAccountApi!=='function') throw new Error('請先以管理者帳號登入。');
   const result=await window.__adminAccountApi('admin-config',{config:globalGameConfigPayload()});
   applyGlobalGameConfig(result.config);
+  // 管理者若正在閱讀故事時更新音樂路徑，立即換成新檔；不必離開頁面或重新整理。
+  const story=document.getElementById('screen-story');
+  if(story&&!story.classList.contains('hidden')&&storyRun&&storyRun.active&&!storyRun.showChapterTitle&&!storyRun.pendingSplash)syncStoryBgm();
   return result.config;
 }
 
