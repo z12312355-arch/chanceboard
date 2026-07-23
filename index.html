@@ -892,6 +892,13 @@
     width:34px;height:34px;align-items:center;justify-content:center;border-radius:50%;
     background:var(--panel2);border:1px solid var(--line);color:var(--muted);cursor:pointer;
     font-size:16px;box-shadow:0 2px 8px rgba(0,0,0,.4);}
+  #battleExitBtn{display:none;}
+  body.battle-mode #battleExitBtn{display:flex;position:fixed;top:10px;right:56px;z-index:81;
+    width:34px;height:34px;align-items:center;justify-content:center;border-radius:50%;
+    background:rgba(36,40,56,.5);border:1px solid var(--line);color:var(--muted);cursor:pointer;
+    font-size:15px;box-shadow:0 2px 8px rgba(0,0,0,.4);}
+  body.battle-mode #battleExitBtn:hover{border-color:var(--bad);color:#ff9a9a;}
+  body.battle-mode.game-over #battleExitBtn{display:none;}
   body.battle-mode #battleSettingsBtn:hover, body.battle-mode #battleSettingsBtn.open{
     border-color:var(--gold);color:var(--gold);}
   /* 面板固定在齒輪鈕正下方，跟其他小彈窗（moveInfo／battleLog）不同，這個不需要整螢幕遮罩壓暗
@@ -1395,7 +1402,7 @@
   /* #statusRow：回合資訊／順序條／公牌庫資訊同一排（使用者要求），三塊都是這裡的 flex item；
      空間不夠時（視窗較窄）整排 wrap。padding-right 留給右上角固定的 #battleSettingsBtn 齒輪鈕
      （不分遊戲進行中/結束都會顯示），避免這排內容剛好排到最右邊時跟齒輪鈕疊在一起。 */
-  #statusRow{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:10px;padding-right:46px;}
+  #statusRow{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:10px;padding-right:88px;}
   #orderBar{display:flex;align-items:center;gap:6px;overflow-x:auto;padding:6px 2px;flex:1 1 auto;min-width:0;}
   .obchip{flex:0 0 auto;background:rgba(28,31,43,.94);border:2px solid var(--line);border-radius:8px;padding:4px 8px;text-align:center;min-width:52px;font-size:11px;box-shadow:0 2px 5px rgba(0,0,0,.35);text-shadow:0 1px 2px #000;}
   .obchip.now{border-color:var(--gold);background:linear-gradient(180deg,#4a4118,#3a340f);box-shadow:0 0 10px 1px rgba(242,193,78,.4);}
@@ -1948,6 +1955,13 @@
   .audio-volume-value{color:var(--gold);font-variant-numeric:tabular-nums;}
   .audio-volume-row input[type="range"]{display:block;width:100%;margin:0;accent-color:var(--gold);cursor:pointer;}
   body.battle-mode #battleSettingsPanel label.audio-volume-row{display:block;padding-left:24px;}
+  #battleExitBackdrop{position:fixed;inset:0;background:rgba(0,0,0,.7);display:flex;align-items:center;justify-content:center;z-index:170;padding:20px;}
+  #battleExitBackdrop.hidden{display:none;}
+  .battle-exit-panel{width:min(420px,100%);border:1px solid var(--line);border-radius:14px;padding:20px;background:linear-gradient(155deg,rgba(29,33,48,.98),rgba(12,15,24,.99));box-shadow:0 24px 80px rgba(0,0,0,.72);}
+  .battle-exit-title{font-size:20px;font-weight:900;color:#fff;}
+  .battle-exit-message{margin-top:10px;color:#c8cede;font-size:13px;line-height:1.7;}
+  .battle-exit-error{min-height:18px;margin-top:8px;color:#ff9a9a;font-size:12px;}
+  .battle-exit-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:14px;}
   /* 卡池機率彈窗：使用者要求「召喚裡面加入卡池資訊」，見 openGachaPoolInfo() 的說明。 */
   #gachaPoolInfoBackdrop{position:fixed;inset:0;background:rgba(0,0,0,.62);display:flex;align-items:center;justify-content:center;z-index:150;padding:20px;}
   #gachaPoolInfoBackdrop.hidden{display:none;}
@@ -2304,7 +2318,7 @@
 </head>
 <body>
 <!-- 發布版本唯一維護位置：每次正式同步／部署時更新日期與當日版次。 -->
-<div id="appVersionBadge" data-version="v2026.07.23-28" aria-label="目前版本">讀取版本…</div>
+<div id="appVersionBadge" data-version="v2026.07.23-29" aria-label="目前版本">讀取版本…</div>
 <script>
 (function showOnlineBuildVersion(){
   const badge=document.getElementById('appVersionBadge'),version=badge.dataset.version||'dev';
@@ -2962,6 +2976,7 @@
          這個角落原本就空著），面板用簡單的「點齒輪開／再點一次或點外面關」，不用跟 moveInfo 那種
          全螢幕遮罩一樣重。 -->
     <button type="button" id="battleSettingsBtn" title="設定">⚙️</button>
+    <button type="button" id="battleExitBtn" title="離開戰鬥" aria-label="離開戰鬥">🚪</button>
     <div id="battleSettingsPanel" class="hidden">
       <label id="soundToggleWrap">
         <input type="checkbox" id="soundToggle" checked> 🔊 音效
@@ -3034,6 +3049,18 @@
   <!-- END SCREEN -->
   <div id="screen-end" class="hidden panel">
     <div id="endscreen"></div>
+  </div>
+</div>
+
+<div id="battleExitBackdrop" class="hidden">
+  <div class="battle-exit-panel" role="dialog" aria-modal="true" aria-labelledby="battleExitTitle">
+    <div class="battle-exit-title" id="battleExitTitle">離開戰鬥</div>
+    <div class="battle-exit-message" id="battleExitMessage"></div>
+    <div class="battle-exit-error" id="battleExitError"></div>
+    <div class="battle-exit-actions">
+      <button type="button" class="btn" id="battleExitCancelBtn">取消</button>
+      <button type="button" class="btn" id="battleExitConfirmBtn">確認離開</button>
+    </div>
   </div>
 </div>
 
@@ -8335,6 +8362,7 @@ function scheduleAutoLoop(){
   const capturedSide = getActingUnit() ? getActingUnit().side : null;
   setTimeout(()=>{
     if(state!==capturedState) return;
+    if(window.__battleExitPromptOpen){scheduleAutoLoop();return;}
     const autoOnForSide = capturedSide==='A' ? state.autoBattle : state.autoBattleB;
     if(!autoOnForSide) return;
     if(state.phase!=='act' || state.actingUnitId!==capturedUnitId) return;
@@ -8353,6 +8381,7 @@ function scheduleOpponentAiTurn(unit){
   const capturedUnitId = unit.id;
   setTimeout(()=>{
     if(state!==capturedState) return; // 防呆：計時器還沒到玩家就重新開局/離開了這場戰鬥
+    if(window.__battleExitPromptOpen){scheduleOpponentAiTurn(unit);return;}
     if(state.phase!=='act' || state.actingUnitId!==capturedUnitId) return; // 防呆：這步不知為何已經被別的路徑處理掉了
     aiHandleTurn(unit);
     roundEndPassiveCheck(unit);
@@ -11080,6 +11109,34 @@ function resetGame(){
     showTopScreen('screen-story');storyRenderCurrent();
   } else if(modeToResume) goToTeamPick(modeToResume); else goToLobby();
 }
+function leaveStoryBattleToStageMap(){
+  if(storyBattleTimer){clearInterval(storyBattleTimer);storyBattleTimer=null;}
+  cancelActionDeadline();
+  setBgmTension(false);
+  stopBgm(0.3);
+  if(storyRun){
+    storyRun.battlePending=null;
+    saveStoryProgress();
+  }
+  window.__storyFixedOpponentIds=null;window.__storyBossMonsterId=null;window.__storyBattleKind=null;window.__storyBattleIsBoss=null;window.__storyPieceType=null;window.__storyUnlimitedTime=null;
+  document.body.classList.remove('battle-mode','game-over','story-battle-mode');
+  state=newState();
+  showTopScreen('screen-story');
+  storyShowMenu('stages',storyRun&&storyRun.route||storyMenuRoute||'black');
+}
+function finishBattleByForfeit(forfeitSide){
+  if(!state || state.phase==='end')return;
+  const losingSide=forfeitSide==='B'?'B':'A';
+  cancelActionDeadline();
+  setBgmTension(false);
+  state.forfeitSide=losingSide;
+  state.winner=losingSide==='A'?'B':'A';
+  state.winnerReason='投降';
+  state.phase='end';
+  state.turnDeadlineAt=0;
+  state.log.push({type:'info',html:(losingSide==='A'?'黑方':'白方')+'選擇投降。'});
+  render();
+}
 // 使用者要求「新增返回大廳的按鈕」（結束畫面）：跟resetGame()做一樣的清理（重置戰鬥狀態、
 // 拿掉battle-mode/game-over這兩個body class、停BGM），差別只在於「一定回大廳」，不像
 // resetGame()那樣還會判斷要不要直接跳回同模式的挑隊伍畫面。
@@ -11572,6 +11629,13 @@ function collapseAllTapExpandedCells(exceptCell){
 }
 
 function renderBattle(){
+  const exitButton=document.getElementById('battleExitBtn');
+  if(exitButton){
+    exitButton.style.display=window.__tutorialBattleReturnRequired?'none':'';
+    const storyBattle=document.body.classList.contains('story-battle-mode')||pendingMode==='story';
+    exitButton.title=storyBattle?'離開故事戰鬥':'投降';
+    exitButton.setAttribute('aria-label',exitButton.title);
+  }
   const roundLabel=document.getElementById('roundlabel');
   roundLabel.classList.toggle('unlimited', !!state.unlimitedTime);
   roundLabel.textContent = state.unlimitedTime
@@ -12073,6 +12137,7 @@ function renderBattle(){
   logDiv.scrollTop = logDiv.scrollHeight;
 
   if(state.phase==='end'){
+    document.getElementById('battleExitBackdrop').classList.add('hidden');
     // 使用者要求「遊戲結束畫面是個滿版獨立畫面」：#screen-battle／#screen-end 是互斥的滿版畫面
     // （見上面 CSS「第四版」的說明），不是疊在一起。查看戰鬥紀錄現在是結束畫面上的按鈕＋彈窗
     // （見 renderEnd()／openBattleLogModal()），結束後就不會再切回棋盤畫面了。
@@ -12089,23 +12154,26 @@ function renderBattle(){
       // 贏的獎勵比較多當作額外誘因，但平手/輸掉也有基本收穫，玩家才不會因為打輸就完全
       // 白忙一場、更願意繼續玩下去累積金幣召喚。放在justEnded這個「剛結束那一刻」的guard
       // 裡面，確保renderBattle()之後每個tick重複呼叫render()時不會被重複加值。
-      let goldReward = state.winner==='A' ? 120 : (state.winner==='draw' ? 80 : 60);
+      const rewardSide=window.__onlineLocalSide==='B'?'B':'A';
+      const localForfeited=state.forfeitSide===rewardSide;
+      let goldReward = localForfeited ? 0 : (state.winner===rewardSide ? 120 : (state.winner==='draw' ? 80 : 60));
       // 詹姆士．弗烈德的被動「賺錢本能」：「遊戲結束時得到的獎賞*2」，原本完全沒實作這半段
       // （只有「回合結束時30%抽牌」那半段有做）。金幣獎勵是單一份、不分陣營的玩家帳號資源
       // （見上面「贏/平/輸都給一些金幣」的說明，本機雙人模式也共用同一份），所以判斷依據跟
       // 檔案其他地方「預設黑方(A)是玩家自己」的慣例一致：只看黑方(A)這邊有沒有詹姆士（不要求
       // 他本場存活到最後——這是「帶他出戰」就有的被動增益，不是「他要活著」的條件），有的話
       // 這次獎勵直接翻倍。
-      const teamAHasJames = state.teamA.some(u=>u.baseId==='001');
-      if(teamAHasJames) goldReward *= 2;
-      addGold(goldReward);
+      const rewardTeam=rewardSide==='A'?state.teamA:state.teamB;
+      const rewardTeamHasJames = rewardTeam.some(u=>u.baseId==='001');
+      if(rewardTeamHasJames) goldReward *= 2;
+      if(goldReward)addGold(goldReward);
       state.lastBattleGoldReward = goldReward;
       if(!window.__fastBattleMode){
         stopBgm(0.6); // fade the BGM out a bit faster here so the stinger below cuts through cleanly
         // Perspective is always from side A's chair (single-player's human side, or Black's
         // chair in local 2P) — a draw doesn't cleanly read as either outcome, so no stinger then.
-        if(state.winner==='A') playVictoryStinger();
-        else if(state.winner==='B') playDefeatStinger();
+        if(state.winner===rewardSide) playVictoryStinger();
+        else if(state.winner!=='draw') playDefeatStinger();
       }
       // 使用者要求「遊戲結束的畫面，要等招式圖跳完才出現」：最後一擊的出招插畫(.move-splash)
       // 是這次render()稍後才會由playPendingEffects()建立、要活滿MOVE_SPLASH_LIFETIME_MS
@@ -12180,7 +12248,7 @@ function renderEnd(){
   box.innerHTML =
     '<div class="end-badge">'+badgeIcon+'</div>'+
     '<div class="end-title">'+title+'</div>'+
-    '<div class="end-reason">'+localizeOnlineWinnerReason(state.winnerReason)+'</div>'+
+    '<div class="end-reason">'+battleWinnerReasonForViewer()+'</div>'+
     goldRewardHtml+
     '<div class="end-teams">'+teamBlock(ownTeam,'我方',localSide,'A')+teamBlock(opponentTeam,'對方',opponentSide,'B')+'</div>'+
     // 使用者要求「新增返回大廳的按鈕」：結束畫面原本只有「再玩一局」（回到同模式的挑隊伍畫面）
@@ -12199,6 +12267,13 @@ function renderEnd(){
   document.getElementById('lobbyBtn2').onclick = backToLobbyFromBattle;
   // 內容剛換掉，量一次現在需不需要縮小才塞得下（見 fitEndScreenToViewport() 的說明）。
   fitEndScreenToViewport();
+}
+function battleWinnerReasonForViewer(){
+  if(state.forfeitSide){
+    const localSide=window.__onlineLocalSide==='B'?'B':'A';
+    return state.forfeitSide===localSide?'你已投降':'對手已投降';
+  }
+  return localizeOnlineWinnerReason(state.winnerReason);
 }
 function localizeOnlineWinnerReason(reason){
   if(window.__onlineLocalSide!=='B') return reason;
@@ -12449,6 +12524,69 @@ document.getElementById('musicVolume').oninput = function(){
     btn.classList.remove('open');
   });
 })();
+let battleExitPausedDeadlineMs=0;
+function battleExitIsStory(){return document.body.classList.contains('story-battle-mode')||pendingMode==='story';}
+function closeBattleExitPrompt(){
+  document.getElementById('battleExitBackdrop').classList.add('hidden');
+  if(window.__battleExitPromptOpen){
+    window.__battleExitPromptOpen=false;
+    if(state&&state.phase==='act'&&battleExitPausedDeadlineMs>0){
+      state.turnDeadlineAt=Date.now()+battleExitPausedDeadlineMs;
+      state.turnDeadlineTotalMs=Math.max(state.turnDeadlineTotalMs||0,battleExitPausedDeadlineMs);
+      scheduleActionDeadline();
+      syncActionDeadlineUi();
+    }
+  }
+  battleExitPausedDeadlineMs=0;
+}
+function openBattleExitPrompt(){
+  if(!state||state.phase==='end'||window.__tutorialBattleReturnRequired)return;
+  const storyMode=battleExitIsStory();
+  const title=document.getElementById('battleExitTitle'),message=document.getElementById('battleExitMessage'),confirmButton=document.getElementById('battleExitConfirmBtn');
+  title.textContent=storyMode?'離開故事戰鬥':'確認投降';
+  message.textContent=storyMode
+    ? '確定離開本場故事戰鬥嗎？本場進度不會保留，你可以從目前章節的關卡地圖重新挑戰。'
+    : '離開進行中的決鬥會視為投降，你將立即判定敗北，對手則判定獲勝。';
+  confirmButton.textContent=storyMode?'離開戰鬥':'確認投降';
+  confirmButton.style.borderColor=storyMode?'':'var(--bad)';
+  confirmButton.style.color=storyMode?'':'#ffb1b1';
+  confirmButton.disabled=false;
+  document.getElementById('battleExitCancelBtn').disabled=false;
+  document.getElementById('battleExitError').textContent='';
+  if(storyMode){
+    battleExitPausedDeadlineMs=state.turnDeadlineAt?Math.max(1,state.turnDeadlineAt-Date.now()):0;
+    window.__battleExitPromptOpen=true;
+    cancelActionDeadline();
+    if(state.turnDeadlineAt)state.turnDeadlineAt=0;
+    syncActionDeadlineUi();
+  }
+  document.getElementById('battleExitBackdrop').classList.remove('hidden');
+}
+document.getElementById('battleExitBtn').onclick=openBattleExitPrompt;
+document.getElementById('battleExitCancelBtn').onclick=closeBattleExitPrompt;
+document.getElementById('battleExitBackdrop').onclick=function(e){if(e.target===this)closeBattleExitPrompt();};
+document.getElementById('battleExitConfirmBtn').onclick=async function(){
+  const confirmButton=this,cancelButton=document.getElementById('battleExitCancelBtn'),error=document.getElementById('battleExitError');
+  confirmButton.disabled=true;cancelButton.disabled=true;error.textContent='';
+  try{
+    if(battleExitIsStory()){
+      window.__battleExitPromptOpen=false;battleExitPausedDeadlineMs=0;
+      document.getElementById('battleExitBackdrop').classList.add('hidden');
+      leaveStoryBattleToStageMap();
+      return;
+    }
+    if(window.__onlineLocalSide&&typeof window.__forfeitOnlineBattle==='function'){
+      confirmButton.textContent='正在送出投降…';
+      await window.__forfeitOnlineBattle();
+    }else{
+      finishBattleByForfeit('A');
+    }
+    document.getElementById('battleExitBackdrop').classList.add('hidden');
+  }catch(e){
+    error.textContent='投降送出失敗：'+(e&&e.message?e.message:'請稍後再試');
+    confirmButton.disabled=false;cancelButton.disabled=false;confirmButton.textContent='重新投降';
+  }
+};
 // 使用者反應「手機版同一格有複數角色時，點擊會展開，但沒機制會恢復」：見 collapseAllTapExpandedCells()
 // 的說明＋棋盤渲染迴圈裡 cell 的 .tap-expanded 攔截器。這裡只掛一次（不是每次 render 都掛，避免
 // 監聽器越疊越多），點畫面任何地方時，如果點擊目標不在任何一個展開中的格子裡面，就把它們全部收起
@@ -15428,6 +15566,43 @@ document.getElementById('admin1v1BattleBtn').onclick=function(){ closeAdminPanel
       pendingMode=null; pendingTeamIdA=null; pendingTeamIdB=null;
       onlineUpdateLock();
     }
+    window.__forfeitOnlineBattle=function(){
+      if(!onlineInRoom || !onlineRole || !onlineGameRef) return Promise.reject(new Error('目前沒有可投降的決鬥房間。'));
+      if(!state || state.phase==='end') return Promise.resolve();
+      onlineCancelAutoBattle();
+      cancelActionDeadline();
+      const losingSide=onlineRole;
+      return new Promise(function(resolve,reject){
+        onlineGameRef.transaction(function(current){
+          let outgoing=JSON.parse(JSON.stringify(state));
+          if(current&&current.blob){
+            try{outgoing=JSON.parse(current.blob);}catch(e){}
+          }
+          // 對手若剛好先完成最後一擊，保留已成立的正常勝負，不再用稍晚送到的投降覆蓋。
+          if(outgoing.phase==='end')return current;
+          outgoing.forfeitSide=losingSide;
+          outgoing.winner=losingSide==='A'?'B':'A';
+          outgoing.winnerReason='投降';
+          outgoing.phase='end';
+          outgoing.turnDeadlineAt=0;
+          outgoing.log=Array.isArray(outgoing.log)?outgoing.log:[];
+          outgoing.log.push({type:'info',html:(losingSide==='A'?'黑方':'白方')+'選擇投降。'});
+          const blob=JSON.stringify(onlineNormalize(outgoing));
+          return {blob:blob,by:onlineRole,ts:Date.now()};
+        },function(error,committed,snapshot){
+          if(error){reject(error);return;}
+          const result=snapshot&&snapshot.val();
+          if(!committed||!result||!result.blob){reject(new Error('房間狀態已變更，請再試一次。'));return;}
+          try{
+            onlineLastBlob=result.blob;
+            state=onlineNormalize(JSON.parse(result.blob));
+            window.__onlineLocalSide=onlineRole;
+            render();
+            resolve();
+          }catch(e){reject(e);}
+        });
+      });
+    };
     function attachOnlineRoom(id, role){
       stopListing();
       onlineCancelAutoBattle();
