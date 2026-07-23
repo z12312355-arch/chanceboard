@@ -2269,7 +2269,7 @@
 </head>
 <body>
 <!-- 發布版本唯一維護位置：每次正式同步／部署時更新日期與當日版次。 -->
-<div id="appVersionBadge" data-version="v2026.07.23-4" aria-label="目前版本">讀取版本…</div>
+<div id="appVersionBadge" data-version="v2026.07.23-6" aria-label="目前版本">讀取版本…</div>
 <script>
 (function showOnlineBuildVersion(){
   const badge=document.getElementById('appVersionBadge'),version=badge.dataset.version||'dev';
@@ -3177,8 +3177,9 @@ let globalStoryModeConfig = {
   routeLabels:{black:'執黑・小黑線',white:'執白・小白線'},
   routeDescriptions:{black:'與小黑同行，學會在殘酷棋盤中求生。',white:'與小白同行，守護每一枚棋子的願望。'},
   portraits:Object.assign({},DEFAULT_STORY_PORTRAITS),typewriterMs:24,cinematicIntervalMs:850,
-  stageDefs:null,flow:null,fate:null,battles:{}
+  stageDefs:null,flow:null,fate:null,battles:{},music:{}
 };
+const MUSIC_PATH_KEYS = ['login','battlePawn','battleKnight','battleRook','battleBishop','battleQueen','battleKing','openingBlack','openingWhite','pawnStory','bossBefore','bossBattle','bossAfter','epilogueOne','epilogueTwo'];
 const TUTORIAL_SIDE_TEXT_KEYS = ['pickIntro','afterPick','goldIntro','goldOffer','afterGold','diamondIntro','diamondOffer','afterDiamond','teamIntro','teamPick3','teamDeck','afterTeam','battleIntro','suitGuide','battlePickTeam','afterBattleWin','afterBattleLose','returnLobby','ending'];
 function applyStoryModePresentationConfig(){
   const cfg=globalStoryModeConfig;
@@ -3249,6 +3250,10 @@ function applyGlobalGameConfig(config){
     if(source.flow&&typeof source.flow==='object')next.flow=JSON.parse(JSON.stringify(source.flow));
     if(source.fate&&typeof source.fate==='object')next.fate=JSON.parse(JSON.stringify(source.fate));
     if(source.battles&&typeof source.battles==='object')next.battles=JSON.parse(JSON.stringify(source.battles));
+    if(source.music&&typeof source.music==='object'){
+      next.music=next.music&&typeof next.music==='object'?next.music:{};
+      MUSIC_PATH_KEYS.forEach(function(key){if(typeof source.music[key]==='string')next.music[key]=source.music[key].trim();});
+    }
     globalStoryModeConfig=next;if(typeof storyRefreshRuntimeConfig==='function')storyRefreshRuntimeConfig();if(typeof storyRefreshFateConfig==='function')storyRefreshFateConfig();if(typeof window.__resetStoryBlocks==='function')window.__resetStoryBlocks();applyStoryModePresentationConfig();
   }
   if(typeof updateGachaCostDisplay==='function') updateGachaCostDisplay();
@@ -6290,6 +6295,10 @@ const BATTLE_BGM_ASSETS = Object.freeze({
   '后(Queen)': 'music/battle/queen/Majesty of the Hunt.mp3',
   '王(King)': 'music/battle/king/The Final Judgment.mp3',
 });
+const BATTLE_BGM_CONFIG_KEYS = Object.freeze({
+  '兵(Pawn)': 'battlePawn','騎士(Knight)': 'battleKnight','城堡(Rook)': 'battleRook',
+  '主教(Bishop)': 'battleBishop','后(Queen)': 'battleQueen','王(King)': 'battleKing',
+});
 const BATTLE_BGM_VOLUME = 0.38;
 const LOGIN_BGM_ASSET = 'music/login/Gambit of the Grandmaster - Eternal Gambit - Treblo.mp3';
 const LOGIN_BGM_VOLUME = 0.3;
@@ -6311,6 +6320,13 @@ let loginBgmAudio = null;
 let loginBgmFadeFrame = 0;
 let storyBgmAudio = null;
 let storyBgmFadeFrame = 0;
+let mediaAudioUnlocked = false;
+
+function configuredMusicPath(key, fallback){
+  const paths=globalStoryModeConfig&&globalStoryModeConfig.music;
+  const value=paths&&typeof paths[key]==='string'?paths[key].trim():'';
+  return value||fallback;
+}
 
 function getSfxTemplate(name){
   const src = SFX_ASSETS[name];
@@ -6319,6 +6335,7 @@ function getSfxTemplate(name){
   if(!audio){
     audio = new Audio(src);
     audio.preload = 'auto';
+    audio.load();
     __sfxTemplates.set(name, audio);
   }
   return audio;
@@ -6353,11 +6370,20 @@ function fadeLoginBgm(audio, targetVolume, durationSec, onDone){
 }
 function startLoginBgm(){
   if(!musicEnabled) return;
-  if(!loginBgmAudio){
-    loginBgmAudio=new Audio(LOGIN_BGM_ASSET);
+  const src=configuredMusicPath('login', LOGIN_BGM_ASSET);
+  if(!loginBgmAudio || loginBgmAudio.__chanceboardSrc!==src){
+    cancelLoginBgmFade();
+    if(loginBgmAudio){ loginBgmAudio.pause(); loginBgmAudio.currentTime=0; }
+    loginBgmAudio=new Audio(src);
+    loginBgmAudio.__chanceboardSrc=src;
     loginBgmAudio.loop=true;
     loginBgmAudio.preload='auto';
     loginBgmAudio.volume=0;
+    // Muted media is allowed to preload/play before a gesture. It gives the login track a
+    // head start, then the first pointer/key interaction below makes it audible.
+    loginBgmAudio.muted=!mediaAudioUnlocked;
+  } else {
+    loginBgmAudio.muted=!mediaAudioUnlocked;
   }
   loginBgmAudio.play().catch(()=>{}); // The first audible play waits for a browser-approved interaction.
   fadeLoginBgm(loginBgmAudio, LOGIN_BGM_VOLUME, BGM_FADE_IN_SEC);
@@ -6389,7 +6415,7 @@ function fadeStoryBgm(audio, targetVolume, durationSec, onDone){
 }
 function startStoryBgm(key){
   if(!musicEnabled) return;
-  const src=STORY_BGM_ASSETS[key];
+  const src=configuredMusicPath(key, STORY_BGM_ASSETS[key]);
   if(!src) return;
   if(!storyBgmAudio || storyBgmAudio.__chanceboardKey!==key){
     cancelStoryBgmFade();
@@ -6427,10 +6453,14 @@ function getAudioCtx(){
 // probably-suspended) AudioContext so sounds aren't silently swallowed by autoplay policy.
 (function(){
   function unlockAudio(){
+    mediaAudioUnlocked=true;
     getAudioCtx();
     preloadSfx();
     const login=document.getElementById('screen-login');
-    if(login && !login.classList.contains('hidden')) startLoginBgm();
+    if(login && !login.classList.contains('hidden')){
+      if(loginBgmAudio) loginBgmAudio.muted=false;
+      startLoginBgm();
+    }
     document.removeEventListener('pointerdown', unlockAudio);
     document.removeEventListener('keydown', unlockAudio);
   }
@@ -6891,7 +6921,7 @@ function startBgm(pieceName){
     return;
   }
   stopStoryBgm(0.25);
-  const src=BATTLE_BGM_ASSETS[pieceName];
+  const src=configuredMusicPath(BATTLE_BGM_CONFIG_KEYS[pieceName], BATTLE_BGM_ASSETS[pieceName]);
   if(!src) return;
   if(!battleBgmAudio || battleBgmAudio.__chanceboardSrc!==src){
     cancelBattleBgmFade();
@@ -8504,6 +8534,9 @@ function goToLobby(){
 // 使用者要求「多做一個登入介面」：遊戲載入後第一個看到的畫面，見底部原本goToLobby()
 // 改成goToLogin()那行、跟#loginEnterBtn的wiring。
 function goToLogin(){
+  // Load small UI effects while the player reads the login screen, so the first Enter click
+  // has no download-induced delay.
+  preloadSfx();
   showTopScreen('screen-login');
 }
 
@@ -12613,6 +12646,23 @@ const ADMIN_TUTORIAL_STORY_FIELDS = [
 function adminStoryTextarea(label,id,value,rows){
   return '<label style="display:block;font-size:12px;color:var(--muted)">'+label+'<textarea id="'+id+'" rows="'+(rows||2)+'" style="display:block;width:100%;margin:4px 0 9px;resize:vertical">'+escHtml(value||'')+'</textarea></label>';
 }
+const ADMIN_MUSIC_PATH_FIELDS = [
+  ['login','登入介面音樂',LOGIN_BGM_ASSET],
+  ['battlePawn','戰鬥：兵',BATTLE_BGM_ASSETS['兵(Pawn)']],['battleKnight','戰鬥：騎士',BATTLE_BGM_ASSETS['騎士(Knight)']],['battleRook','戰鬥：城堡',BATTLE_BGM_ASSETS['城堡(Rook)']],['battleBishop','戰鬥：主教',BATTLE_BGM_ASSETS['主教(Bishop)']],['battleQueen','戰鬥：后',BATTLE_BGM_ASSETS['后(Queen)']],['battleKing','戰鬥：王',BATTLE_BGM_ASSETS['王(King)']],
+  ['openingBlack','第一章：執黑開場',STORY_BGM_ASSETS.openingBlack],['openingWhite','第一章：執白開場',STORY_BGM_ASSETS.openingWhite],['pawnStory','第一章：預設劇情',STORY_BGM_ASSETS.pawnStory],['bossBefore','第一章：Boss 戰前',STORY_BGM_ASSETS.bossBefore],['bossBattle','第一章：Boss 戰鬥',STORY_BGM_ASSETS.bossBattle],['bossAfter','第一章：Boss 戰後',STORY_BGM_ASSETS.bossAfter],['epilogueOne','第一章：尾聲 1',STORY_BGM_ASSETS.epilogueOne],['epilogueTwo','第一章：尾聲 2',STORY_BGM_ASSETS.epilogueTwo]
+];
+function adminMusicPathEditorHtml(){
+  return '<div class="admin-grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(290px,1fr));gap:8px;margin-top:10px">'+ADMIN_MUSIC_PATH_FIELDS.map(function(field){return adminManagerField(field[1],'admin-music-'+field[0],'text',configuredMusicPath(field[0],field[2]));}).join('')+'</div>';
+}
+function adminCollectMusicPaths(){
+  const music={};
+  ADMIN_MUSIC_PATH_FIELDS.forEach(function(field){
+    const value=document.getElementById('admin-music-'+field[0]).value.trim();
+    if(!value.startsWith('music/')||value.includes('..')||/[\r\n]/.test(value)||!/\.(mp3|ogg|m4a|wav)$/i.test(value))throw new Error('「'+field[1]+'」必須是網站內的 music/ 音訊檔路徑。');
+    music[field[0]]=value;
+  });
+  return music;
+}
 function adminTutorialSideFieldsHtml(){
   return ADMIN_TUTORIAL_STORY_FIELDS.map(function(field){
     const key=field[0],label=field[1],pair=TUTORIAL_LINES[key]||{};
@@ -12825,7 +12875,7 @@ function adminApplyStoryDraftForPreview(){
   if(error||portraits.errors.length){msg.textContent='❌ '+(error||portraits.errors[0]);msg.className='admin-msg err';return false;}
   const previewStageDefs=adminCollectStageDefs(),previewStageError=adminValidateStageDefs(previewStageDefs,adminStorySplitBlocks(text).length);
   if(previewStageError){msg.textContent='❌ '+previewStageError;msg.className='admin-msg err';return false;}
-  try{const read=function(id){return document.getElementById(id).value.trim();};globalStoryModeConfig={chapterTitle:read('admin-storymode-title'),chapter1Text:text,openingCg:{black:read('admin-storymode-cg-black'),white:read('admin-storymode-cg-white')},routeLabels:{black:read('admin-storymode-label-black'),white:read('admin-storymode-label-white')},routeDescriptions:{black:read('admin-storymode-desc-black'),white:read('admin-storymode-desc-white')},portraits:portraits.map,typewriterMs:Number(read('admin-storymode-type-ms'))||24,cinematicIntervalMs:Number(read('admin-storymode-cinematic-ms'))||850,stageDefs:previewStageDefs,flow:adminParseJsonField('admin-storymode-flow','流程規則'),fate:adminParseJsonField('admin-storymode-fate','命運棋譜規則'),battles:adminCollectBattles()};storyRefreshRuntimeConfig();storyRefreshFateConfig();window.__resetStoryBlocks();applyStoryModePresentationConfig();return true;}catch(e){msg.textContent='❌ '+e.message;msg.className='admin-msg err';return false;}
+  try{const read=function(id){return document.getElementById(id).value.trim();};globalStoryModeConfig={chapterTitle:read('admin-storymode-title'),chapter1Text:text,openingCg:{black:read('admin-storymode-cg-black'),white:read('admin-storymode-cg-white')},routeLabels:{black:read('admin-storymode-label-black'),white:read('admin-storymode-label-white')},routeDescriptions:{black:read('admin-storymode-desc-black'),white:read('admin-storymode-desc-white')},portraits:portraits.map,typewriterMs:Number(read('admin-storymode-type-ms'))||24,cinematicIntervalMs:Number(read('admin-storymode-cinematic-ms'))||850,stageDefs:previewStageDefs,flow:adminParseJsonField('admin-storymode-flow','流程規則'),fate:adminParseJsonField('admin-storymode-fate','命運棋譜規則'),battles:adminCollectBattles(),music:adminCollectMusicPaths()};storyRefreshRuntimeConfig();storyRefreshFateConfig();window.__resetStoryBlocks();applyStoryModePresentationConfig();return true;}catch(e){msg.textContent='❌ '+e.message;msg.className='admin-msg err';return false;}
 }
 function validateStoryChapterText(text){
   const raw=String(text||'').trim();if(!raw)return '第一章文本不能留白。';
@@ -12863,11 +12913,11 @@ async function saveAdminStoryMode(){
   if(error||portraits.errors.length){msg.textContent='❌ '+(error||portraits.errors[0]);msg.className='admin-msg err';return;}
   const integer=function(id,min,max){const n=Number(document.getElementById(id).value);return Number.isInteger(n)&&n>=min&&n<=max?n:null;},typeMs=integer('admin-storymode-type-ms',8,120),cinematicMs=integer('admin-storymode-cinematic-ms',150,3000);
   if(typeMs==null||cinematicMs==null){msg.textContent='❌ 逐字速度需為 8–120ms，開場逐行間隔需為 150–3000ms。';msg.className='admin-msg err';return;}
-  const read=function(id){return document.getElementById(id).value.trim();};let flow,fate;
-  try{flow=adminParseJsonField('admin-storymode-flow','流程規則');fate=adminParseJsonField('admin-storymode-fate','命運棋譜規則');}catch(e){msg.textContent='❌ '+e.message;msg.className='admin-msg err';return;}
+  const read=function(id){return document.getElementById(id).value.trim();};let flow,fate,music;
+  try{flow=adminParseJsonField('admin-storymode-flow','流程規則');fate=adminParseJsonField('admin-storymode-fate','命運棋譜規則');music=adminCollectMusicPaths();}catch(e){msg.textContent='❌ '+e.message;msg.className='admin-msg err';return;}
   const stageDefs=adminCollectStageDefs(),stageError=adminValidateStageDefs(stageDefs,adminStorySplitBlocks(text).length);
   if(stageError){msg.textContent='❌ '+stageError;msg.className='admin-msg err';return;}
-  const next={chapterTitle:read('admin-storymode-title'),chapter1Text:text,openingCg:{black:read('admin-storymode-cg-black'),white:read('admin-storymode-cg-white')},routeLabels:{black:read('admin-storymode-label-black'),white:read('admin-storymode-label-white')},routeDescriptions:{black:read('admin-storymode-desc-black'),white:read('admin-storymode-desc-white')},portraits:portraits.map,typewriterMs:typeMs,cinematicIntervalMs:cinematicMs,stageDefs:stageDefs,flow:flow,fate:fate,battles:adminCollectBattles()};
+  const next={chapterTitle:read('admin-storymode-title'),chapter1Text:text,openingCg:{black:read('admin-storymode-cg-black'),white:read('admin-storymode-cg-white')},routeLabels:{black:read('admin-storymode-label-black'),white:read('admin-storymode-label-white')},routeDescriptions:{black:read('admin-storymode-desc-black'),white:read('admin-storymode-desc-white')},portraits:portraits.map,typewriterMs:typeMs,cinematicIntervalMs:cinematicMs,stageDefs:stageDefs,flow:flow,fate:fate,battles:adminCollectBattles(),music:music};
   if(!next.chapterTitle||!next.openingCg.black||!next.openingCg.white||!next.routeLabels.black||!next.routeLabels.white){msg.textContent='❌ 章名、黑白路線名稱與兩張開場 CG 都不能留白。';msg.className='admin-msg err';return;}
   globalStoryModeConfig=next;storyRefreshRuntimeConfig();storyRefreshFateConfig();window.__resetStoryBlocks();applyStoryModePresentationConfig();msg.textContent='⏳ 儲存中…';msg.className='admin-msg';
   try{await saveGlobalAdminConfig();msg.textContent='✅ 故事模式設定與完整第一章文本已儲存到 D1。所有玩家重新載入後生效。';msg.className='admin-msg';}
@@ -12940,6 +12990,9 @@ function renderAdminAccountManager(){
       +adminManagerField('開場字幕逐行間隔（150–3000ms）','admin-storymode-cinematic-ms','number',cfg.cinematicIntervalMs)
     +'</div><p style="font-size:11px;color:var(--muted);line-height:1.6">每行格式：<code>劇本中的角色名稱 = 圖片路徑</code>。新增說話者時請同步加入；括號內的動作提示會自動忽略。</p>'
       +adminStoryTextarea('角色與立繪路徑','admin-storymode-portraits',storyPortraitConfigText(cfg.portraits),14)
+    +'</details>'
+    +'<details open class="admin-section"><summary style="cursor:pointer;font-weight:800;color:var(--gold)">音樂路徑</summary><p style="font-size:11px;color:var(--muted);line-height:1.65">可管理登入、六種戰鬥與第一章故事音樂。請填入已部署的網站內相對路徑（必須以 <code>music/</code> 開頭）；儲存設定只會變更播放路徑，不會上傳音檔。</p>'
+      +adminMusicPathEditorHtml()
     +'</details>'
     +'<details open class="admin-section"><summary style="cursor:pointer;font-weight:800;color:var(--gold)">劇情節點與事件</summary><p style="font-size:11px;color:var(--muted);line-height:1.65">左側選節點，右側依出現順序編輯事件。每行旁白會逐句呈現；<code>角色名稱＋「台詞」</code>是角色台詞，角色名稱寫「玩家」即為置中玩家按鈕。可用下方按鈕插入標準事件。</p><div class="admin-story-workspace"><div id="admin-storymode-node-list" class="admin-story-node-list">'+adminStoryNodeListHtml()+'</div><div><b id="admin-storymode-node-label">'+escHtml(adminStoryDraftBlocks.length?adminStoryBlockLabel(adminStoryDraftIndex,adminStoryDraftBlocks[adminStoryDraftIndex]):'請先載入文本')+'</b><div class="admin-story-tools"><button type="button" class="btn small" data-story-template="narration">＋旁白</button><button type="button" class="btn small" data-story-template="dialogue">＋角色台詞</button><button type="button" class="btn small" data-story-template="player">＋玩家台詞</button><button type="button" class="btn small" data-story-template="choice">＋選項</button><button type="button" class="btn small" data-story-template="cg">＋跑馬燈／CG</button><button type="button" class="btn small" data-story-template="battle">＋戰鬥</button><button type="button" class="btn small" data-story-template="boss">＋Boss</button><button type="button" class="btn small" data-story-template="reward">＋角色獎勵</button><button type="button" class="btn small" data-story-template="score">＋分數</button><button type="button" class="btn small" data-story-template="complete">＋章節完成</button><button type="button" class="btn small primary" id="admin-story-node-add">＋新增節點（此節點後）</button><button type="button" class="btn small danger" id="admin-story-node-del">🗑 刪除此節點</button></div>'+adminStoryTextarea('節點事件內容','admin-storymode-node-text',adminStoryDraftBlocks[adminStoryDraftIndex]||'',24)+'</div></div></details>'
     +'<details open class="admin-section"><summary style="cursor:pointer;font-weight:800;color:var(--gold)">戰鬥與怪物設定</summary><p style="font-size:11px;color:var(--muted);line-height:1.65">每個【進入戰鬥】／【Boss戰】都可獨立指定敵人、Boss、公牌類型、玩家人數與時間限制。怪物的能力與招式仍在「怪物與招式」統一維護。</p><button type="button" class="btn small" id="admin-refresh-story-battles">依目前劇本重新掃描戰鬥</button><div id="admin-storymode-battles" style="margin-top:8px">'+adminBattleEditorHtml()+'</div></details>'

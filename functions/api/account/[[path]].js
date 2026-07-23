@@ -114,6 +114,11 @@ function normalizeGlobalConfig(input) {
       const safeSpeaker = String(speaker).trim().slice(0, 100), safePath = text(path);
       if (safeSpeaker && safePath) portraits[safeSpeaker] = safePath;
     });
+    const music = {};
+    const musicSource = storyModeSource.music && typeof storyModeSource.music === 'object' ? storyModeSource.music : {};
+    ['login', 'battlePawn', 'battleKnight', 'battleRook', 'battleBishop', 'battleQueen', 'battleKing', 'openingBlack', 'openingWhite', 'pawnStory', 'bossBefore', 'bossBattle', 'bossAfter', 'epilogueOne', 'epilogueTwo'].forEach(key => {
+      music[key] = text(musicSource[key]);
+    });
     // Structured story data (stage defs, flow rules, fate map config, battle configs)
     // is stored as opaque JSON documents with a size cap. Dropping unknown keys here
     // was the bug that silently discarded every admin stage edit on save.
@@ -133,7 +138,8 @@ function normalizeGlobalConfig(input) {
       stageDefs: jsonDocument(storyModeSource.stageDefs, 100000),
       flow: jsonDocument(storyModeSource.flow, 100000),
       fate: jsonDocument(storyModeSource.fate, 100000),
-      battles: jsonDocument(storyModeSource.battles, 100000)
+      battles: jsonDocument(storyModeSource.battles, 100000),
+      music
     };
   }
   return {
