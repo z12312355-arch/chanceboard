@@ -2269,7 +2269,7 @@
 </head>
 <body>
 <!-- 發布版本唯一維護位置：每次正式同步／部署時更新日期與當日版次。 -->
-<div id="appVersionBadge" data-version="v2026.07.23-1" aria-label="目前版本">讀取版本…</div>
+<div id="appVersionBadge" data-version="v2026.07.23-2" aria-label="目前版本">讀取版本…</div>
 <script>
 (function showOnlineBuildVersion(){
   const badge=document.getElementById('appVersionBadge'),version=badge.dataset.version||'dev';
@@ -6279,7 +6279,21 @@ const SFX_ASSETS = Object.freeze({
   defeat: 'SFX/Battle/sfx_defeat.ogg',
   uiClick: 'SFX/UI/sfx_ui_click.ogg',
 });
+// Story battles and standard duels both enter through startGame(), which passes the active
+// public-deck piece type into startBgm(). Keeping this mapping keyed by that same value makes
+// the music selection identical in both modes.
+const BATTLE_BGM_ASSETS = Object.freeze({
+  '兵(Pawn)': 'music/battle/pawn/Echoes of the First Watch.mp3',
+  '騎士(Knight)': 'music/battle/knight/Shadows of the Siege.mp3',
+  '城堡(Rook)': 'music/battle/rook/Fortress of Doom.mp3',
+  '主教(Bishop)': 'music/battle/bishop/Lex Arcanum Ritual [Instrumental].mp3',
+  '后(Queen)': 'music/battle/queen/Majesty of the Hunt.mp3',
+  '王(King)': 'music/battle/king/The Final Judgment.mp3',
+});
+const BATTLE_BGM_VOLUME = 0.38;
 const __sfxTemplates = new Map();
+let battleBgmAudio = null;
+let battleBgmFadeFrame = 0;
 
 function getSfxTemplate(name){
   const src = SFX_ASSETS[name];
@@ -6748,48 +6762,60 @@ function setBgmTension(active){
 // every render and good enough; no need for anything fancier like per-unit critical-HP tracking.
 const BGM_TENSION_HP_FRAC = 0.3;
 function updateBgmTensionFromHp(){
-  if(window.__fastBattleMode || !state.teamA || !state.teamA.length) return;
-  if(state.phase!=='act'){ if(state.phase==='end') setBgmTension(false); return; }
-  const hpFrac = team => { const cur=team.reduce((s,u)=>s+Math.max(0,u.hp),0), max=team.reduce((s,u)=>s+u.maxHp,0); return max?cur/max:1; };
-  setBgmTension(hpFrac(state.teamA) < BGM_TENSION_HP_FRAC || hpFrac(state.teamB) < BGM_TENSION_HP_FRAC);
+  // The old low-HP drone was designed for synthesized BGM. Do not layer it over the
+  // authored MP3 tracks, where it would clash with the mix in both story and duel battles.
+  setBgmTension(false);
 }
 
-// Starts (or switches) the looping theme for `pieceName` (one of DB.pieceTypes' names, i.e.
-// state.selectedPiece). No-op under fast-battle simulation or when musicEnabled is off.
+function cancelBattleBgmFade(){
+  if(battleBgmFadeFrame){ cancelAnimationFrame(battleBgmFadeFrame); battleBgmFadeFrame=0; }
+}
+function fadeBattleBgm(audio, targetVolume, durationSec, onDone){
+  cancelBattleBgmFade();
+  const from=Math.max(0,Math.min(1,audio.volume)), to=Math.max(0,Math.min(1,targetVolume));
+  const duration=Math.max(0,(durationSec||0)*1000);
+  if(!duration || from===to){ audio.volume=to; if(onDone) onDone(); return; }
+  const started=performance.now();
+  const tick=now=>{
+    const progress=Math.min(1,(now-started)/duration);
+    audio.volume=from+(to-from)*progress;
+    if(progress<1){ battleBgmFadeFrame=requestAnimationFrame(tick); }
+    else { battleBgmFadeFrame=0; if(onDone) onDone(); }
+  };
+  battleBgmFadeFrame=requestAnimationFrame(tick);
+}
+
+// Starts (or resumes) the selected piece's authored MP3. Story battles and duels share this
+// entry point, while batch simulations remain silent as before.
 function startBgm(pieceName){
   if(window.__fastBattleMode || !musicEnabled) return;
-  const ctx = getAudioCtx();
-  if(!ctx) return;
-  const theme = BGM_THEMES[pieceName];
-  if(!theme) return;
-  if(bgmTimerId){ clearInterval(bgmTimerId); bgmTimerId = null; }
-  bgmTheme = theme;
-  bgmCurrentStep = 0;
-  bgmNextNoteTime = ctx.currentTime + 0.05;
-  const gainNode = ensureBgmGain(ctx);
-  const now = ctx.currentTime;
-  gainNode.gain.cancelScheduledValues(now);
-  gainNode.gain.setValueAtTime(gainNode.gain.value, now);
-  gainNode.gain.linearRampToValueAtTime(1.0, now+BGM_FADE_IN_SEC);
-  bgmTimerId = setInterval(bgmSchedulerTick, BGM_LOOKAHEAD_MS);
+  const src=BATTLE_BGM_ASSETS[pieceName];
+  if(!src) return;
+  if(!battleBgmAudio || battleBgmAudio.__chanceboardSrc!==src){
+    cancelBattleBgmFade();
+    if(battleBgmAudio){ battleBgmAudio.pause(); battleBgmAudio.currentTime=0; }
+    const audio=new Audio(src);
+    audio.__chanceboardSrc=src;
+    audio.loop=true;
+    audio.preload='auto';
+    audio.volume=0;
+    battleBgmAudio=audio;
+  }
+  battleBgmAudio.play().catch(()=>{});
+  fadeBattleBgm(battleBgmAudio, BATTLE_BGM_VOLUME, BGM_FADE_IN_SEC);
 }
 
-// Fades the BGM out over `fadeSec` (default BGM_FADE_OUT_SEC), then stops the scheduler.
-// Safe to call even if nothing is currently playing.
+// Fades the active MP3 out and releases it. Safe to call even if nothing is playing.
 function stopBgm(fadeSec){
   const dur = fadeSec!=null ? fadeSec : BGM_FADE_OUT_SEC;
-  const ctx = window.__audioCtx;
-  if(ctx && bgmMasterGain){
-    const now = ctx.currentTime;
-    bgmMasterGain.gain.cancelScheduledValues(now);
-    bgmMasterGain.gain.setValueAtTime(bgmMasterGain.gain.value, now);
-    bgmMasterGain.gain.linearRampToValueAtTime(0.0001, now+dur);
+  const audio=battleBgmAudio;
+  if(audio){
+    fadeBattleBgm(audio, 0, dur, ()=>{
+      if(battleBgmAudio!==audio) return;
+      audio.pause(); audio.currentTime=0; battleBgmAudio=null;
+    });
   }
-  const idToClear = bgmTimerId;
-  if(idToClear){
-    setTimeout(()=>{ if(bgmTimerId===idToClear){ clearInterval(bgmTimerId); bgmTimerId=null; bgmTheme=null; } }, dur*1000+50);
-  }
-  setBgmTension(false); // whatever's ending the BGM (battle end, abandon-match, etc.) also ends the danger layer
+  setBgmTension(false);
 }
 
 // Called at the end of render(), after renderBattle() has (re)built the board DOM. Finds each
