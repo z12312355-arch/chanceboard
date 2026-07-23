@@ -516,7 +516,9 @@
   .character-story-sub{color:var(--muted);font-size:16px;margin-bottom:30px;}
   .character-story-copy{max-width:680px;white-space:pre-line;font-size:clamp(15px,1.5vw,18px);line-height:2;color:#edf0ff;text-shadow:0 2px 5px #000;}
   .character-story-copy:empty:before{content:'尚未收錄角色故事。';color:var(--muted);}
-  #characterStoryBackBtn{position:fixed;top:16px;left:18px;z-index:151;}
+  #characterStoryBackBtn,#characterStoryGalleryBtn{position:fixed;top:16px;z-index:151;}
+  #characterStoryBackBtn{left:18px;}
+  #characterStoryGalleryBtn{left:132px;}
   body.teamlist-mode #app, body.teampick-mode #app, body.gacha-mode #app, body.collection-mode #app, body.shop-mode #app{max-width:1100px;}
   /* 使用者反應召喚結果「左右的空間都浪費掉了」：視窗較寬時，其他hub畫面（隊伍列表等內容
      本來就是直向清單，1100px頂寬夠用）跟召喚結果（多達10張角色卡橫向排開）情況不同，
@@ -2294,7 +2296,7 @@
 </head>
 <body>
 <!-- 發布版本唯一維護位置：每次正式同步／部署時更新日期與當日版次。 -->
-<div id="appVersionBadge" data-version="v2026.07.23-15" aria-label="目前版本">讀取版本…</div>
+<div id="appVersionBadge" data-version="v2026.07.23-17" aria-label="目前版本">讀取版本…</div>
 <script>
 (function showOnlineBuildVersion(){
   const badge=document.getElementById('appVersionBadge'),version=badge.dataset.version||'dev';
@@ -2809,6 +2811,7 @@
   <!-- 角色故事改由圖鑑角色卡開啟；獨立成全版面，避免長文被招式資訊彈窗擠在底部。 -->
   <div id="screen-character-story" class="hidden">
     <button type="button" class="btn small" id="characterStoryBackBtn">◂ 返回圖鑑</button>
+    <button type="button" class="btn small" id="characterStoryGalleryBtn">🖼️ 角色圖片</button>
     <div id="characterStoryArt" class="character-story-art"></div>
     <article class="character-story-page">
       <div class="character-story-kicker">CHARACTER STORY</div>
@@ -3292,6 +3295,8 @@ function applyGlobalGameConfig(config){
     if(source.music&&typeof source.music==='object'){
       next.music=next.music&&typeof next.music==='object'?next.music:{};
       MUSIC_PATH_KEYS.forEach(function(key){if(typeof source.music[key]==='string')next.music[key]=source.music[key].trim();});
+      // 同一路徑的音檔被管理者覆寫時，瀏覽器可能仍使用舊快取；每次讀到新的故事音樂設定都更新媒體版本。
+      storyMusicAssetRevision=Date.now();
     }
     globalStoryModeConfig=next;if(typeof storyRefreshRuntimeConfig==='function')storyRefreshRuntimeConfig();if(typeof storyRefreshFateConfig==='function')storyRefreshFateConfig();if(typeof window.__resetStoryBlocks==='function')window.__resetStoryBlocks();applyStoryModePresentationConfig();
   }
@@ -6355,12 +6360,17 @@ let collectionBgmAudio = null;
 let collectionBgmFadeFrame = 0;
 let storyBgmAudio = null;
 let storyBgmFadeFrame = 0;
+let storyMusicAssetRevision = Date.now();
 let mediaAudioUnlocked = false;
 
 function configuredMusicPath(key, fallback){
   const paths=globalStoryModeConfig&&globalStoryModeConfig.music;
   const value=paths&&typeof paths[key]==='string'?paths[key].trim():'';
   return value||fallback;
+}
+function storyMusicPlaybackSrc(path){
+  const sep=path.includes('?')?'&':'?';
+  return path+sep+'musicv='+encodeURIComponent(String(storyMusicAssetRevision));
 }
 
 function getSfxTemplate(name){
@@ -6474,8 +6484,9 @@ function fadeStoryBgm(audio, targetVolume, durationSec, onDone){
 }
 function startStoryBgm(key){
   if(!musicEnabled) return;
-  const src=configuredMusicPath(key, STORY_BGM_ASSETS[key]);
-  if(!src) return;
+  const configuredSrc=configuredMusicPath(key, STORY_BGM_ASSETS[key]);
+  if(!configuredSrc) return;
+  const src=storyMusicPlaybackSrc(configuredSrc);
   // 後台可在不換段落名稱的情況下修改路徑；必須連同來源比對，否則同一 key 會一直沿用舊音檔。
   if(!storyBgmAudio || storyBgmAudio.__chanceboardKey!==key || storyBgmAudio.__chanceboardSrc!==src){
     cancelStoryBgmFade();
@@ -9026,9 +9037,11 @@ function renderGachaCollectionGrid(){
   refreshCrystalDisplays(); // 收藏標題列的💠願望結晶餘額跟著收藏格一起更新
   fitGachaCardNames();
 }
+let activeCharacterStoryId=null;
 // 圖鑑角色卡直接開啟全版角色故事；原本的招式資訊不再承載長篇故事內容。
 function openCharacterStory(charId){
   const c=CHAR_BY_ID[charId];if(!c||!isCharOwned(charId))return;
+  activeCharacterStoryId=charId;
   document.getElementById('characterStoryTitle').textContent=stripParenAlias(c.name);
   document.getElementById('characterStorySubtitle').textContent=c.title||'';
   document.getElementById('characterStoryContent').textContent=c.story||'';
@@ -9037,6 +9050,7 @@ function openCharacterStory(charId){
   showTopScreen('screen-character-story');
 }
 function closeCharacterStory(){goToCollection();}
+function openCharacterStoryGallery(){if(activeCharacterStoryId)openCharGallery(activeCharacterStoryId);}
 window.openCharacterStory=openCharacterStory;
 // 使用者要求「角色名子如果太長，要縮小讓他能顯示」：原本太長的名字（例如「法斯特．伊艾克斯．
 // 卡薩巴」）靠overflow:hidden+ellipsis截斷成「法斯特．伊艾…」，看不到完整名字。改成用JS量
@@ -12044,6 +12058,7 @@ document.getElementById('gachaPoolInfoCloseBtn').onclick = closeGachaPoolInfo;
 document.getElementById('gachaPoolInfoBackdrop').onclick = function(e){ if(e.target===this) closeGachaPoolInfo(); };
 document.getElementById('lobbyCollectionBtn').onclick = goToCollection;
 document.getElementById('characterStoryBackBtn').onclick = closeCharacterStory;
+document.getElementById('characterStoryGalleryBtn').onclick = openCharacterStoryGallery;
 document.getElementById('lobbyPiecesBtn').onclick = goToPieces;
 document.getElementById('lobbyHuntBtn').onclick = goToHunt;
 [
