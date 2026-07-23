@@ -2296,7 +2296,7 @@
 </head>
 <body>
 <!-- 發布版本唯一維護位置：每次正式同步／部署時更新日期與當日版次。 -->
-<div id="appVersionBadge" data-version="v2026.07.23-19" aria-label="目前版本">讀取版本…</div>
+<div id="appVersionBadge" data-version="v2026.07.23-20" aria-label="目前版本">讀取版本…</div>
 <script>
 (function showOnlineBuildVersion(){
   const badge=document.getElementById('appVersionBadge'),version=badge.dataset.version||'dev';
@@ -10168,15 +10168,21 @@ function storyBlockHeader(blockIndex){
 function storyMusicKey(){
   if(!storyRun || !storyRun.active || storyRun.chapterId!=='chapter1') return null;
   const stage=storyStageForBlock(storyRun.route,storyRun.block);
+  // Boss 音樂不能只靠後台的關卡 role 判斷：舊存檔的 stageDefs 可能沒有 role='boss'，
+  // 但劇本中的【Boss戰】才是實際戰鬥的權威。戰後另外保留剛完成的 Boss 記錄，確保回到
+  // 劇情時一定會進入戰後曲，而不會被一般劇情曲覆蓋。
+  const beats=storyParseBlock(storyRun.block);
+  const bossBeat=beats.findIndex(beat=>beat.type==='battle' && beat.boss===true);
+  const completedBoss=storyRun.lastCompletedBossBattle;
+  const isBossSegment=(stage&&stage.role==='boss')||bossBeat>=0||!!(completedBoss&&Number(completedBoss.block)===Number(storyRun.block));
+  if(isBossSegment){
+    const beforeBoss=bossBeat>=0&&Number(storyRun.beat)<=bossBeat;
+    return beforeBoss?'bossBefore':'bossAfter';
+  }
   if(!stage) return 'pawnStory';
   if(stage.role==='prologue') return storyRun.route==='white' ? 'openingWhite' : 'openingBlack';
   if(Number(stage.number)===5) return 'epilogueOne';
   if(Number(stage.number)===6) return 'epilogueTwo';
-  if(stage.role==='boss'){
-    const beats=storyParseBlock(storyRun.block);
-    const bossBeat=beats.findIndex(beat=>beat.type==='battle' && (beat.kind==='boss' || beat.boss));
-    return bossBeat>=0 && Number(storyRun.beat)<=bossBeat ? 'bossBefore' : 'bossAfter';
-  }
   return 'pawnStory';
 }
 function syncStoryBgm(){
@@ -10632,9 +10638,13 @@ function storyReturnFromBattle(won){
   // 戰敗結算需要的戰況摘要必須在 state 被重置「之前」先取出來。
   const summary=won?null:storyBattleSummary();
   if(won)storyRecordDefeatedMonsters();
+  const completedBattle=storyRun&&storyRun.battlePending?Object.assign({},storyRun.battlePending):null;
   stopBgm(0.3);window.__storyFixedOpponentIds=null;window.__storyBossMonsterId=null;window.__storyBattleKind=null;window.__storyBattleIsBoss=null;window.__storyPieceType=null;window.__storyUnlimitedTime=null;
   document.body.classList.remove('battle-mode','game-over','story-battle-mode');state=newState();showTopScreen('screen-story');
-  if(won){storyRun.beat++;storyRun.battlePending=null;saveStoryProgress();storyFlash('戰鬥勝利');storyRenderCurrent();return;}
+  if(won){
+    if(completedBattle&&completedBattle.boss)storyRun.lastCompletedBossBattle={block:completedBattle.block,beat:completedBattle.beat};
+    storyRun.beat++;storyRun.battlePending=null;saveStoryProgress();storyFlash('戰鬥勝利');storyRenderCurrent();return;
+  }
   // 戰敗：storyRun.beat 仍停在這個 battle beat 上，所以「再挑戰一次」可以直接重跑同一場。
   storyRun.battlePending=null;saveStoryProgress();
   storyRenderCurrent();
