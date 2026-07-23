@@ -387,6 +387,13 @@
   #screen-login #loginSettingsBtn{right:18px;top:16px;bottom:auto;}
   #screen-login #lobbyAdminBtn:hover,#screen-login #loginSettingsBtn:hover{opacity:1;background:rgba(20,22,30,.85);color:var(--text);}
   #screen-login #lobbyAdminBtn .lobby-btn-icon,#screen-login #loginSettingsBtn .lobby-btn-icon{font-size:16px;}
+  /* 所有非戰鬥畫面共用同一顆右上角設定鈕；戰鬥畫面沿用自己的齒輪與即時設定面板。 */
+  #globalSettingsBtn{position:fixed;top:14px;right:16px;z-index:145;width:42px;height:42px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+    background:rgba(20,22,30,.72);border:1px solid var(--line);color:var(--text);cursor:pointer;font-size:18px;box-shadow:0 4px 16px rgba(0,0,0,.3);}
+  #globalSettingsBtn:hover{background:rgba(42,47,65,.92);}
+  #globalSettingsBtn.hidden{display:none;}
+  /* 入口統一後，登入／大廳舊入口不再重複顯示。 */
+  #screen-login #loginSettingsBtn,#screen-lobby #lobbySettingsBtn{display:none;}
 
   /* ============ 大廳 NIKKE/蔚藍檔案式版面（使用者要求「參考市面上的熱門手遊重新設計」）============
      三塊固定區域：頂部橫條（玩家/貨幣＋系統小圖示）、右側直欄（養成/管理）、底部主功能列
@@ -2271,7 +2278,7 @@
 </head>
 <body>
 <!-- 發布版本唯一維護位置：每次正式同步／部署時更新日期與當日版次。 -->
-<div id="appVersionBadge" data-version="v2026.07.23-9" aria-label="目前版本">讀取版本…</div>
+<div id="appVersionBadge" data-version="v2026.07.23-11" aria-label="目前版本">讀取版本…</div>
 <script>
 (function showOnlineBuildVersion(){
   const badge=document.getElementById('appVersionBadge'),version=badge.dataset.version||'dev';
@@ -2330,6 +2337,7 @@
       <span class="lobby-btn-icon">⚙️</span>
     </button>
   </div>
+  <button type="button" id="globalSettingsBtn" title="設定" aria-label="音效／音樂設定">⚙️</button>
 
   <div id="screen-lobby" class="hidden panel">
     <!-- 使用者要求「重新設計大廳，更有手遊的感覺」（暗黑奇幻二次元方向，使用者選的）：
@@ -4095,6 +4103,31 @@ let soundEnabled = ('sound' in __savedSettings) ? __savedSettings.sound : true;
 // Background-music mute toggle — kept independent from soundEnabled so the player can turn
 // off the looping BGM while keeping hit/cast sound effects, or vice versa.
 let musicEnabled = ('music' in __savedSettings) ? __savedSettings.music : true;
+// 帳號資料是非同步回來的；玩家已經在本頁動過設定後，不能再被較晚抵達的舊設定覆寫。
+let audioSettingsTouchedThisSession = false;
+function syncAudioSettingControls(){
+  ['lobbySoundToggle','soundToggle'].forEach(function(id){const el=document.getElementById(id);if(el)el.checked=soundEnabled;});
+  ['lobbyMusicToggle','musicToggle'].forEach(function(id){const el=document.getElementById(id);if(el)el.checked=musicEnabled;});
+}
+function applySoundPreference(enabled){
+  audioSettingsTouchedThisSession=true;
+  soundEnabled=!!enabled;
+  if(soundEnabled)getAudioCtx();
+  syncAudioSettingControls();
+  saveSettings();
+}
+function applyMusicPreference(enabled){
+  audioSettingsTouchedThisSession=true;
+  musicEnabled=!!enabled;
+  syncAudioSettingControls();
+  saveSettings();
+  if(!musicEnabled){stopBgm(0.4);stopLoginBgm(0.4);stopStoryBgm(0.4);return;}
+  const story=document.getElementById('screen-story'),login=document.getElementById('screen-login');
+  if(story&&!story.classList.contains('hidden')&&storyRun&&storyRun.active){
+    if(!storyRun.showChapterTitle&&!storyRun.pendingSplash)syncStoryBgm();
+  }else if(login&&!login.classList.contains('hidden'))startLoginBgm();
+  else if(state&&state.phase!=='select'&&state.phase!=='deckbuild'&&state.selectedPiece)startBgm(state.selectedPiece);
+}
 
 /* ============================================================ */
 /* ============ 大廳／隊伍系統 ============ */
@@ -6311,9 +6344,9 @@ const STORY_BGM_ASSETS = Object.freeze({
   openingBlack: 'music/story/s001/00/black/The Smiling Arbiter.mp3',
   openingWhite: 'music/story/s001/00/white/The Guardian\'s Welcome.mp3',
   pawnStory: 'music/story/s001/01pawn story/En Passant Fantasy.mp3',
-  bossBefore: 'music/story/s001/02pawn boss Before/End of the Ninety-Nine.mp3',
+  bossBefore: 'music/story/s001/02pawn boss Before/Fate\'s Cold Blade.mp3',
   bossBattle: 'music/story/s001/03pawn boss/Echoes of the Totem Spirit.mp3',
-  bossAfter: 'music/story/s001/04pawn boss After/Fate\'s Cold Blade.mp3',
+  bossAfter: 'music/story/s001/04pawn boss After/End of the Ninety-Nine.mp3',
   epilogueOne: 'music/story/s001/05ep1/The Rising Lights (Epilogue).mp3',
   epilogueTwo: 'music/story/s001/06ep2/The Unliving Board.mp3',
 });
@@ -6921,7 +6954,7 @@ function fadeBattleBgm(audio, targetVolume, durationSec, onDone){
 // entry point, while batch simulations remain silent as before.
 function startBgm(pieceName){
   if(window.__fastBattleMode || !musicEnabled) return;
-  if(window.__storyBattleKind==='boss'){
+  if(window.__storyBattleIsBoss===true){
     startStoryBgm('bossBattle');
     return;
   }
@@ -6945,7 +6978,7 @@ function startBgm(pieceName){
 // Fades the active MP3 out and releases it. Safe to call even if nothing is playing.
 function stopBgm(fadeSec){
   const dur = fadeSec!=null ? fadeSec : BGM_FADE_OUT_SEC;
-  if(window.__storyBattleKind==='boss'){
+  if(window.__storyBattleIsBoss===true){
     stopStoryBgm(dur);
     setBgmTension(false);
     return;
@@ -8497,6 +8530,9 @@ function hideAllTopScreens(){
 function showTopScreen(id){
   hideAllTopScreens();
   document.getElementById(id).classList.remove('hidden');
+  // 非戰鬥的每個主介面都使用共用右上角齒輪；戰鬥／結算保留既有的戰鬥齒輪。
+  const globalSettingsBtn=document.getElementById('globalSettingsBtn');
+  if(globalSettingsBtn)globalSettingsBtn.classList.toggle('hidden',id==='screen-battle'||id==='screen-end');
   // 使用者要求「多做一個登入介面，把LOGO/標語資訊改過去」：本來大廳（lobby-mode）自己扛著
   // 「LOGO文字＋按鈕」全部塞在同一個100vh裡，矮視窗會擠到有捲軸/被裁到。獨立出login-mode
   // 這個開場畫面專門放LOGO/標語，大廳騰出空間只放按鈕本身，兩個畫面各自都寬鬆很多。
@@ -10015,8 +10051,9 @@ function storyParseBlock(blockIndex){
     if(line==='（CG結束）'||line==='【CG結束】'){currentCg=null;i++;continue;}
     if(line==='選項'){const choices=[];i++;while(i<lines.length&&/^【.*】$/.test(lines[i])){choices.push(lines[i].slice(1,-1));i++;}push({type:'choice',choices});continue;}
     if(/^【進入戰鬥/.test(line)||line==='【Boss戰】'){
-      const key=String(blockIndex)+':'+battleOrdinal++,configured=(globalStoryModeConfig.battles||{})[key]||{};
-      push(Object.assign({type:'battle',battleKey:key,boss:line==='【Boss戰】',text:line.slice(1,-1)},configured));i++;continue;
+      const key=String(blockIndex)+':'+battleOrdinal++,configured=(globalStoryModeConfig.battles||{})[key]||{},isBoss=line==='【Boss戰】';
+      // Boss 身分只能由劇本文字決定。後台的戰鬥設定只可調整隊伍、敵人與難度，不能把一般戰鬥誤標成 Boss。
+      push(Object.assign({type:'battle',battleKey:key,text:line.slice(1,-1)},configured,{boss:isBoss,kind:isBoss?'boss':'normal'}));i++;continue;
     }
     if(/^【獲得角色：/.test(line)){push({type:'reward',name:(line.match(/^【獲得角色：(.+)】$/)||[])[1]||'新角色'});i++;continue;}
     const score=line.match(/^【(求生意志|守護之心)(＋|－)(\d+)】$/);if(score){push({type:'score',label:score[1],amount:(score[2]==='－'?-1:1)*Number(score[3])});i++;continue;}
@@ -10439,14 +10476,14 @@ function storyStartFourthFromBranch(route,branchBlock,targetStage){const progres
 function storyStartRoute(route){storyShowMenu('stages',route);}
 function storyResumeSaved(){const saved=loadStoryProgress();if(!saved||!saved.active)return;storyRun=saved;storyRun.flags=storyRun.flags||{};storyRun.choices=storyRun.choices||{};storyRun.applied=storyRun.applied||{};storyRun.stageNumber=storyCurrentStageNumber(storyRun);document.getElementById('storyMenu').classList.add('hidden');storyRenderCurrent();}
 function storySelectedTeam(){const id=document.getElementById('storyTeamSelect').value||storySavedTeamId();return teams.find(t=>t.id===id)||teams[0]||null;}
-function storyStartBattle(beat){const config=beat&&typeof beat==='object'?beat:{boss:!!beat},isBoss=config.kind?config.kind==='boss':!!config.boss,team=storySelectedTeam();if(!team){alert('故事戰鬥需要一支隊伍。請先到大廳的「隊伍」建立隊伍，再回故事繼續。');storyExit();goToTeamList();return;}stopStoryBgm(0.35);storyHidePresentation();storyCancelAuto();storySetSavedTeamId(team.id);storyRun.battlePending={block:storyRun.block,beat:storyRun.beat,boss:isBoss,battleKey:config.battleKey||''};saveStoryProgress();state=newState();const requestedSize=Number(config.teamSize)||team.characterIds.length;currentMatchSize=Math.max(1,Math.min(3,requestedSize,team.characterIds.length));twoPlayerMode=false;pendingMode='story';state.selectedIds=team.characterIds.slice(0,currentMatchSize);state.customDeck=expandDeckDraft(team.deck);state.customDeckOrder=shuffle(state.customDeck.map((_,i)=>i));state.selectedIdsB=[];window.__storyBossMonsterId=isBoss?(config.bossMonsterId||'m001'):null;window.__storyFixedOpponentIds=isBoss?null:(Array.isArray(config.opponentIds)&&config.opponentIds.length?config.opponentIds:['020','018','008']).slice(0,currentMatchSize);window.__storyBattleKind=isBoss?'boss':'normal';window.__storyPieceType=config.pieceType||'兵(Pawn)';window.__storyUnlimitedTime=config.unlimitedTime!==false;document.body.classList.add('story-battle-mode');startGame();storyWatchBattle();}
+function storyStartBattle(beat){const config=beat&&typeof beat==='object'?beat:{boss:!!beat},isBoss=config.boss===true,team=storySelectedTeam();if(!team){alert('故事戰鬥需要一支隊伍。請先到大廳的「隊伍」建立隊伍，再回故事繼續。');storyExit();goToTeamList();return;}stopStoryBgm(0.35);storyHidePresentation();storyCancelAuto();storySetSavedTeamId(team.id);storyRun.battlePending={block:storyRun.block,beat:storyRun.beat,boss:isBoss,battleKey:config.battleKey||''};saveStoryProgress();state=newState();const requestedSize=Number(config.teamSize)||team.characterIds.length;currentMatchSize=Math.max(1,Math.min(3,requestedSize,team.characterIds.length));twoPlayerMode=false;pendingMode='story';state.selectedIds=team.characterIds.slice(0,currentMatchSize);state.customDeck=expandDeckDraft(team.deck);state.customDeckOrder=shuffle(state.customDeck.map((_,i)=>i));state.selectedIdsB=[];window.__storyBossMonsterId=isBoss?(config.bossMonsterId||'m001'):null;window.__storyFixedOpponentIds=isBoss?null:(Array.isArray(config.opponentIds)&&config.opponentIds.length?config.opponentIds:['020','018','008']).slice(0,currentMatchSize);window.__storyBattleKind=isBoss?'boss':'normal';window.__storyBattleIsBoss=isBoss;window.__storyPieceType=config.pieceType||'兵(Pawn)';window.__storyUnlimitedTime=config.unlimitedTime!==false;document.body.classList.add('story-battle-mode');startGame();storyWatchBattle();}
 function storyWatchBattle(){if(storyBattleTimer)clearInterval(storyBattleTimer);storyBattleTimer=setInterval(function(){if(state.phase!=='end')return;clearInterval(storyBattleTimer);storyBattleTimer=null;const won=state.winner==='A';setTimeout(()=>storyReturnFromBattle(won),650);},250);}
 function storyReturnFromBattle(won){
   // 戰敗結算需要的戰況摘要必須在 state 被重置「之前」先取出來。
   const summary=won?null:storyBattleSummary();
   if(won)storyRecordDefeatedMonsters();
-  window.__storyFixedOpponentIds=null;window.__storyBossMonsterId=null;window.__storyBattleKind=null;window.__storyPieceType=null;window.__storyUnlimitedTime=null;
-  stopBgm(0.3);document.body.classList.remove('battle-mode','game-over','story-battle-mode');state=newState();showTopScreen('screen-story');
+  stopBgm(0.3);window.__storyFixedOpponentIds=null;window.__storyBossMonsterId=null;window.__storyBattleKind=null;window.__storyBattleIsBoss=null;window.__storyPieceType=null;window.__storyUnlimitedTime=null;
+  document.body.classList.remove('battle-mode','game-over','story-battle-mode');state=newState();showTopScreen('screen-story');
   if(won){storyRun.beat++;storyRun.battlePending=null;saveStoryProgress();storyFlash('戰鬥勝利');storyRenderCurrent();return;}
   // 戰敗：storyRun.beat 仍停在這個 battle beat 上，所以「再挑戰一次」可以直接重跑同一場。
   storyRun.battlePending=null;saveStoryProgress();
@@ -10746,7 +10783,7 @@ function resetGame(){
   // 「再玩一局」直接回到同一種模式（單人/雙人）的挑隊伍畫面，不用每次都繞回大廳重新點一次；
   // modeToResume 是 null 代表這場對戰不是從大廳的單人/雙人對戰按鈕進來的（理論上不會發生，防呆）。
   if(modeToResume==='story'){
-    window.__storyFixedOpponentIds=null;window.__storyBossMonsterId=null;window.__storyBattleKind=null;window.__storyPieceType=null;window.__storyUnlimitedTime=null;
+    window.__storyFixedOpponentIds=null;window.__storyBossMonsterId=null;window.__storyBattleKind=null;window.__storyBattleIsBoss=null;window.__storyPieceType=null;window.__storyUnlimitedTime=null;
     showTopScreen('screen-story');storyRenderCurrent();
   } else if(modeToResume) goToTeamPick(modeToResume); else goToLobby();
 }
@@ -11994,7 +12031,7 @@ document.getElementById('teampickConfirmBtn').onclick = confirmTeamPick;
 // soundEnabled/musicEnabled 設定，只是換一組獨立的 DOM 元素（不能共用同一個 id），開啟時把目前的
 // 值同步到 checkbox 上，兩邊改的都是同一份全域變數＋同一個 saveSettings()，不會互相衝突或不同步。
 (function(){
-  const buttons = [document.getElementById('lobbySettingsBtn'),document.getElementById('loginSettingsBtn')].filter(Boolean);
+  const buttons = [document.getElementById('globalSettingsBtn'),document.getElementById('lobbySettingsBtn'),document.getElementById('loginSettingsBtn')].filter(Boolean);
   const backdrop = document.getElementById('lobbySettingsBackdrop');
   const closeBtn = document.getElementById('lobbySettingsCloseBtn');
   const soundBox = document.getElementById('lobbySoundToggle');
@@ -12020,28 +12057,10 @@ document.getElementById('teampickConfirmBtn').onclick = confirmTeamPick;
     nameSave.disabled=false;
   };
   soundBox.onchange = function(){
-    soundEnabled = this.checked;
-    if(soundEnabled) getAudioCtx();
-    saveSettings();
+    applySoundPreference(this.checked);
   };
   musicBox.onchange = function(){
-    musicEnabled = this.checked;
-    saveSettings();
-    if(musicEnabled){
-      const story=document.getElementById('screen-story');
-      const login=document.getElementById('screen-login');
-      if(story && !story.classList.contains('hidden') && storyRun && storyRun.active){
-        syncStoryBgm();
-      } else if(login && !login.classList.contains('hidden')){
-        startLoginBgm();
-      } else if(state && state.phase!=='select' && state.phase!=='deckbuild' && state.selectedPiece){
-        startBgm(state.selectedPiece);
-      }
-    } else {
-      stopBgm(0.4);
-      stopLoginBgm(0.4);
-      stopStoryBgm(0.4);
-    }
+    applyMusicPreference(this.checked);
   };
 })();
 document.getElementById('actConfirmBtn').onclick = confirmAct;
@@ -12097,28 +12116,10 @@ syncAutoBattleSpeedBtn();
 document.getElementById('soundToggle').checked = soundEnabled;
 document.getElementById('musicToggle').checked = musicEnabled;
 document.getElementById('soundToggle').onchange = function(){
-  soundEnabled = this.checked;
-  if(soundEnabled) getAudioCtx();
-  saveSettings();
+  applySoundPreference(this.checked);
 };
 document.getElementById('musicToggle').onchange = function(){
-  musicEnabled = this.checked;
-  saveSettings();
-  if(musicEnabled){
-    const story=document.getElementById('screen-story');
-    const login=document.getElementById('screen-login');
-    if(story && !story.classList.contains('hidden') && storyRun && storyRun.active){
-      syncStoryBgm();
-    } else if(login && !login.classList.contains('hidden')){
-      startLoginBgm();
-    } else if(state && state.phase!=='select' && state.phase!=='deckbuild' && state.selectedPiece){
-      startBgm(state.selectedPiece);
-    }
-  } else {
-    stopBgm(0.4);
-    stopLoginBgm(0.4);
-    stopStoryBgm(0.4);
-  }
+  applyMusicPreference(this.checked);
 };
 // 設定齒輪鈕：點擊切換面板開/關；點面板本身不關（要能點裡面的 checkbox），點面板以外的任何地方
 // 才關閉——跟 moveInfo／battleLog 那種「有獨立遮罩、點遮罩關閉」的彈窗不一樣，這裡沒有遮罩，所以
@@ -15539,8 +15540,11 @@ document.getElementById('admin1v1BattleBtn').onclick=function(){ closeAdminPanel
     setTutorialStepLocal(typeof p.tutorialStep==='string'?p.tutorialStep:(p.tutorialDone?'completed':'intro'));
     if(p.settings&&typeof p.settings==='object'){
       if(Number.isInteger(p.settings.speedIdx)) autoBattleSpeedIdx=p.settings.speedIdx;
+      if(!audioSettingsTouchedThisSession){
       if(typeof p.settings.sound==='boolean') soundEnabled=p.settings.sound;
       if(typeof p.settings.music==='boolean') musicEnabled=p.settings.music;
+      syncAudioSettingControls();
+      }
     }
     try{
       localStorage.setItem(TUTORIAL_DONE_KEY,p.tutorialDone?'1':'');
