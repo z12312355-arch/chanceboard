@@ -395,7 +395,7 @@
   .screen-settings-slot{min-height:42px;display:flex;justify-content:flex-end;align-items:center;margin:0 0 10px;}
   #screen-login #globalSettingsBtn{position:absolute;top:16px;right:18px;z-index:3;}
   #screen-character-story #globalSettingsBtn{position:fixed;top:16px;right:18px;z-index:151;}
-  #screen-story #globalSettingsBtn{position:fixed;top:16px;right:18px;z-index:150;width:38px;height:38px;font-size:16px;}
+  #screen-story #globalSettingsBtn{position:static;z-index:auto;width:38px;height:38px;font-size:16px;flex:0 0 38px;}
   #screen-lobby #lobbyTopIcons #globalSettingsBtn{width:38px;height:38px;font-size:16px;box-shadow:none;}
   #screen-online .online-head #globalSettingsBtn{width:34px;height:34px;font-size:16px;box-shadow:none;}
   /* 入口統一後，登入／大廳舊入口不再重複顯示。 */
@@ -2301,7 +2301,7 @@
 </head>
 <body>
 <!-- 發布版本唯一維護位置：每次正式同步／部署時更新日期與當日版次。 -->
-<div id="appVersionBadge" data-version="v2026.07.23-25" aria-label="目前版本">讀取版本…</div>
+<div id="appVersionBadge" data-version="v2026.07.23-26" aria-label="目前版本">讀取版本…</div>
 <script>
 (function showOnlineBuildVersion(){
   const badge=document.getElementById('appVersionBadge'),version=badge.dataset.version||'dev';
@@ -8702,6 +8702,17 @@ const TOP_SCREEN_IDS = ['screen-login','screen-lobby','screen-story','screen-tea
 function hideAllTopScreens(){
   TOP_SCREEN_IDS.forEach(id=>{ const el=document.getElementById(id); if(el) el.classList.add('hidden'); });
 }
+function placeStorySettingsButton(menuVisible){
+  const button=document.getElementById('globalSettingsBtn');
+  if(!button)return;
+  if(menuVisible){
+    const menuHead=document.querySelector('#storyMenu .story-menu-head');
+    if(menuHead)menuHead.appendChild(button);
+    return;
+  }
+  const topbar=document.getElementById('storyTopbar'),exit=document.getElementById('storyExitBtn');
+  if(topbar)topbar.insertBefore(button,exit||null);
+}
 function placeSettingsButton(screenId){
   const button=document.getElementById('globalSettingsBtn');
   if(!button)return;
@@ -8710,8 +8721,11 @@ function placeSettingsButton(screenId){
   let target=null;
   // 大廳實際使用的是 #lobbyTopIcons（不是舊的 class 名），先前因此找不到掛載點而整個消失。
   if(screenId==='screen-lobby')target=screen.querySelector('#lobbyTopIcons');
-  // 故事的頂部列會隨劇情／章節選單切換而隱藏；直接掛在故事畫面，固定維持右上角可用。
-  else if(screenId==='screen-story')target=screen;
+  // 故事頁依目前狀態放進章節選單標題列或正文頂部列，避免浮動定位蓋住「返回大廳」。
+  else if(screenId==='screen-story'){
+    placeStorySettingsButton(!document.getElementById('storyMenu').classList.contains('hidden'));
+    target=button.parentElement;
+  }
   else if(screenId==='screen-online')target=screen.querySelector('.online-head');
   else if(screenId==='screen-login'||screenId==='screen-character-story')target=screen;
   else{
@@ -10226,6 +10240,7 @@ function storyShowMenu(view,route){
   // 無論從大廳進入、或從正文返回章節／關卡頁，只要選單顯示就停止所有背景音樂。
   stopStoryBgm(0.35);stopCharacterBgm(0.35);
   storyHidePresentation();document.getElementById('storyLogOverlay').classList.add('hidden');document.getElementById('storyMenu').classList.remove('hidden');document.getElementById('storyDialog').classList.add('hidden');document.getElementById('storyChoices').classList.add('hidden');storyBuildTeamOptions();
+  placeStorySettingsButton(true);
   storySetMenuView(view||'chapters',route||null);
 }
 async function openStoryMode(preview){const opts=preview&&typeof preview==='object'?preview:null;storyPreviewMode=preview===true||!!(opts&&opts.preview);storyPreviewSkipBattles=opts?opts.skipBattles!==false:true;storyAutoMode=false;storySpeed=1;storyDialogueLog=[];storyUpdateAutoButton();showTopScreen('screen-story');storyShowMenu('chapters');const msg=document.getElementById('storyLoadMessage');msg.textContent='';try{await storyEnsureSource();if(storyPreviewMode)msg.textContent='🧪 後台預覽模式：不儲存進度、不發放獎勵，'+(storyPreviewSkipBattles?'戰鬥會自動跳過。':'戰鬥將正常進行。');}catch(e){msg.textContent='❌ '+e.message;}}
@@ -10512,7 +10527,7 @@ function storySetSpeakerAvatar(speaker){
   else show();
 }
 function storyRenderCurrent(){
-  if(!storyRun||!storyRun.active){stopStoryBgm(0.35);return storyShowMenu();}storyCancelReveal();storyCancelAuto();document.getElementById('storyMenu').classList.add('hidden');document.getElementById('storyChapterTitle').textContent=storyBlockHeader(storyRun.block);document.getElementById('storyRouteBadge').textContent=storyRouteText(storyRun.route)+(storyPreviewMode?'・預覽':storyRun.replayMode?'・命運回溯':'');
+  if(!storyRun||!storyRun.active){stopStoryBgm(0.35);return storyShowMenu();}storyCancelReveal();storyCancelAuto();document.getElementById('storyMenu').classList.add('hidden');placeStorySettingsButton(false);document.getElementById('storyChapterTitle').textContent=storyBlockHeader(storyRun.block);document.getElementById('storyRouteBadge').textContent=storyRouteText(storyRun.route)+(storyPreviewMode?'・預覽':storyRun.replayMode?'・命運回溯':'');
   storyMarkBlockVisited(storyRun.route,storyRun.block);
   const dialog=document.getElementById('storyDialog'),choices=document.getElementById('storyChoices'),cinematic=document.getElementById('storyCinematic'),narration=document.getElementById('storyNarration'),playerLine=document.getElementById('storyPlayerLine'),splash=document.getElementById('storyChapterSplash'),motto=document.getElementById('storyMotto'),complete=document.getElementById('storyComplete');
   [dialog,choices,cinematic,narration,playerLine,splash,motto,complete].forEach(el=>el.classList.add('hidden'));dialog.classList.remove('context-narration');document.getElementById('storySpeakerRow').classList.remove('hidden');cinematic.innerHTML='';narration.innerHTML='';playerLine.innerHTML='';
