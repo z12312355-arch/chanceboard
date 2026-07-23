@@ -387,11 +387,17 @@
   #screen-login #loginSettingsBtn{right:18px;top:16px;bottom:auto;}
   #screen-login #lobbyAdminBtn:hover,#screen-login #loginSettingsBtn:hover{opacity:1;background:rgba(20,22,30,.85);color:var(--text);}
   #screen-login #lobbyAdminBtn .lobby-btn-icon,#screen-login #loginSettingsBtn .lobby-btn-icon{font-size:16px;}
-  /* 所有非戰鬥畫面共用同一顆右上角設定鈕；戰鬥畫面沿用自己的齒輪與即時設定面板。 */
-  #globalSettingsBtn{position:fixed;top:14px;right:16px;z-index:149;width:42px;height:42px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+  /* 共用設定鈕會由 JS 放進目前畫面的標題列／工具列，不再固定浮在畫面上遮住其他操作。 */
+  #globalSettingsBtn{position:static;z-index:auto;width:42px;height:42px;border-radius:50%;display:flex;align-items:center;justify-content:center;
     background:rgba(20,22,30,.72);border:1px solid var(--line);color:var(--text);cursor:pointer;font-size:18px;box-shadow:0 4px 16px rgba(0,0,0,.3);}
   #globalSettingsBtn:hover{background:rgba(42,47,65,.92);}
   #globalSettingsBtn.hidden{display:none;}
+  .screen-settings-slot{min-height:42px;display:flex;justify-content:flex-end;align-items:center;margin:0 0 10px;}
+  #screen-login #globalSettingsBtn{position:absolute;top:16px;right:18px;z-index:3;}
+  #screen-character-story #globalSettingsBtn{position:fixed;top:16px;right:18px;z-index:151;}
+  #storyTopbar #globalSettingsBtn{width:34px;height:34px;font-size:16px;flex:0 0 auto;}
+  #screen-lobby .lobby-top-icons #globalSettingsBtn{width:38px;height:38px;font-size:16px;box-shadow:none;}
+  #screen-online .online-head #globalSettingsBtn{width:34px;height:34px;font-size:16px;box-shadow:none;}
   /* 入口統一後，登入／大廳舊入口不再重複顯示。 */
   #screen-login #loginSettingsBtn,#screen-lobby #lobbySettingsBtn{display:none;}
 
@@ -2288,7 +2294,7 @@
 </head>
 <body>
 <!-- 發布版本唯一維護位置：每次正式同步／部署時更新日期與當日版次。 -->
-<div id="appVersionBadge" data-version="v2026.07.23-13" aria-label="目前版本">讀取版本…</div>
+<div id="appVersionBadge" data-version="v2026.07.23-14" aria-label="目前版本">讀取版本…</div>
 <script>
 (function showOnlineBuildVersion(){
   const badge=document.getElementById('appVersionBadge'),version=badge.dataset.version||'dev';
@@ -8542,12 +8548,28 @@ const TOP_SCREEN_IDS = ['screen-login','screen-lobby','screen-story','screen-tea
 function hideAllTopScreens(){
   TOP_SCREEN_IDS.forEach(id=>{ const el=document.getElementById(id); if(el) el.classList.add('hidden'); });
 }
+function placeSettingsButton(screenId){
+  const button=document.getElementById('globalSettingsBtn');
+  if(!button)return;
+  if(screenId==='screen-battle'||screenId==='screen-end'){button.classList.add('hidden');return;}
+  const screen=document.getElementById(screenId);if(!screen)return;
+  let target=null;
+  if(screenId==='screen-lobby')target=screen.querySelector('.lobby-top-icons');
+  else if(screenId==='screen-story')target=document.getElementById('storyTopbar');
+  else if(screenId==='screen-online')target=screen.querySelector('.online-head');
+  else if(screenId==='screen-login'||screenId==='screen-character-story')target=screen;
+  else{
+    target=screen.querySelector(':scope > .screen-settings-slot');
+    if(!target){target=document.createElement('div');target.className='screen-settings-slot';screen.insertBefore(target,screen.firstChild);}
+  }
+  if(target)target.appendChild(button);
+  button.classList.remove('hidden');
+}
 function showTopScreen(id){
   hideAllTopScreens();
   document.getElementById(id).classList.remove('hidden');
-  // 非戰鬥的每個主介面都使用共用右上角齒輪；戰鬥／結算保留既有的戰鬥齒輪。
-  const globalSettingsBtn=document.getElementById('globalSettingsBtn');
-  if(globalSettingsBtn)globalSettingsBtn.classList.toggle('hidden',id==='screen-battle'||id==='screen-end');
+  // 非戰鬥畫面把設定鈕放進自己的標題列／工具列；戰鬥／結算保留戰鬥專用齒輪。
+  placeSettingsButton(id);
   // 使用者要求「多做一個登入介面，把LOGO/標語資訊改過去」：本來大廳（lobby-mode）自己扛著
   // 「LOGO文字＋按鈕」全部塞在同一個100vh裡，矮視窗會擠到有捲軸/被裁到。獨立出login-mode
   // 這個開場畫面專門放LOGO/標語，大廳騰出空間只放按鈕本身，兩個畫面各自都寬鬆很多。
@@ -15185,6 +15207,7 @@ document.getElementById('admin1v1BattleBtn').onclick=function(){ closeAdminPanel
       const actionLabel=action==='create'?'建立房間':(action==='join'?'加入房間':'進入房間大廳');
       onlineScreen.innerHTML='<div class="online-head"><div><div class="online-title">🌐 '+actionLabel+'</div><div class="online-sub">先選擇本次對戰使用的隊伍</div></div><button class="btn small" id="onlineTeamPickBack">✕</button></div>'+ 
         '<div class="online-body"><h2>選擇你的隊伍</h2><p>選擇後才會'+actionLabel+'，不會直接開始本機遊戲。</p><div id="onlineTeamPickList" class="online-room-list"></div><button class="btn primary" id="onlineTeamPickConfirm" disabled>確認'+actionLabel+'</button></div>';
+      placeSettingsButton('screen-online');
       const list=document.getElementById('onlineTeamPickList');
       const confirm=document.getElementById('onlineTeamPickConfirm');
       let selectedTeam=loadOnlineSelectedTeam();
@@ -15439,6 +15462,7 @@ document.getElementById('admin1v1BattleBtn').onclick=function(){ closeAdminPanel
           '<div id="onlineRoomList" class="online-room-list">'+roomCardsHtml()+'</div>';
       }
       onlineScreen.innerHTML='<div class="online-head"><div><div class="online-title">⚔️ 決鬥</div><div class="online-sub">即時對戰大廳</div></div><button class="btn small" id="onlineBack">✕</button></div><div class="online-body">'+body+'</div>';
+      placeSettingsButton('screen-online');
       document.getElementById('onlineBack').onclick=function(){ onlineInRoom?leaveOnlineRoom():goToLobby(); };
       const create=document.getElementById('onlineCreate'); if(create) create.onclick=createOnlineRoom;
       const roomNameInput=document.getElementById('onlineRoomName'); if(roomNameInput) roomNameInput.oninput=function(){ onlineDraftRoomName=this.value.slice(0,24); };
