@@ -2269,7 +2269,7 @@
 </head>
 <body>
 <!-- 發布版本唯一維護位置：每次正式同步／部署時更新日期與當日版次。 -->
-<div id="appVersionBadge" data-version="v2026.07.23-3" aria-label="目前版本">讀取版本…</div>
+<div id="appVersionBadge" data-version="v2026.07.23-4" aria-label="目前版本">讀取版本…</div>
 <script>
 (function showOnlineBuildVersion(){
   const badge=document.getElementById('appVersionBadge'),version=badge.dataset.version||'dev';
@@ -6293,11 +6293,24 @@ const BATTLE_BGM_ASSETS = Object.freeze({
 const BATTLE_BGM_VOLUME = 0.38;
 const LOGIN_BGM_ASSET = 'music/login/Gambit of the Grandmaster - Eternal Gambit - Treblo.mp3';
 const LOGIN_BGM_VOLUME = 0.3;
+const STORY_BGM_ASSETS = Object.freeze({
+  openingBlack: 'music/story/s001/00/black/The Smiling Arbiter.mp3',
+  openingWhite: 'music/story/s001/00/white/The Guardian\'s Welcome.mp3',
+  pawnStory: 'music/story/s001/01pawn story/En Passant Fantasy.mp3',
+  bossBefore: 'music/story/s001/02pawn boss Before/End of the Ninety-Nine.mp3',
+  bossBattle: 'music/story/s001/03pawn boss/Echoes of the Totem Spirit.mp3',
+  bossAfter: 'music/story/s001/04pawn boss After/Fate\'s Cold Blade.mp3',
+  epilogueOne: 'music/story/s001/05ep1/The Rising Lights (Epilogue).mp3',
+  epilogueTwo: 'music/story/s001/06ep2/The Unliving Board.mp3',
+});
+const STORY_BGM_VOLUME = 0.34;
 const __sfxTemplates = new Map();
 let battleBgmAudio = null;
 let battleBgmFadeFrame = 0;
 let loginBgmAudio = null;
 let loginBgmFadeFrame = 0;
+let storyBgmAudio = null;
+let storyBgmFadeFrame = 0;
 
 function getSfxTemplate(name){
   const src = SFX_ASSETS[name];
@@ -6355,6 +6368,47 @@ function stopLoginBgm(fadeSec){
   fadeLoginBgm(audio, 0, fadeSec!=null ? fadeSec : BGM_FADE_OUT_SEC, ()=>{
     if(loginBgmAudio!==audio) return;
     audio.pause(); audio.currentTime=0; loginBgmAudio=null;
+  });
+}
+function cancelStoryBgmFade(){
+  if(storyBgmFadeFrame){ cancelAnimationFrame(storyBgmFadeFrame); storyBgmFadeFrame=0; }
+}
+function fadeStoryBgm(audio, targetVolume, durationSec, onDone){
+  cancelStoryBgmFade();
+  const from=Math.max(0,Math.min(1,audio.volume)), to=Math.max(0,Math.min(1,targetVolume));
+  const duration=Math.max(0,(durationSec||0)*1000);
+  if(!duration || from===to){ audio.volume=to; if(onDone) onDone(); return; }
+  const started=performance.now();
+  const tick=now=>{
+    const progress=Math.min(1,(now-started)/duration);
+    audio.volume=from+(to-from)*progress;
+    if(progress<1){ storyBgmFadeFrame=requestAnimationFrame(tick); }
+    else { storyBgmFadeFrame=0; if(onDone) onDone(); }
+  };
+  storyBgmFadeFrame=requestAnimationFrame(tick);
+}
+function startStoryBgm(key){
+  if(!musicEnabled) return;
+  const src=STORY_BGM_ASSETS[key];
+  if(!src) return;
+  if(!storyBgmAudio || storyBgmAudio.__chanceboardKey!==key){
+    cancelStoryBgmFade();
+    if(storyBgmAudio){ storyBgmAudio.pause(); storyBgmAudio.currentTime=0; }
+    storyBgmAudio=new Audio(src);
+    storyBgmAudio.__chanceboardKey=key;
+    storyBgmAudio.loop=true;
+    storyBgmAudio.preload='auto';
+    storyBgmAudio.volume=0;
+  }
+  storyBgmAudio.play().catch(()=>{});
+  fadeStoryBgm(storyBgmAudio, STORY_BGM_VOLUME, BGM_FADE_IN_SEC);
+}
+function stopStoryBgm(fadeSec){
+  const audio=storyBgmAudio;
+  if(!audio) return;
+  fadeStoryBgm(audio, 0, fadeSec!=null ? fadeSec : BGM_FADE_OUT_SEC, ()=>{
+    if(storyBgmAudio!==audio) return;
+    audio.pause(); audio.currentTime=0; storyBgmAudio=null;
   });
 }
 
@@ -6832,6 +6886,11 @@ function fadeBattleBgm(audio, targetVolume, durationSec, onDone){
 // entry point, while batch simulations remain silent as before.
 function startBgm(pieceName){
   if(window.__fastBattleMode || !musicEnabled) return;
+  if(window.__storyBattleKind==='boss'){
+    startStoryBgm('bossBattle');
+    return;
+  }
+  stopStoryBgm(0.25);
   const src=BATTLE_BGM_ASSETS[pieceName];
   if(!src) return;
   if(!battleBgmAudio || battleBgmAudio.__chanceboardSrc!==src){
@@ -6851,6 +6910,11 @@ function startBgm(pieceName){
 // Fades the active MP3 out and releases it. Safe to call even if nothing is playing.
 function stopBgm(fadeSec){
   const dur = fadeSec!=null ? fadeSec : BGM_FADE_OUT_SEC;
+  if(window.__storyBattleKind==='boss'){
+    stopStoryBgm(dur);
+    setBgmTension(false);
+    return;
+  }
   const audio=battleBgmAudio;
   if(audio){
     fadeBattleBgm(audio, 0, dur, ()=>{
@@ -8404,6 +8468,7 @@ function showTopScreen(id){
   document.body.classList.toggle('login-mode', id==='screen-login');
   if(id==='screen-login') startLoginBgm();
   else stopLoginBgm(0.35);
+  if(id!=='screen-story') stopStoryBgm(0.35);
   document.body.classList.toggle('lobby-mode', id==='screen-lobby');
   document.body.classList.toggle('story-mode', id==='screen-story');
   // 使用者接著要求「隊伍介面也改成手遊的風格」：同一套滿版沉浸式背景手法（沿用大廳同一張
@@ -9862,6 +9927,7 @@ function storySetMenuView(view,route){
   storyUpdateChapterStatus();
 }
 function storyShowMenu(view,route){
+  if(!storyRun || !storyRun.active) stopStoryBgm(0.35);
   storyHidePresentation();document.getElementById('storyLogOverlay').classList.add('hidden');document.getElementById('storyMenu').classList.remove('hidden');document.getElementById('storyDialog').classList.add('hidden');document.getElementById('storyChoices').classList.add('hidden');storyBuildTeamOptions();
   storySetMenuView(view||'chapters',route||null);
 }
@@ -9874,6 +9940,24 @@ function storyBlockHeader(blockIndex){
   // 標題以後台「關卡設定」的完整名稱為準；文本第一行只當作段落識別（改名不用動劇情文本）。
   const stage=storyRun&&storyRun.route?storyStageForBlock(storyRun.route,blockIndex):null;
   return stage&&Number(stage.startBlock)===Number(blockIndex)&&stage.title?stage.title:first;
+}
+function storyMusicKey(){
+  if(!storyRun || !storyRun.active || storyRun.chapterId!=='chapter1') return null;
+  const stage=storyStageForBlock(storyRun.route,storyRun.block);
+  if(!stage) return 'pawnStory';
+  if(stage.role==='prologue') return storyRun.route==='white' ? 'openingWhite' : 'openingBlack';
+  if(Number(stage.number)===5) return 'epilogueOne';
+  if(Number(stage.number)===6) return 'epilogueTwo';
+  if(stage.role==='boss'){
+    const beats=storyParseBlock(storyRun.block);
+    const bossBeat=beats.findIndex(beat=>beat.type==='battle' && (beat.kind==='boss' || beat.boss));
+    return bossBeat>=0 && Number(storyRun.beat)<=bossBeat ? 'bossBefore' : 'bossAfter';
+  }
+  return 'pawnStory';
+}
+function syncStoryBgm(){
+  const key=storyMusicKey();
+  if(key) startStoryBgm(key); else stopStoryBgm(0.35);
 }
 function storyIsSpeaker(lines,i){return i+1<lines.length&&/^「/.test(lines[i+1])&&!/^「/.test(lines[i]);}
 function storyStripQuote(line){return line.replace(/^「/,'').replace(/」$/,'');}
@@ -10115,7 +10199,7 @@ function storySetSpeakerAvatar(speaker){
   else show();
 }
 function storyRenderCurrent(){
-  if(!storyRun||!storyRun.active)return storyShowMenu();storyCancelReveal();storyCancelAuto();document.getElementById('storyMenu').classList.add('hidden');document.getElementById('storyChapterTitle').textContent=storyBlockHeader(storyRun.block);document.getElementById('storyRouteBadge').textContent=storyRouteText(storyRun.route)+(storyPreviewMode?'・預覽':storyRun.replayMode?'・命運回溯':'');
+  if(!storyRun||!storyRun.active){stopStoryBgm(0.35);return storyShowMenu();}syncStoryBgm();storyCancelReveal();storyCancelAuto();document.getElementById('storyMenu').classList.add('hidden');document.getElementById('storyChapterTitle').textContent=storyBlockHeader(storyRun.block);document.getElementById('storyRouteBadge').textContent=storyRouteText(storyRun.route)+(storyPreviewMode?'・預覽':storyRun.replayMode?'・命運回溯':'');
   storyMarkBlockVisited(storyRun.route,storyRun.block);
   const dialog=document.getElementById('storyDialog'),choices=document.getElementById('storyChoices'),cinematic=document.getElementById('storyCinematic'),narration=document.getElementById('storyNarration'),playerLine=document.getElementById('storyPlayerLine'),splash=document.getElementById('storyChapterSplash'),motto=document.getElementById('storyMotto'),complete=document.getElementById('storyComplete');
   [dialog,choices,cinematic,narration,playerLine,splash,motto,complete].forEach(el=>el.classList.add('hidden'));dialog.classList.remove('context-narration');document.getElementById('storySpeakerRow').classList.remove('hidden');cinematic.innerHTML='';narration.innerHTML='';playerLine.innerHTML='';
@@ -10316,7 +10400,7 @@ function storyStartFourthFromBranch(route,branchBlock,targetStage){const progres
 function storyStartRoute(route){storyShowMenu('stages',route);}
 function storyResumeSaved(){const saved=loadStoryProgress();if(!saved||!saved.active)return;storyRun=saved;storyRun.flags=storyRun.flags||{};storyRun.choices=storyRun.choices||{};storyRun.applied=storyRun.applied||{};storyRun.stageNumber=storyCurrentStageNumber(storyRun);document.getElementById('storyMenu').classList.add('hidden');storyRenderCurrent();}
 function storySelectedTeam(){const id=document.getElementById('storyTeamSelect').value||storySavedTeamId();return teams.find(t=>t.id===id)||teams[0]||null;}
-function storyStartBattle(beat){const config=beat&&typeof beat==='object'?beat:{boss:!!beat},isBoss=config.kind?config.kind==='boss':!!config.boss,team=storySelectedTeam();if(!team){alert('故事戰鬥需要一支隊伍。請先到大廳的「隊伍」建立隊伍，再回故事繼續。');storyExit();goToTeamList();return;}storyHidePresentation();storyCancelAuto();storySetSavedTeamId(team.id);storyRun.battlePending={block:storyRun.block,beat:storyRun.beat,boss:isBoss,battleKey:config.battleKey||''};saveStoryProgress();state=newState();const requestedSize=Number(config.teamSize)||team.characterIds.length;currentMatchSize=Math.max(1,Math.min(3,requestedSize,team.characterIds.length));twoPlayerMode=false;pendingMode='story';state.selectedIds=team.characterIds.slice(0,currentMatchSize);state.customDeck=expandDeckDraft(team.deck);state.customDeckOrder=shuffle(state.customDeck.map((_,i)=>i));state.selectedIdsB=[];window.__storyBossMonsterId=isBoss?(config.bossMonsterId||'m001'):null;window.__storyFixedOpponentIds=isBoss?null:(Array.isArray(config.opponentIds)&&config.opponentIds.length?config.opponentIds:['020','018','008']).slice(0,currentMatchSize);window.__storyBattleKind=isBoss?'boss':'normal';window.__storyPieceType=config.pieceType||'兵(Pawn)';window.__storyUnlimitedTime=config.unlimitedTime!==false;document.body.classList.add('story-battle-mode');startGame();storyWatchBattle();}
+function storyStartBattle(beat){const config=beat&&typeof beat==='object'?beat:{boss:!!beat},isBoss=config.kind?config.kind==='boss':!!config.boss,team=storySelectedTeam();if(!team){alert('故事戰鬥需要一支隊伍。請先到大廳的「隊伍」建立隊伍，再回故事繼續。');storyExit();goToTeamList();return;}stopStoryBgm(0.35);storyHidePresentation();storyCancelAuto();storySetSavedTeamId(team.id);storyRun.battlePending={block:storyRun.block,beat:storyRun.beat,boss:isBoss,battleKey:config.battleKey||''};saveStoryProgress();state=newState();const requestedSize=Number(config.teamSize)||team.characterIds.length;currentMatchSize=Math.max(1,Math.min(3,requestedSize,team.characterIds.length));twoPlayerMode=false;pendingMode='story';state.selectedIds=team.characterIds.slice(0,currentMatchSize);state.customDeck=expandDeckDraft(team.deck);state.customDeckOrder=shuffle(state.customDeck.map((_,i)=>i));state.selectedIdsB=[];window.__storyBossMonsterId=isBoss?(config.bossMonsterId||'m001'):null;window.__storyFixedOpponentIds=isBoss?null:(Array.isArray(config.opponentIds)&&config.opponentIds.length?config.opponentIds:['020','018','008']).slice(0,currentMatchSize);window.__storyBattleKind=isBoss?'boss':'normal';window.__storyPieceType=config.pieceType||'兵(Pawn)';window.__storyUnlimitedTime=config.unlimitedTime!==false;document.body.classList.add('story-battle-mode');startGame();storyWatchBattle();}
 function storyWatchBattle(){if(storyBattleTimer)clearInterval(storyBattleTimer);storyBattleTimer=setInterval(function(){if(state.phase!=='end')return;clearInterval(storyBattleTimer);storyBattleTimer=null;const won=state.winner==='A';setTimeout(()=>storyReturnFromBattle(won),650);},250);}
 function storyReturnFromBattle(won){
   // 戰敗結算需要的戰況摘要必須在 state 被重置「之前」先取出來。
@@ -11905,8 +11989,11 @@ document.getElementById('teampickConfirmBtn').onclick = confirmTeamPick;
     musicEnabled = this.checked;
     saveSettings();
     if(musicEnabled){
+      const story=document.getElementById('screen-story');
       const login=document.getElementById('screen-login');
-      if(login && !login.classList.contains('hidden')){
+      if(story && !story.classList.contains('hidden') && storyRun && storyRun.active){
+        syncStoryBgm();
+      } else if(login && !login.classList.contains('hidden')){
         startLoginBgm();
       } else if(state && state.phase!=='select' && state.phase!=='deckbuild' && state.selectedPiece){
         startBgm(state.selectedPiece);
@@ -11914,6 +12001,7 @@ document.getElementById('teampickConfirmBtn').onclick = confirmTeamPick;
     } else {
       stopBgm(0.4);
       stopLoginBgm(0.4);
+      stopStoryBgm(0.4);
     }
   };
 })();
@@ -11978,8 +12066,11 @@ document.getElementById('musicToggle').onchange = function(){
   musicEnabled = this.checked;
   saveSettings();
   if(musicEnabled){
+    const story=document.getElementById('screen-story');
     const login=document.getElementById('screen-login');
-    if(login && !login.classList.contains('hidden')){
+    if(story && !story.classList.contains('hidden') && storyRun && storyRun.active){
+      syncStoryBgm();
+    } else if(login && !login.classList.contains('hidden')){
       startLoginBgm();
     } else if(state && state.phase!=='select' && state.phase!=='deckbuild' && state.selectedPiece){
       startBgm(state.selectedPiece);
@@ -11987,6 +12078,7 @@ document.getElementById('musicToggle').onchange = function(){
   } else {
     stopBgm(0.4);
     stopLoginBgm(0.4);
+    stopStoryBgm(0.4);
   }
 };
 // 設定齒輪鈕：點擊切換面板開/關；點面板本身不關（要能點裡面的 checkbox），點面板以外的任何地方
