@@ -2318,7 +2318,7 @@
 </head>
 <body>
 <!-- 發布版本唯一維護位置：每次正式同步／部署時更新日期與當日版次。 -->
-<div id="appVersionBadge" data-version="v2026.07.23-29" aria-label="目前版本">讀取版本…</div>
+<div id="appVersionBadge" data-version="v2026.07.23-31" aria-label="目前版本">讀取版本…</div>
 <script>
 (function showOnlineBuildVersion(){
   const badge=document.getElementById('appVersionBadge'),version=badge.dataset.version||'dev';
@@ -3235,13 +3235,22 @@ const DEFAULT_STATUS_PRESENTATION = {
   if(!status.color)status.color=presentation[1];
   if(!status.category)status.category=presentation[2];
 });
-const CURRENT_CARD_BALANCE_VERSION = 1;
+const CURRENT_CARD_BALANCE_VERSION = 2;
 function applyProtectCardBalance(){
-  const card=(DB.cards||[]).find(function(item){return String(item.id)==='010';});
-  if(!card)return;
-  card.description='角色獲得200點護盾，抵免傷害時消耗，最多持續10秒';
-  const shield=(card.effectOps||[]).find(function(op){return op.op==='status'&&op.key==='護盾+';});
+  const protectCard=(DB.cards||[]).find(function(item){return String(item.id)==='010';});
+  if(protectCard){
+    protectCard.description='角色獲得200點護盾，抵免傷害時消耗，最多持續10秒';
+  }
+  const shield=protectCard && (protectCard.effectOps||[]).find(function(op){return op.op==='status'&&op.key==='護盾+';});
   if(shield){shield.value=200;shield.durSec=10;}
+  // 快攻的 BAT- 仍縮短 5 秒，但實際排程最低為 6 秒（見 scheduleNext）。
+  // 在這裡同步說明與卡片數值，避免舊版 D1 卡牌快照載入後覆蓋本次平衡調整。
+  const blitzCard=(DB.cards||[]).find(function(item){return String(item.id)==='014';});
+  if(blitzCard){
+    blitzCard.description='角色BAT-5(20秒)，間隔縮短5秒（最低6秒）';
+    const batDown=(blitzCard.effectOps||[]).find(function(op){return op.op==='status'&&op.key==='BAT-';});
+    if(batDown){batDown.value=5;batDown.durSec=20;}
+  }
 }
 applyProtectCardBalance();
 
@@ -7575,11 +7584,13 @@ function playFlowerCard(unit, card, ownTeam, enemyTeam, chosenTargetUnit){
 function scheduleNext(unit){
   tickExpire(unit);
   let cd = baseCooldownSeconds(effectiveSpd(unit));
-  cd += sumStatus(unit,'BAT+','value') - sumStatus(unit,'BAT-','value');
+  const batReduction = sumStatus(unit,'BAT-','value');
+  cd += sumStatus(unit,'BAT+','value') - batReduction;
   // 「連動」2026-07改版：不再靠冷卻減半來達到「行動次數*2」，改成 confirmAct() 結尾直接讓
   // 同一位角色立刻再動一次（見那裡的說明），這裡的正常排程不用再管連動——它的效果已經是
   // 「這次多打一次」而不是「以後動得比較快」，兩者疊加會變成雙重加成，不是原本要的設計。
-  cd = Math.max(1, Math.floor(cd));
+  // 「快攻(Blitz)」的 BAT- 不論疊加幾次，最終行動間隔都不能低於 6 秒。
+  cd = Math.max(batReduction>0 ? 6 : 1, Math.floor(cd));
   unit.nextActionAt = state.clock + cd;
 }
 

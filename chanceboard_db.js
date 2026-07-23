@@ -4846,7 +4846,7 @@ window.CHANCEBOARD_DB = {
       "id": "014",
       "name": "快攻(Blitz)",
       "color": "花牌",
-      "description": "角色BAT-5(20秒)，間隔縮短5秒",
+      "description": "角色BAT-5(20秒)，間隔縮短5秒（最低6秒）",
       "isSuitCard": false,
       "effectOps": [
         {
