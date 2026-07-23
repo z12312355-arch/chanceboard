@@ -319,6 +319,9 @@
   #lobbyHeroPickBackdrop.hidden{display:none;}
   #lobbyHeroPickGrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(88px,1fr));gap:10px;
     max-height:60vh;overflow-y:auto;margin-top:10px;}
+  .lobbyhero-pose-switch{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:10px;padding:4px;border:1px solid var(--line);border-radius:10px;background:rgba(8,10,18,.45);}
+  .lobbyhero-pose-btn{border:1px solid transparent;border-radius:7px;padding:8px 12px;background:transparent;color:var(--muted);cursor:pointer;font-size:13px;font-weight:750;}
+  .lobbyhero-pose-btn.active{border-color:rgba(242,193,78,.55);background:rgba(242,193,78,.13);color:var(--gold);box-shadow:0 0 10px rgba(242,193,78,.1);}
   .lobbyhero-pick-item{cursor:pointer;border:1px solid var(--line);border-radius:8px;padding:6px;
     text-align:center;background:var(--panel2);transition:border-color .15s,box-shadow .15s;}
   .lobbyhero-pick-item:hover{border-color:var(--gold);}
@@ -2301,7 +2304,7 @@
 </head>
 <body>
 <!-- 發布版本唯一維護位置：每次正式同步／部署時更新日期與當日版次。 -->
-<div id="appVersionBadge" data-version="v2026.07.23-26" aria-label="目前版本">讀取版本…</div>
+<div id="appVersionBadge" data-version="v2026.07.23-27" aria-label="目前版本">讀取版本…</div>
 <script>
 (function showOnlineBuildVersion(){
   const badge=document.getElementById('appVersionBadge'),version=badge.dataset.version||'dev';
@@ -2646,6 +2649,10 @@
   <div id="lobbyHeroPickBackdrop" class="hidden">
     <div class="battlelog-panel" style="max-width:520px;">
       <div class="bl-head"><div class="bl-title">🖼️ 選擇大廳立繪</div><button class="btn small" id="lobbyHeroPickCloseBtn">✕</button></div>
+      <div class="lobbyhero-pose-switch" role="group" aria-label="立繪方向">
+        <button type="button" class="lobbyhero-pose-btn" data-lobby-pose="front">正面</button>
+        <button type="button" class="lobbyhero-pose-btn" data-lobby-pose="side">側面</button>
+      </div>
       <div id="lobbyHeroPickGrid"></div>
     </div>
   </div>
@@ -4113,7 +4120,7 @@ function saveSettings(){
   try{
     localStorage.setItem(SETTINGS_KEY, JSON.stringify({
       speedIdx: autoBattleSpeedIdx, sound: soundEnabled, music: musicEnabled,
-      soundVolume: soundVolume, musicVolume: musicVolume
+      soundVolume: soundVolume, musicVolume: musicVolume, lobbyHeroPose: loadLobbyHeroPose()
     }));
   } catch(e){ /* 存不進去就算了，不影響遊戲本身運作 */ }
 }
@@ -4295,6 +4302,7 @@ function claimDailyBonusIfNeeded(){
 // 沒選過（或選的角色後來被admin後臺清空重置變不擁有）就退回「最新召喚到的角色」（ownedCharIds
 // 是push進去的，最後一個=最新），完全沒角色才用001當預設（跟原本寫死的行為一致）。
 const LOBBY_HERO_KEY = 'chanceboard_lobby_hero_v1';
+const LOBBY_HERO_POSE_KEY = 'chanceboard_lobby_hero_pose_v1';
 // 使用者要求「大廳立繪新增小黑小白的側面圖，根據選擇的陣營會不同；初始立繪默認是他們，
 // 立繪不再根據召喚的角色去變化，之後都要玩家手選」：兩位惡魔用跟角色一樣的id/_wide.png
 // 命名慣例(images/demon_01_wide.png／demon_02_wide.png，序章教學裡已經生成好的側面圖)，
@@ -4309,6 +4317,18 @@ function loadLobbyHeroChoice(){
 function saveLobbyHeroChoice(id){
   try{ localStorage.setItem(LOBBY_HERO_KEY, id); }catch(e){}
 }
+function normalizeLobbyHeroPose(value){ return value==='front' ? 'front' : 'side'; }
+function loadLobbyHeroPose(){
+  try{ return normalizeLobbyHeroPose(localStorage.getItem(LOBBY_HERO_POSE_KEY)); }catch(e){ return 'side'; }
+}
+function saveLobbyHeroPose(pose){
+  pose=normalizeLobbyHeroPose(pose);
+  try{ localStorage.setItem(LOBBY_HERO_POSE_KEY,pose); }catch(e){}
+  saveSettings();
+}
+function lobbyHeroImageSrc(id,pose){
+  return 'images/'+id+'_'+(normalizeLobbyHeroPose(pose)==='front'?'full':'wide')+'.png';
+}
 function currentLobbyHeroId(){
   const saved = loadLobbyHeroChoice();
   if(saved && isLobbyHeroSelectable(saved)) return saved;
@@ -4321,11 +4341,34 @@ function refreshLobbyHeroArt(){
   const img = document.getElementById('lobbyHeroImg');
   if(!wrap || !img) return;
   wrap.style.display = '';
-  img.src = 'images/'+currentLobbyHeroId()+'_wide.png';
+  img.src = lobbyHeroImageSrc(currentLobbyHeroId(),loadLobbyHeroPose());
 }
-function openLobbyHeroPicker(){
+let lobbyHeroPickerPose = 'side';
+function renderLobbyHeroPicker(){
   const current = currentLobbyHeroId();
   const grid = document.getElementById('lobbyHeroPickGrid');
+  document.querySelectorAll('[data-lobby-pose]').forEach(function(btn){
+    btn.classList.toggle('active',btn.dataset.lobbyPose===lobbyHeroPickerPose);
+    btn.setAttribute('aria-pressed',btn.dataset.lobbyPose===lobbyHeroPickerPose?'true':'false');
+  });
+  const demonItems = LOBBY_DEMON_IDS.map(function(id){
+    return '<div class="lobbyhero-pick-item'+(id===current?' active':'')+'" data-char-id="'+id+'">'
+      + '<img src="'+lobbyHeroImageSrc(id,lobbyHeroPickerPose)+'" alt="" onerror="this.style.display=\'none\';">'
+      + '<div class="lobbyhero-pick-name">'+LOBBY_DEMON_NAMES[id]+'</div>'
+      + '</div>';
+  }).join('');
+  const charItems = ownedCharIds.slice().reverse().map(function(id){
+    const c = CHAR_BY_ID[id];
+    if(!c) return '';
+    return '<div class="lobbyhero-pick-item'+(id===current?' active':'')+'" data-char-id="'+id+'">'
+      + '<img src="'+lobbyHeroImageSrc(id,lobbyHeroPickerPose)+'" alt="" onerror="this.style.display=\'none\';">'
+      + '<div class="lobbyhero-pick-name">'+stripParenAlias(c.name)+'</div>'
+      + '</div>';
+  }).join('');
+  grid.innerHTML = demonItems + charItems;
+}
+function openLobbyHeroPicker(){
+  lobbyHeroPickerPose=loadLobbyHeroPose();
   // 兩位惡魔固定排最前面（一定能選，不受有沒有召喚到角色影響），使用者反應「點擊角色
   // 沒反應」：原本卡片用inline onclick="pickLobbyHero('id')"字串屬性，但整份遊戲程式碼是
   // 包在最上層(function(){"use strict";...})()這個IIFE裡面（見檔案開頭<script>標籤緊接著
@@ -4333,22 +4376,7 @@ function openLobbyHeroPicker(){
   // pickLobbyHero，點下去只會在console噴ReferenceError、畫面上完全沒反應。改成純data屬性
   // 存id，事件委派交給下面用addEventListener掛在grid本身的監聽器處理——這個監聽器是IIFE
   // 內部的JS程式碼自己掛上去的，跟IIFE closure是同一個作用域，就不會有這個找不到函式的問題。
-  const demonItems = LOBBY_DEMON_IDS.map(function(id){
-    return '<div class="lobbyhero-pick-item'+(id===current?' active':'')+'" data-char-id="'+id+'">'
-      + '<img src="images/'+id+'_wide.png" alt="" onerror="this.style.display=\'none\';">'
-      + '<div class="lobbyhero-pick-name">'+LOBBY_DEMON_NAMES[id]+'</div>'
-      + '</div>';
-  }).join('');
-  // 由新到舊排（跟ownedCharIds儲存順序相反），最新召喚到的角色排最前面，方便玩家找。
-  const charItems = ownedCharIds.slice().reverse().map(function(id){
-    const c = CHAR_BY_ID[id];
-    if(!c) return '';
-    return '<div class="lobbyhero-pick-item'+(id===current?' active':'')+'" data-char-id="'+id+'">'
-      + '<img src="images/'+id+'_wide.png" alt="" onerror="this.style.display=\'none\';">'
-      + '<div class="lobbyhero-pick-name">'+stripParenAlias(c.name)+'</div>'
-      + '</div>';
-  }).join('');
-  grid.innerHTML = demonItems + charItems;
+  renderLobbyHeroPicker();
   document.getElementById('lobbyHeroPickBackdrop').classList.remove('hidden');
 }
 function pickLobbyHero(id){
@@ -4368,6 +4396,14 @@ document.getElementById('lobbyHeroPickGrid').addEventListener('click', function(
   const item = e.target.closest('.lobbyhero-pick-item');
   if(!item) return;
   pickLobbyHero(item.getAttribute('data-char-id'));
+});
+document.querySelectorAll('[data-lobby-pose]').forEach(function(btn){
+  btn.addEventListener('click',function(){
+    lobbyHeroPickerPose=normalizeLobbyHeroPose(this.dataset.lobbyPose);
+    saveLobbyHeroPose(lobbyHeroPickerPose);
+    refreshLobbyHeroArt();
+    renderLobbyHeroPicker();
+  });
 });
 
 // ============ 抽卡／召喚（使用者要求「加入抽卡的機制，必須要有這個角色才能使用」＋
@@ -15820,6 +15856,9 @@ document.getElementById('admin1v1BattleBtn').onclick=function(){ closeAdminPanel
     setTutorialStepLocal(typeof p.tutorialStep==='string'?p.tutorialStep:(p.tutorialDone?'completed':'intro'));
     if(p.settings&&typeof p.settings==='object'){
       if(Number.isInteger(p.settings.speedIdx)) autoBattleSpeedIdx=p.settings.speedIdx;
+      if(p.settings.lobbyHeroPose==='front'||p.settings.lobbyHeroPose==='side'){
+        try{localStorage.setItem(LOBBY_HERO_POSE_KEY,p.settings.lobbyHeroPose);}catch(e){}
+      }
       if(!audioSettingsTouchedThisSession){
       if(typeof p.settings.sound==='boolean') soundEnabled=p.settings.sound;
       if(typeof p.settings.music==='boolean') musicEnabled=p.settings.music;
@@ -16013,7 +16052,7 @@ document.getElementById('admin1v1BattleBtn').onclick=function(){ closeAdminPanel
     guestSaveTutorialFaction(faction);
     if(!accountReady) return Promise.resolve();
     tutorialFaction=faction==='white'?'white':'black';
-    return accountApi('preferences',{settings:{speedIdx:autoBattleSpeedIdx,sound:soundEnabled,music:musicEnabled,soundVolume:soundVolume,musicVolume:musicVolume},tutorialFaction:tutorialFaction,lobbyHeroId:loadLobbyHeroChoice()})
+    return accountApi('preferences',{settings:{speedIdx:autoBattleSpeedIdx,sound:soundEnabled,music:musicEnabled,soundVolume:soundVolume,musicVolume:musicVolume,lobbyHeroPose:loadLobbyHeroPose()},tutorialFaction:tutorialFaction,lobbyHeroId:loadLobbyHeroChoice()})
       .then(function(d){applyAccountState(d.state);});
   };
   const guestSavePlayerNameValue=savePlayerNameValue;
@@ -16060,7 +16099,7 @@ document.getElementById('admin1v1BattleBtn').onclick=function(){ closeAdminPanel
   function queuePreferences(){
     if(!accountReady) return;
     clearTimeout(preferenceSyncTimer); preferenceSyncTimer=setTimeout(async function(){
-      try{ const d=await accountApi('preferences',{settings:{speedIdx:autoBattleSpeedIdx,sound:soundEnabled,music:musicEnabled,soundVolume:soundVolume,musicVolume:musicVolume},tutorialFaction:tutorialFaction,lobbyHeroId:loadLobbyHeroChoice()}); applyAccountState(d.state); }
+      try{ const d=await accountApi('preferences',{settings:{speedIdx:autoBattleSpeedIdx,sound:soundEnabled,music:musicEnabled,soundVolume:soundVolume,musicVolume:musicVolume,lobbyHeroPose:loadLobbyHeroPose()},tutorialFaction:tutorialFaction,lobbyHeroId:loadLobbyHeroChoice()}); applyAccountState(d.state); }
       catch(e){ console.warn('[Account] preferences',e); }
     },350);
   }
