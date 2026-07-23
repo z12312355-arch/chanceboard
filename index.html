@@ -2296,7 +2296,7 @@
 </head>
 <body>
 <!-- 發布版本唯一維護位置：每次正式同步／部署時更新日期與當日版次。 -->
-<div id="appVersionBadge" data-version="v2026.07.23-17" aria-label="目前版本">讀取版本…</div>
+<div id="appVersionBadge" data-version="v2026.07.23-18" aria-label="目前版本">讀取版本…</div>
 <script>
 (function showOnlineBuildVersion(){
   const badge=document.getElementById('appVersionBadge'),version=badge.dataset.version||'dev';
@@ -2653,7 +2653,7 @@
        .battlelog-panel版型。 -->
   <div id="galleryBackdrop" class="hidden">
     <div class="battlelog-panel gallery-panel">
-      <div class="bl-head"><div class="bl-title" id="gallery-title">角色圖鑑</div><button class="btn small" id="galleryCloseBtn">✕</button></div>
+      <div class="bl-head"><div class="bl-title" id="gallery-title">角色圖鑑</div><div style="display:flex;gap:8px"><button class="btn small" id="galleryStoryBtn">📖 角色故事</button><button class="btn small" id="galleryCloseBtn">✕</button></div></div>
       <div id="gallery-viewer">
         <div id="gallery-main-wrap">
           <div id="gallery-main"><img id="gallery-main-img" src="" alt="" onerror="this.style.display='none';"></div>
@@ -2808,7 +2808,7 @@
     </div>
   </div>
 
-  <!-- 角色故事改由圖鑑角色卡開啟；獨立成全版面，避免長文被招式資訊彈窗擠在底部。 -->
+  <!-- 角色故事由角色圖片圖鑑內的入口開啟；獨立成全版面，避免長文被招式資訊彈窗擠在底部。 -->
   <div id="screen-character-story" class="hidden">
     <button type="button" class="btn small" id="characterStoryBackBtn">◂ 返回圖鑑</button>
     <button type="button" class="btn small" id="characterStoryGalleryBtn">🖼️ 角色圖片</button>
@@ -9013,7 +9013,7 @@ function renderGachaCollectionGrid(){
     const owned = isCharOwned(c.id);
     const stars = charStarLevel(c.id);
     return '<div class="gacha-card'+(owned?' owned':' locked')+'"'
-      +   (owned ? ' onclick="openCharacterStory(\''+c.id+'\')"' : '')
+      +   (owned ? ' onclick="openCharGallery(\''+c.id+'\')"' : '')
       +   '>'
       +   '<div class="gacha-card-art">'
       +     (owned
@@ -9038,7 +9038,7 @@ function renderGachaCollectionGrid(){
   fitGachaCardNames();
 }
 let activeCharacterStoryId=null;
-// 圖鑑角色卡直接開啟全版角色故事；原本的招式資訊不再承載長篇故事內容。
+// 角色圖片圖鑑內的「角色故事」入口會開啟全版角色故事；原本的招式資訊不再承載長篇故事內容。
 function openCharacterStory(charId){
   const c=CHAR_BY_ID[charId];if(!c||!isCharOwned(charId))return;
   activeCharacterStoryId=charId;
@@ -9112,9 +9112,13 @@ function galleryItemsForChar(charId){
   });
   return base.concat(extra);
 }
+let activeGalleryCharId=null;
 function openCharGallery(charId){
   const c = CHAR_BY_ID[charId];
   if(!c || !isCharOwned(charId)) return;
+  activeGalleryCharId=charId;
+  const storyBtn=document.getElementById('galleryStoryBtn');
+  if(storyBtn)storyBtn.style.display=c.story?'':'none';
   document.getElementById('gallery-title').textContent = stripParenAlias(c.name) + ' 圖鑑';
   const mainImg = document.getElementById('gallery-main-img');
   const thumbs = document.getElementById('gallery-thumbs');
@@ -9192,7 +9196,13 @@ function closeCharGallery(){
 (function(){
   const backdrop = document.getElementById('galleryBackdrop');
   const closeBtn = document.getElementById('galleryCloseBtn');
+  const storyBtn = document.getElementById('galleryStoryBtn');
   if(closeBtn) closeBtn.onclick = closeCharGallery;
+  if(storyBtn) storyBtn.onclick = function(){
+    if(!activeGalleryCharId)return;
+    closeCharGallery();
+    openCharacterStory(activeGalleryCharId);
+  };
   if(backdrop) backdrop.onclick = function(e){ if(e.target===this) closeCharGallery(); };
 })();
 /* ============================================================ */
