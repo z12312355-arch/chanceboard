@@ -896,7 +896,7 @@
      不需要那麼重的互動。 */
   body.battle-mode #battleSettingsPanel{position:fixed;top:50px;right:14px;z-index:80;
     background:rgba(36,40,56,.5);border:1px solid var(--line);border-radius:10px;padding:10px 14px;
-    display:flex;flex-direction:column;gap:8px;box-shadow:0 6px 18px rgba(0,0,0,.5);}
+    display:flex;flex-direction:column;gap:8px;min-width:220px;box-shadow:0 6px 18px rgba(0,0,0,.5);}
   body.battle-mode #battleSettingsPanel.hidden{display:none;}
   body.battle-mode #battleSettingsPanel label{font-size:13px;display:flex;align-items:center;
     gap:6px;cursor:pointer;white-space:nowrap;}
@@ -1940,6 +1940,11 @@
   #lobbySettingsBackdrop{position:fixed;inset:0;background:rgba(0,0,0,.62);display:flex;align-items:center;justify-content:center;z-index:150;padding:20px;}
   #lobbySettingsBackdrop.hidden{display:none;}
   .lobbysettings-row{display:flex;align-items:center;gap:8px;font-size:14px;padding:8px 0;cursor:pointer;}
+  .audio-volume-row{display:block;padding:0 0 9px 26px;font-size:12px;color:var(--muted);}
+  .audio-volume-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:4px;}
+  .audio-volume-value{color:var(--gold);font-variant-numeric:tabular-nums;}
+  .audio-volume-row input[type="range"]{display:block;width:100%;margin:0;accent-color:var(--gold);cursor:pointer;}
+  body.battle-mode #battleSettingsPanel label.audio-volume-row{display:block;padding-left:24px;}
   /* 卡池機率彈窗：使用者要求「召喚裡面加入卡池資訊」，見 openGachaPoolInfo() 的說明。 */
   #gachaPoolInfoBackdrop{position:fixed;inset:0;background:rgba(0,0,0,.62);display:flex;align-items:center;justify-content:center;z-index:150;padding:20px;}
   #gachaPoolInfoBackdrop.hidden{display:none;}
@@ -2296,7 +2301,7 @@
 </head>
 <body>
 <!-- 發布版本唯一維護位置：每次正式同步／部署時更新日期與當日版次。 -->
-<div id="appVersionBadge" data-version="v2026.07.23-23" aria-label="目前版本">讀取版本…</div>
+<div id="appVersionBadge" data-version="v2026.07.23-25" aria-label="目前版本">讀取版本…</div>
 <script>
 (function showOnlineBuildVersion(){
   const badge=document.getElementById('appVersionBadge'),version=badge.dataset.version||'dev';
@@ -2609,8 +2614,16 @@
       <label id="lobbySoundToggleWrap" class="lobbysettings-row">
         <input type="checkbox" id="lobbySoundToggle" checked> 🔊 音效
       </label>
+      <label class="audio-volume-row" for="lobbySoundVolume">
+        <span class="audio-volume-head"><span>音效音量</span><output id="lobbySoundVolumeValue" class="audio-volume-value">100%</output></span>
+        <input type="range" id="lobbySoundVolume" min="0" max="100" step="1" value="100">
+      </label>
       <label id="lobbyMusicToggleWrap" class="lobbysettings-row">
         <input type="checkbox" id="lobbyMusicToggle" checked> 🎵 音樂
+      </label>
+      <label class="audio-volume-row" for="lobbyMusicVolume">
+        <span class="audio-volume-head"><span>音樂音量</span><output id="lobbyMusicVolumeValue" class="audio-volume-value">100%</output></span>
+        <input type="range" id="lobbyMusicVolume" min="0" max="100" step="1" value="100">
       </label>
     </div>
   </div>
@@ -2946,8 +2959,16 @@
       <label id="soundToggleWrap">
         <input type="checkbox" id="soundToggle" checked> 🔊 音效
       </label>
+      <label class="audio-volume-row" for="soundVolume">
+        <span class="audio-volume-head"><span>音效音量</span><output id="soundVolumeValue" class="audio-volume-value">100%</output></span>
+        <input type="range" id="soundVolume" min="0" max="100" step="1" value="100">
+      </label>
       <label id="musicToggleWrap">
         <input type="checkbox" id="musicToggle" checked> 🎵 音樂
+      </label>
+      <label class="audio-volume-row" for="musicVolume">
+        <span class="audio-volume-head"><span>音樂音量</span><output id="musicVolumeValue" class="audio-volume-value">100%</output></span>
+        <input type="range" id="musicVolume" min="0" max="100" step="1" value="100">
       </label>
     </div>
 
@@ -4091,7 +4112,8 @@ function loadSavedSettings(){
 function saveSettings(){
   try{
     localStorage.setItem(SETTINGS_KEY, JSON.stringify({
-      speedIdx: autoBattleSpeedIdx, sound: soundEnabled, music: musicEnabled
+      speedIdx: autoBattleSpeedIdx, sound: soundEnabled, music: musicEnabled,
+      soundVolume: soundVolume, musicVolume: musicVolume
     }));
   } catch(e){ /* 存不進去就算了，不影響遊戲本身運作 */ }
 }
@@ -4102,11 +4124,24 @@ let soundEnabled = ('sound' in __savedSettings) ? __savedSettings.sound : true;
 // Background-music mute toggle — kept independent from soundEnabled so the player can turn
 // off the looping BGM while keeping hit/cast sound effects, or vice versa.
 let musicEnabled = ('music' in __savedSettings) ? __savedSettings.music : true;
+function normalizedAudioVolume(value){
+  const number=Number(value);
+  return Number.isFinite(number) ? Math.max(0,Math.min(1,number)) : 1;
+}
+let soundVolume = normalizedAudioVolume(__savedSettings.soundVolume);
+let musicVolume = normalizedAudioVolume(__savedSettings.musicVolume);
 // 帳號資料是非同步回來的；玩家已經在本頁動過設定後，不能再被較晚抵達的舊設定覆寫。
 let audioSettingsTouchedThisSession = false;
 function syncAudioSettingControls(){
   ['lobbySoundToggle','soundToggle'].forEach(function(id){const el=document.getElementById(id);if(el)el.checked=soundEnabled;});
   ['lobbyMusicToggle','musicToggle'].forEach(function(id){const el=document.getElementById(id);if(el)el.checked=musicEnabled;});
+  [['lobbySoundVolume','lobbySoundVolumeValue',soundVolume],['soundVolume','soundVolumeValue',soundVolume],
+   ['lobbyMusicVolume','lobbyMusicVolumeValue',musicVolume],['musicVolume','musicVolumeValue',musicVolume]]
+    .forEach(function(item){
+      const slider=document.getElementById(item[0]),output=document.getElementById(item[1]),percent=Math.round(item[2]*100);
+      if(slider)slider.value=String(percent);
+      if(output)output.textContent=percent+'%';
+    });
 }
 function applySoundPreference(enabled){
   audioSettingsTouchedThisSession=true;
@@ -4121,9 +4156,11 @@ function applyMusicPreference(enabled){
   syncAudioSettingControls();
   saveSettings();
   if(!musicEnabled){stopBgm(0.4);stopLoginBgm(0.4);stopCollectionBgm(0.4);stopCharacterBgm(0.4);stopStoryBgm(0.4);return;}
-  const story=document.getElementById('screen-story'),login=document.getElementById('screen-login'),collection=document.getElementById('screen-collection'),characterStory=document.getElementById('screen-character-story');
+  const story=document.getElementById('screen-story'),storyMenu=document.getElementById('storyMenu'),login=document.getElementById('screen-login'),collection=document.getElementById('screen-collection'),characterStory=document.getElementById('screen-character-story');
   if(story&&!story.classList.contains('hidden')&&storyRun&&storyRun.active){
-    if(!storyRun.showChapterTitle&&!storyRun.pendingSplash)syncStoryBgm();
+    // 章節／關卡頁是靜音區；即使在此重新開啟音樂，也要等正文真正出現後才播放。
+    if(storyMenu&&!storyMenu.classList.contains('hidden')){stopStoryBgm(0.35);stopCharacterBgm(0.35);}
+    else if(!storyRun.showChapterTitle&&!storyRun.pendingSplash)syncStoryBgm();
   }else if(collection&&!collection.classList.contains('hidden')||characterStory&&!characterStory.classList.contains('hidden'))startCollectionBgm();
   else if(login&&!login.classList.contains('hidden'))startLoginBgm();
   else if(state&&state.phase!=='select'&&state.phase!=='deckbuild'&&state.selectedPiece)startBgm(state.selectedPiece);
@@ -4131,6 +4168,33 @@ function applyMusicPreference(enabled){
     const activeScreen=typeof TOP_SCREEN_IDS!=='undefined'&&TOP_SCREEN_IDS.find(id=>{const el=document.getElementById(id);return el&&!el.classList.contains('hidden');});
     if(activeScreen)syncCharacterBgmForScreen(activeScreen);
   }
+}
+function applySoundVolumePreference(value){
+  audioSettingsTouchedThisSession=true;
+  soundVolume=normalizedAudioVolume(value);
+  syncAudioSettingControls();
+  saveSettings();
+}
+function applyLiveMusicVolume(){
+  const targets=[
+    [loginBgmAudio,LOGIN_BGM_VOLUME,cancelLoginBgmFade],
+    [collectionBgmAudio,COLLECTION_BGM_VOLUME,cancelCollectionBgmFade],
+    [characterBgmAudio,CHARACTER_BGM_VOLUME,cancelCharacterBgmFade],
+    [storyBgmAudio,STORY_BGM_VOLUME,cancelStoryBgmFade],
+    [battleBgmAudio,BATTLE_BGM_VOLUME,cancelBattleBgmFade]
+  ];
+  targets.forEach(function(item){
+    if(!item[0])return;
+    item[2]();
+    item[0].volume=Math.max(0,Math.min(1,item[1]*musicVolume));
+  });
+}
+function applyMusicVolumePreference(value){
+  audioSettingsTouchedThisSession=true;
+  musicVolume=normalizedAudioVolume(value);
+  syncAudioSettingControls();
+  applyLiveMusicVolume();
+  saveSettings();
 }
 
 /* ============================================================ */
@@ -6433,7 +6497,7 @@ function playSfx(name, volume){
   if(!template) return;
   // Cloning lets rapid hits/casts overlap instead of cutting off the previous sound.
   const audio = template.cloneNode();
-  audio.volume = Math.max(0, Math.min(1, volume == null ? 0.72 : volume));
+  audio.volume = Math.max(0, Math.min(1, (volume == null ? 0.72 : volume)*soundVolume));
   audio.play().catch(()=>{}); // Browser autoplay policy: safely wait for the next user gesture.
 }
 function preloadSfx(){ Object.keys(SFX_ASSETS).forEach(getSfxTemplate); }
@@ -6473,7 +6537,7 @@ function startLoginBgm(){
     loginBgmAudio.muted=!mediaAudioUnlocked;
   }
   loginBgmAudio.play().catch(()=>{}); // The first audible play waits for a browser-approved interaction.
-  fadeLoginBgm(loginBgmAudio, LOGIN_BGM_VOLUME, BGM_FADE_IN_SEC);
+  fadeLoginBgm(loginBgmAudio, LOGIN_BGM_VOLUME*musicVolume, BGM_FADE_IN_SEC);
 }
 function stopLoginBgm(fadeSec){
   const audio=loginBgmAudio;
@@ -6501,7 +6565,7 @@ function startCollectionBgm(){
     collectionBgmAudio=new Audio(src);collectionBgmAudio.__chanceboardSrc=src;collectionBgmAudio.loop=true;collectionBgmAudio.preload='auto';collectionBgmAudio.volume=0;
   }
   collectionBgmAudio.play().catch(()=>{});
-  fadeCollectionBgm(collectionBgmAudio,COLLECTION_BGM_VOLUME,BGM_FADE_IN_SEC);
+  fadeCollectionBgm(collectionBgmAudio,COLLECTION_BGM_VOLUME*musicVolume,BGM_FADE_IN_SEC);
 }
 function stopCollectionBgm(fadeSec){
   const audio=collectionBgmAudio;if(!audio)return;
@@ -6526,15 +6590,15 @@ function startCharacterBgm(heroId){
     characterBgmAudio=new Audio(src);characterBgmAudio.__chanceboardSrc=src;characterBgmAudio.loop=true;characterBgmAudio.preload='auto';characterBgmAudio.volume=0;
   }
   characterBgmAudio.play().catch(()=>{});
-  fadeCharacterBgm(characterBgmAudio,CHARACTER_BGM_VOLUME,BGM_FADE_IN_SEC);
+  fadeCharacterBgm(characterBgmAudio,CHARACTER_BGM_VOLUME*musicVolume,BGM_FADE_IN_SEC);
 }
 function stopCharacterBgm(fadeSec){
   const audio=characterBgmAudio;if(!audio)return;
   fadeCharacterBgm(audio,0,fadeSec!=null?fadeSec:BGM_FADE_OUT_SEC,()=>{if(characterBgmAudio!==audio)return;audio.pause();audio.currentTime=0;characterBgmAudio=null;});
 }
 function screenUsesCharacterBgm(screenId){
-  // 故事的章節／關卡選單沒有專屬曲，延續大廳角色歌；進入正文時由 startStoryBgm() 接手。
-  return !['screen-login','screen-collection','screen-character-story','screen-battle','screen-end'].includes(screenId);
+  // 故事章節／關卡頁依需求保持安靜；正文開始後由 startStoryBgm() 播放專屬劇情曲。
+  return !['screen-login','screen-story','screen-collection','screen-character-story','screen-battle','screen-end'].includes(screenId);
 }
 function syncCharacterBgmForScreen(screenId){
   if(screenUsesCharacterBgm(screenId))startCharacterBgm(currentLobbyHeroId());
@@ -6576,7 +6640,7 @@ function startStoryBgm(key){
     storyBgmAudio.volume=0;
   }
   storyBgmAudio.play().catch(()=>{});
-  fadeStoryBgm(storyBgmAudio, STORY_BGM_VOLUME, BGM_FADE_IN_SEC);
+  fadeStoryBgm(storyBgmAudio, STORY_BGM_VOLUME*musicVolume, BGM_FADE_IN_SEC);
 }
 function stopStoryBgm(fadeSec){
   const audio=storyBgmAudio;
@@ -6711,7 +6775,7 @@ function playTone(freq, dur, type, vol, sweepToFreq, pan){
   osc.type = type || 'sine';
   osc.frequency.setValueAtTime(freq, ctx.currentTime);
   if(sweepToFreq){ osc.frequency.exponentialRampToValueAtTime(Math.max(1,sweepToFreq), ctx.currentTime+dur); }
-  gain.gain.setValueAtTime(vol||0.15, ctx.currentTime);
+  gain.gain.setValueAtTime((vol||0.15)*soundVolume, ctx.currentTime);
   gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime+dur);
   osc.connect(gain);
   connectWithReverb(ctx, applyPan(ctx, gain, pan), getMasterBus(ctx), 0.12);
@@ -6732,7 +6796,7 @@ function playNoiseBurst(dur, filterFreq, vol, pan){
   filter.type = 'bandpass';
   filter.frequency.value = filterFreq || 1200;
   const gain = ctx.createGain();
-  gain.gain.setValueAtTime(vol||0.15, ctx.currentTime);
+  gain.gain.setValueAtTime((vol||0.15)*soundVolume, ctx.currentTime);
   gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime+dur);
   noise.connect(filter); filter.connect(gain);
   connectWithReverb(ctx, applyPan(ctx, gain, pan), getMasterBus(ctx), 0.12);
@@ -6788,7 +6852,7 @@ function playChordTone(freqs, dur, type, vol, delay){
       const gain = ctx.createGain();
       osc.type = type || 'sine';
       osc.frequency.setValueAtTime(jitter(f,0.008), ctx.currentTime);
-      gain.gain.setValueAtTime((vol||0.11)/Math.sqrt(freqs.length), ctx.currentTime);
+      gain.gain.setValueAtTime(((vol||0.11)*soundVolume)/Math.sqrt(freqs.length), ctx.currentTime);
       gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime+dur);
       connectWithReverb(ctx, gain, ctx.destination, 0.32);
       osc.connect(gain);
@@ -7083,7 +7147,7 @@ function startBgm(pieceName){
     battleBgmAudio=audio;
   }
   battleBgmAudio.play().catch(()=>{});
-  fadeBattleBgm(battleBgmAudio, BATTLE_BGM_VOLUME, BGM_FADE_IN_SEC);
+  fadeBattleBgm(battleBgmAudio, BATTLE_BGM_VOLUME*musicVolume, BGM_FADE_IN_SEC);
 }
 
 // Fades the active MP3 out and releases it. Safe to call even if nothing is playing.
@@ -10159,7 +10223,8 @@ function storySetMenuView(view,route){
   storyUpdateChapterStatus();
 }
 function storyShowMenu(view,route){
-  if(!storyRun || !storyRun.active) stopStoryBgm(0.35);
+  // 無論從大廳進入、或從正文返回章節／關卡頁，只要選單顯示就停止所有背景音樂。
+  stopStoryBgm(0.35);stopCharacterBgm(0.35);
   storyHidePresentation();document.getElementById('storyLogOverlay').classList.add('hidden');document.getElementById('storyMenu').classList.remove('hidden');document.getElementById('storyDialog').classList.add('hidden');document.getElementById('storyChoices').classList.add('hidden');storyBuildTeamOptions();
   storySetMenuView(view||'chapters',route||null);
 }
@@ -12215,12 +12280,13 @@ document.getElementById('teampickConfirmBtn').onclick = confirmTeamPick;
   const closeBtn = document.getElementById('lobbySettingsCloseBtn');
   const soundBox = document.getElementById('lobbySoundToggle');
   const musicBox = document.getElementById('lobbyMusicToggle');
+  const soundSlider = document.getElementById('lobbySoundVolume');
+  const musicSlider = document.getElementById('lobbyMusicVolume');
   const nameInput = document.getElementById('playerNameInput');
   const nameSave = document.getElementById('playerNameSaveBtn');
   const nameMessage = document.getElementById('playerNameMessage');
   function openLobbySettings(){
-    soundBox.checked = soundEnabled;
-    musicBox.checked = musicEnabled;
+    syncAudioSettingControls();
     nameInput.value=playerName;
     nameMessage.textContent='';
     backdrop.classList.remove('hidden');
@@ -12240,6 +12306,12 @@ document.getElementById('teampickConfirmBtn').onclick = confirmTeamPick;
   };
   musicBox.onchange = function(){
     applyMusicPreference(this.checked);
+  };
+  soundSlider.oninput = function(){
+    applySoundVolumePreference(Number(this.value)/100);
+  };
+  musicSlider.oninput = function(){
+    applyMusicVolumePreference(Number(this.value)/100);
   };
 })();
 document.getElementById('actConfirmBtn').onclick = confirmAct;
@@ -12299,6 +12371,12 @@ document.getElementById('soundToggle').onchange = function(){
 };
 document.getElementById('musicToggle').onchange = function(){
   applyMusicPreference(this.checked);
+};
+document.getElementById('soundVolume').oninput = function(){
+  applySoundVolumePreference(Number(this.value)/100);
+};
+document.getElementById('musicVolume').oninput = function(){
+  applyMusicVolumePreference(Number(this.value)/100);
 };
 // 設定齒輪鈕：點擊切換面板開/關；點面板本身不關（要能點裡面的 checkbox），點面板以外的任何地方
 // 才關閉——跟 moveInfo／battleLog 那種「有獨立遮罩、點遮罩關閉」的彈窗不一樣，這裡沒有遮罩，所以
@@ -15730,7 +15808,10 @@ document.getElementById('admin1v1BattleBtn').onclick=function(){ closeAdminPanel
       if(!audioSettingsTouchedThisSession){
       if(typeof p.settings.sound==='boolean') soundEnabled=p.settings.sound;
       if(typeof p.settings.music==='boolean') musicEnabled=p.settings.music;
+      if('soundVolume' in p.settings) soundVolume=normalizedAudioVolume(p.settings.soundVolume);
+      if('musicVolume' in p.settings) musicVolume=normalizedAudioVolume(p.settings.musicVolume);
       syncAudioSettingControls();
+      applyLiveMusicVolume();
       }
     }
     try{
@@ -15917,7 +15998,7 @@ document.getElementById('admin1v1BattleBtn').onclick=function(){ closeAdminPanel
     guestSaveTutorialFaction(faction);
     if(!accountReady) return Promise.resolve();
     tutorialFaction=faction==='white'?'white':'black';
-    return accountApi('preferences',{settings:{speedIdx:autoBattleSpeedIdx,sound:soundEnabled,music:musicEnabled},tutorialFaction:tutorialFaction,lobbyHeroId:loadLobbyHeroChoice()})
+    return accountApi('preferences',{settings:{speedIdx:autoBattleSpeedIdx,sound:soundEnabled,music:musicEnabled,soundVolume:soundVolume,musicVolume:musicVolume},tutorialFaction:tutorialFaction,lobbyHeroId:loadLobbyHeroChoice()})
       .then(function(d){applyAccountState(d.state);});
   };
   const guestSavePlayerNameValue=savePlayerNameValue;
@@ -15964,7 +16045,7 @@ document.getElementById('admin1v1BattleBtn').onclick=function(){ closeAdminPanel
   function queuePreferences(){
     if(!accountReady) return;
     clearTimeout(preferenceSyncTimer); preferenceSyncTimer=setTimeout(async function(){
-      try{ const d=await accountApi('preferences',{settings:{speedIdx:autoBattleSpeedIdx,sound:soundEnabled,music:musicEnabled},tutorialFaction:tutorialFaction,lobbyHeroId:loadLobbyHeroChoice()}); applyAccountState(d.state); }
+      try{ const d=await accountApi('preferences',{settings:{speedIdx:autoBattleSpeedIdx,sound:soundEnabled,music:musicEnabled,soundVolume:soundVolume,musicVolume:musicVolume},tutorialFaction:tutorialFaction,lobbyHeroId:loadLobbyHeroChoice()}); applyAccountState(d.state); }
       catch(e){ console.warn('[Account] preferences',e); }
     },350);
   }
