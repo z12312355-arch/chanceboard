@@ -2269,7 +2269,7 @@
 </head>
 <body>
 <!-- 發布版本唯一維護位置：每次正式同步／部署時更新日期與當日版次。 -->
-<div id="appVersionBadge" data-version="v2026.07.23-6" aria-label="目前版本">讀取版本…</div>
+<div id="appVersionBadge" data-version="v2026.07.23-7" aria-label="目前版本">讀取版本…</div>
 <script>
 (function showOnlineBuildVersion(){
   const badge=document.getElementById('appVersionBadge'),version=badge.dataset.version||'dev';
@@ -10232,11 +10232,12 @@ function storySetSpeakerAvatar(speaker){
   else show();
 }
 function storyRenderCurrent(){
-  if(!storyRun||!storyRun.active){stopStoryBgm(0.35);return storyShowMenu();}syncStoryBgm();storyCancelReveal();storyCancelAuto();document.getElementById('storyMenu').classList.add('hidden');document.getElementById('storyChapterTitle').textContent=storyBlockHeader(storyRun.block);document.getElementById('storyRouteBadge').textContent=storyRouteText(storyRun.route)+(storyPreviewMode?'・預覽':storyRun.replayMode?'・命運回溯':'');
+  if(!storyRun||!storyRun.active){stopStoryBgm(0.35);return storyShowMenu();}storyCancelReveal();storyCancelAuto();document.getElementById('storyMenu').classList.add('hidden');document.getElementById('storyChapterTitle').textContent=storyBlockHeader(storyRun.block);document.getElementById('storyRouteBadge').textContent=storyRouteText(storyRun.route)+(storyPreviewMode?'・預覽':storyRun.replayMode?'・命運回溯':'');
   storyMarkBlockVisited(storyRun.route,storyRun.block);
   const dialog=document.getElementById('storyDialog'),choices=document.getElementById('storyChoices'),cinematic=document.getElementById('storyCinematic'),narration=document.getElementById('storyNarration'),playerLine=document.getElementById('storyPlayerLine'),splash=document.getElementById('storyChapterSplash'),motto=document.getElementById('storyMotto'),complete=document.getElementById('storyComplete');
   [dialog,choices,cinematic,narration,playerLine,splash,motto,complete].forEach(el=>el.classList.add('hidden'));dialog.classList.remove('context-narration');document.getElementById('storySpeakerRow').classList.remove('hidden');cinematic.innerHTML='';narration.innerHTML='';playerLine.innerHTML='';
-  if(storyRun.showChapterTitle||storyRun.pendingSplash){const info=storyRun.pendingSplash||{kicker:'CHAPTER',title:globalStoryModeConfig.chapterTitle};document.getElementById('storyChapterSplashKicker').textContent=info.kicker||'SECTION';document.getElementById('storyChapterSplashName').textContent=info.title||globalStoryModeConfig.chapterTitle;splash.classList.remove('hidden');['storyCg','storyCgBlur'].forEach(id=>document.getElementById(id).classList.remove('show'));['storyActorLeft','storyActorRight'].forEach(id=>document.getElementById(id).classList.remove('visible','active'));storyScheduleAuto(1500/storySpeed);return;}
+  if(storyRun.showChapterTitle||storyRun.pendingSplash){stopStoryBgm(0.35);const info=storyRun.pendingSplash||{kicker:'CHAPTER',title:globalStoryModeConfig.chapterTitle};document.getElementById('storyChapterSplashKicker').textContent=info.kicker||'SECTION';document.getElementById('storyChapterSplashName').textContent=info.title||globalStoryModeConfig.chapterTitle;splash.classList.remove('hidden');['storyCg','storyCgBlur'].forEach(id=>document.getElementById(id).classList.remove('show'));['storyActorLeft','storyActorRight'].forEach(id=>document.getElementById(id).classList.remove('visible','active'));storyScheduleAuto(1500/storySpeed);return;}
+  syncStoryBgm();
   // 一定要先取得 beat 再決定 CG。原本 storySetCg() 寫在前面，於是「這一段的 beat 已經播完、
   // 正要換到下一段」的那一次 render（beat===undefined）會被判定成「沒有CG」，把 CG 連 src 一起
   // 清掉、也拿掉 cg-scene 底色；接著換段落重新載入圖，而預載的 onload 是非同步的，中間那段
