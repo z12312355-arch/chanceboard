@@ -384,7 +384,7 @@
     background:rgba(20,22,30,.55);border:1px solid var(--line);color:var(--muted);
     cursor:pointer;font-size:16px;transition:opacity .2s,background .2s,color .2s;opacity:.55;}
   #screen-login #lobbyAdminBtn{right:18px;}
-  #screen-login #loginSettingsBtn{left:18px;}
+  #screen-login #loginSettingsBtn{right:18px;top:16px;bottom:auto;}
   #screen-login #lobbyAdminBtn:hover,#screen-login #loginSettingsBtn:hover{opacity:1;background:rgba(20,22,30,.85);color:var(--text);}
   #screen-login #lobbyAdminBtn .lobby-btn-icon,#screen-login #loginSettingsBtn .lobby-btn-icon{font-size:16px;}
 
@@ -2271,7 +2271,7 @@
 </head>
 <body>
 <!-- 發布版本唯一維護位置：每次正式同步／部署時更新日期與當日版次。 -->
-<div id="appVersionBadge" data-version="v2026.07.23-8" aria-label="目前版本">讀取版本…</div>
+<div id="appVersionBadge" data-version="v2026.07.23-9" aria-label="目前版本">讀取版本…</div>
 <script>
 (function showOnlineBuildVersion(){
   const badge=document.getElementById('appVersionBadge'),version=badge.dataset.version||'dev';
@@ -13420,7 +13420,6 @@ preloadEssentialAssets();
 // 這裡只是防呆，避免萬一某個環節真的卡住，玩家被讀取畫面永遠卡住進不去。
 document.getElementById('loginEnterBtn').onclick = function(){
   showBootLoadingOverlay();
-  stopLoginBgm(0.5);
   let settled = false;
   const proceed = function(){
     if(settled) return;
