@@ -78,7 +78,11 @@
   #storyPlayerLine{position:absolute;z-index:6;left:50%;top:50%;transform:translate(-50%,-50%);width:min(680px,calc(100% - 38px));}
   .story-player-line-btn{width:100%;padding:17px 24px;border:1px solid rgba(242,193,78,.7);border-radius:12px;background:linear-gradient(180deg,rgba(36,41,59,.97),rgba(13,16,27,.98));box-shadow:0 14px 42px rgba(0,0,0,.62),inset 0 1px rgba(255,255,255,.08);color:#fff;font-size:17px;font-weight:750;line-height:1.55;text-align:center;cursor:pointer;transition:.17s;}
   .story-player-line-btn:hover{transform:translateY(-2px);border-color:#f2c14e;box-shadow:0 16px 48px rgba(0,0,0,.68),0 0 20px rgba(242,193,78,.18);}
-  #storyTopbar{position:absolute;left:0;right:0;top:0;z-index:3;display:flex;align-items:center;gap:10px;padding:14px 18px;background:linear-gradient(180deg,rgba(0,0,0,.68),transparent);}
+  /* 故事設定固定使用獨立的右上角安全區。頂列在安全區左側結束，因此返回大廳等按鈕不會
+     跑到齒輪底下；設定鈕高於故事內各種遮罩，但仍低於設定視窗本身。 */
+  #storyTopbar{position:absolute;left:0;right:60px;top:0;z-index:3;display:flex;align-items:center;gap:10px;padding:14px 8px 14px 18px;background:linear-gradient(180deg,rgba(0,0,0,.68),transparent);}
+  #storySettingsDock{position:absolute;z-index:30;top:calc(10px + env(safe-area-inset-top,0px));right:calc(14px + env(safe-area-inset-right,0px));width:38px;height:38px;display:flex;align-items:center;justify-content:center;pointer-events:none;}
+  #storySettingsDock #globalSettingsBtn{pointer-events:auto;}
   #storyChapterTitle{min-width:0;font-weight:800;color:#fff;text-shadow:0 2px 8px #000;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
   #storyRouteBadge{flex:0 0 auto;white-space:nowrap;font-size:11px;border:1px solid rgba(255,255,255,.35);border-radius:999px;padding:4px 9px;background:rgba(8,10,18,.7);}
   #storyTopSpacer{flex:1;}
@@ -146,7 +150,7 @@
   #storyMenu{position:absolute;z-index:8;inset:0;display:flex;align-items:center;justify-content:center;padding:24px;background:radial-gradient(circle at 50% 24%,rgba(72,83,126,.42),transparent 45%),linear-gradient(135deg,rgba(3,5,10,.97),rgba(8,11,20,.94));}
   #storyMenu.hidden,#storyChoices.hidden{display:none;}
   .story-menu-card{width:min(1040px,100%);max-height:calc(100vh - 38px);overflow:auto;border:1px solid rgba(184,199,239,.34);border-radius:20px;padding:28px;background:linear-gradient(155deg,rgba(18,22,35,.97),rgba(8,11,20,.97));box-shadow:0 28px 90px #000;}
-  .story-menu-head{display:flex;align-items:flex-start;gap:13px;margin-bottom:20px}.story-menu-head-main{min-width:0;flex:1}.story-menu-card h2{margin:0 0 5px;font-size:28px;color:#fff;}.story-menu-back{flex:0 0 auto;border:1px solid rgba(255,255,255,.22);background:rgba(255,255,255,.05);color:#dfe5f5;border-radius:9px;padding:8px 12px;cursor:pointer}.story-menu-back.hidden{display:none}
+  .story-menu-head{display:flex;align-items:flex-start;gap:13px;margin-bottom:20px;padding-right:48px}.story-menu-head-main{min-width:0;flex:1}.story-menu-card h2{margin:0 0 5px;font-size:28px;color:#fff;}.story-menu-back{flex:0 0 auto;border:1px solid rgba(255,255,255,.22);background:rgba(255,255,255,.05);color:#dfe5f5;border-radius:9px;padding:8px 12px;cursor:pointer}.story-menu-back.hidden{display:none}
   .story-menu-sub{color:#aeb6ce;font-size:13px;line-height:1.6;}
   .story-menu-panel.hidden{display:none}.story-chapter-grid{display:grid;grid-template-columns:minmax(0,1.55fr) minmax(240px,.65fr);gap:16px}.story-chapter-card{position:relative;min-height:300px;border:1px solid #525d7e;border-radius:16px;overflow:hidden;padding:24px;text-align:left;color:#fff;background:url('background/pawn.png') center/cover no-repeat;cursor:pointer;isolation:isolate;box-shadow:0 16px 38px rgba(0,0,0,.35);transition:.2s}.story-chapter-card::before{content:'';position:absolute;inset:0;z-index:-1;background:linear-gradient(90deg,rgba(3,5,10,.96),rgba(4,6,12,.5) 58%,rgba(0,0,0,.28)),linear-gradient(0deg,rgba(0,0,0,.78),transparent 65%)}.story-chapter-card:hover{transform:translateY(-3px);border-color:#f2c14e;box-shadow:0 20px 48px rgba(0,0,0,.55),0 0 26px rgba(242,193,78,.14)}.story-chapter-card.locked{cursor:not-allowed;filter:grayscale(.8);opacity:.55;background-image:none}.story-chapter-card.locked:hover{transform:none;border-color:#525d7e;box-shadow:0 16px 38px rgba(0,0,0,.35)}.story-chapter-no{font-size:11px;letter-spacing:.32em;color:#f2c14e;font-weight:850}.story-chapter-card-title{margin-top:9px;font-size:clamp(25px,3vw,42px);font-weight:950;letter-spacing:.04em;text-shadow:0 4px 20px #000}.story-chapter-card-desc{position:absolute;left:24px;right:24px;bottom:24px;color:#d6dbea;font-size:13px;line-height:1.7}.story-chapter-status{display:inline-flex;margin-top:13px;border:1px solid rgba(242,193,78,.48);border-radius:999px;padding:5px 10px;background:rgba(0,0,0,.5);color:#ffe08a;font-size:11px;font-weight:800}
   .story-route-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
@@ -280,6 +284,12 @@
   }
   @media(max-width:700px){.story-stage-shell{grid-template-columns:30px minmax(0,1fr) 30px;gap:4px;margin-left:-9px;margin-right:-9px}.story-stage-scroll-btn{height:58px;padding:0;font-size:21px}.story-stage-scroll{padding-bottom:17px}.story-stage-map{padding:0}.story-stage-row{grid-template-columns:225px 54px}.story-stage-row:last-child{grid-template-columns:225px}.story-stage-node{width:225px;min-height:160px;padding:14px}.story-stage-row:not(:last-child)::before{width:39px}.story-stage-index{width:40px;height:40px;font-size:14px}.story-stage-title{font-size:16px}.story-stage-desc{display:block;font-size:10px}.story-stage-state{right:10px;top:11px}}
   @media(max-height:500px) and (orientation:landscape){#storyMenu{padding:6px}.story-menu-card.stage-map-mode{width:100%;height:calc(100vh - 12px);padding:10px 14px;border-radius:13px}.stage-map-mode .story-menu-head{margin-bottom:5px;align-items:center}.stage-map-mode .story-menu-card h2,.stage-map-mode h2{font-size:19px;margin-bottom:1px}.stage-map-mode .story-menu-sub{font-size:10px;line-height:1.25}.stage-map-mode .story-menu-back{padding:5px 8px;font-size:10px}.stage-map-mode .story-stage-shell{min-height:0;margin-top:0}.stage-map-mode .story-stage-scroll{padding-top:3px;padding-bottom:13px}.stage-map-mode .story-stage-row{grid-template-columns:225px 52px}.stage-map-mode .story-stage-row:last-child{grid-template-columns:225px}.stage-map-mode .story-stage-node{width:225px;padding:9px 12px;gap:4px}.stage-map-mode .story-stage-index{width:34px;height:34px;font-size:12px}.stage-map-mode .story-stage-kicker{font-size:8px}.stage-map-mode .story-stage-title{font-size:15px;margin-top:1px}.stage-map-mode .story-stage-desc{display:none}.stage-map-mode .story-stage-explore{margin-top:2px;font-size:9px}.stage-map-mode .story-stage-state{top:8px;right:8px;padding:3px 7px;font-size:8px}.stage-map-mode .story-fate-btn{margin-top:4px;padding:4px 8px;font-size:9px}.stage-map-mode .story-stage-scroll-btn{height:48px}.stage-map-mode .story-stage-scroll-hint{display:none}.stage-map-mode .story-stage-toolbar{margin-top:4px;padding-top:5px;gap:6px}.stage-map-mode .story-stage-toolbar label{font-size:10px!important}.stage-map-mode #storyTeamSelect{min-width:150px;padding:5px 7px;font-size:11px}.stage-map-mode .story-stage-toolbar .btn{padding:6px 10px;font-size:10px}.stage-map-mode #storyMenuActions{margin-top:4px}.stage-map-mode #storyMenuActions .btn{padding:5px 10px;font-size:10px}.stage-map-mode #storyLoadMessage{margin-top:2px!important;min-height:0}}
+  /* 右上角齒輪高於命運棋譜／對話紀錄；兩種視窗的標題列保留同一塊空間，關閉鈕不會被壓住。 */
+  #screen-story .story-fate-head,#screen-story .story-log-head{padding-right:68px}
+  @media(max-width:700px){
+    #storyTopbar{right:50px;padding:7px 4px 7px 7px}
+    #storySettingsDock{top:calc(6px + env(safe-area-inset-top,0px));right:calc(7px + env(safe-area-inset-right,0px))}
+  }
   #screen-lobby{position:relative;height:100%;width:100%;overflow:hidden;
     background:none;border:none;padding:0;margin:0;box-shadow:none;}
   /* 使用者要求「把按鈕的布局改在右邊」：角色立繪跟文字/按鈕內容整組左右對調——立繪移到
@@ -2318,7 +2328,7 @@
 </head>
 <body>
 <!-- 發布版本唯一維護位置：每次正式同步／部署時更新日期與當日版次。 -->
-<div id="appVersionBadge" data-version="v2026.07.23-31" aria-label="目前版本">讀取版本…</div>
+<div id="appVersionBadge" data-version="v2026.07.23-32" aria-label="目前版本">讀取版本…</div>
 <script>
 (function showOnlineBuildVersion(){
   const badge=document.getElementById('appVersionBadge'),version=badge.dataset.version||'dev';
@@ -2490,6 +2500,7 @@
 
   <!-- 故事模式：完整播放 story/chapter1.txt 的黑白雙路線、選項分支、CG 與戰鬥節點。 -->
   <div id="screen-story" class="hidden">
+    <div id="storySettingsDock" aria-label="故事模式設定位置"></div>
     <img id="storyCgBlur" alt="" aria-hidden="true">
     <img id="storyCg" alt="故事 CG">
     <div id="storyShade"></div>
@@ -8781,13 +8792,10 @@ function hideAllTopScreens(){
 function placeStorySettingsButton(menuVisible){
   const button=document.getElementById('globalSettingsBtn');
   if(!button)return;
-  if(menuVisible){
-    const menuActions=document.getElementById('storyMenuActions');
-    if(menuActions)menuActions.appendChild(button);
-    return;
-  }
-  const topbar=document.getElementById('storyTopbar');
-  if(topbar)topbar.appendChild(button);
+  // 故事模式的設定鈕永遠留在獨立的右上角安全區，不再於正文頂列與章節頁底部之間搬動。
+  // menuVisible 參數為舊呼叫保留，位置已不再依它改變。
+  const dock=document.getElementById('storySettingsDock');
+  if(dock)dock.appendChild(button);
 }
 function placeSettingsButton(screenId){
   const button=document.getElementById('globalSettingsBtn');
